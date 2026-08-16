@@ -45,11 +45,15 @@ pub struct AppShell {
     title: UnsafeCell<&'static str>,
 }
 
-// Safety: `App` pumps frames from one thread, and the navigator is only ever
-// touched from inside a frame — so the `UnsafeCell` fields have exactly one
-// accessor at a time. A host that renders on a second task must not use `App`;
-// it should implement `Navigator` itself over whatever synchronisation it
-// already has, which is what the C++ firmware does.
+// Safety: **`App` must be driven from one thread.** Not a style note — two
+// threads inside `present` would both hold `&mut *self.pending.get()`, and
+// aliasing `&mut` is undefined behaviour, not a clean error.
+//
+// `App` pumps frames from one thread, and the navigator is only ever touched
+// from inside a frame — so the `UnsafeCell` fields have exactly one accessor at
+// a time. A host that renders on a second task must not use `App`; it should
+// implement `Navigator` itself over whatever synchronisation it already has,
+// which is what the C++ firmware does.
 unsafe impl Sync for AppShell {}
 
 impl AppShell {
