@@ -440,9 +440,9 @@ of the above assembled, and
 is the test suite for it — behaviour, the runtime driving it, and screenshots.
 
 ```bash
-cargo run -p xpui-tutorial            # in a window
-cargo test -p xpui-tutorial           # eleven tests, no window
-open target/screenshots/tutorial.bmp  # what it painted
+cargo run -p xpui-tutorial                             # in a window
+cargo test -p xpui-tutorial                            # eleven tests, no window
+open examples/tutorial/tests/screenshots/tutorial.png  # the frame it must paint
 ```
 
 ## Where next

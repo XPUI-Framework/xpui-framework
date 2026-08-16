@@ -39,7 +39,7 @@ mod ui;
 
 pub use ops::{DrawOp, RectKind, RowCells, render};
 pub use recorder::Recorder;
-pub use snapshot::{assert_snapshot, assert_text_snapshot};
+pub use snapshot::assert_snapshot;
 #[cfg(not(target_os = "none"))]
 pub use ui::{Drive, Ui};
 

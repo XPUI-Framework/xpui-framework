@@ -4,6 +4,13 @@
 //! committed beside the test, so a change to layout shows up as a diff a
 //! reviewer can read rather than a number that moved.
 //!
+//! Text, and only text. It asserts *call order*, clip lifecycle and the state
+//! a widget was drawn in — that the clip went on before the content and came
+//! off after it, that a dialog forced `selected=-1` on the list behind it,
+//! that an overlay did not call `clear`. None of that is visible in a picture.
+//! Pixels are the other half of the story and belong to whichever backend put
+//! them there; a lossy rendering of a framebuffer does not belong here.
+//!
 //! ```rust,ignore
 //! testing::reset();
 //! screen.render();
@@ -47,9 +54,12 @@ pub fn assert_snapshot(name: &str) {
     assert_text_snapshot(name, &ops::render(&super::ops_log()));
 }
 
-/// The same comparison against text a caller produced, so a backend can
-/// snapshot rendered pixels rather than draw calls.
-pub fn assert_text_snapshot(name: &str, actual: &str) {
+/// The comparison itself, against any text.
+///
+/// Private: the only text worth committing under `tests/snapshots` is a draw
+/// log, and this used to be the door through which lossy pictures of a
+/// framebuffer came in as text goldens.
+fn assert_text_snapshot(name: &str, actual: &str) {
     let path = path_for(name);
 
     let existing = fs::read_to_string(&path).ok();
