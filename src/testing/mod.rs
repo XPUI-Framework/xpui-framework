@@ -32,10 +32,16 @@ use crate::screen::Driver;
 use crate::{Button, SwipeDir};
 
 mod ops;
+mod recorder;
 mod snapshot;
+#[cfg(not(target_os = "none"))]
+mod ui;
 
 pub use ops::{DrawOp, RectKind, RowCells, render};
+pub use recorder::Recorder;
 pub use snapshot::{assert_snapshot, assert_text_snapshot};
+#[cfg(not(target_os = "none"))]
+pub use ui::{Drive, Ui};
 
 /// One recorded `draw_text`: position, text, font id and style.
 pub type TextDraw = (i32, i32, String, i32, u8);
