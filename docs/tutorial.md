@@ -95,8 +95,8 @@ Simulator::new(Panel::PORTRAIT)
 cargo run -p xpui-tutorial
 ```
 
-Arrows move focus, Enter confirms, Escape goes back, Q quits. Clicking is a
-tap and the scroll wheel is a swipe, so touch behaviour works too.
+Arrows move focus, Enter confirms, Backspace goes back, Q or Escape quits.
+Clicking is a tap and the scroll wheel is a swipe, so touch behaviour works too.
 
 ## 3. State, and messages that change it
 

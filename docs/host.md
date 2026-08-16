@@ -19,14 +19,88 @@ worth reading if you are changing one of those, or writing a new one.
 
 Implement all five on one type and it satisfies `Host` automatically:
 
-```rust
+```rust,no_run
+# use xpui::host::{
+#     Button, Canvas, Chrome, Clock, FontId, FontRole, FontStyle, Hint, IconRef, InputSource,
+#     RowField, SwipeDir, TextMetrics, ThemeMetric,
+# };
+# use xpui::{Point, Rect, Size};
 pub struct MyBackend;
 
-impl Canvas for MyBackend { /* ... */ }
-impl TextMetrics for MyBackend { /* ... */ }
-impl Chrome for MyBackend { /* ... */ }
-impl InputSource for MyBackend { /* ... */ }
-impl Clock for MyBackend { /* ... */ }
+impl Canvas for MyBackend {
+#   fn screen_size(&self) -> Size { Size::new(480, 800) }
+#   fn clear(&self) {}
+#   fn draw_text(&self, _at: Point, _text: &str, _font: FontId, _style: FontStyle) {}
+#   fn fill_rect(&self, _rect: Rect, _black: bool) {}
+#   fn stroke_rect(&self, _rect: Rect) {}
+#   fn draw_line(&self, _from: Point, _to: Point) {}
+#   fn fill_rect_dither(&self, _rect: Rect, _light: bool) {}
+#   fn scrim(&self, _rect: Rect) {}
+#   fn set_clip(&self, _rect: Option<Rect>) {}
+#   fn draw_image(&self, _at: Point, _data: &[u8], _size: Size) {}
+#   fn draw_icon(&self, _at: Point, _icon: IconRef) {}
+#   fn icon_size(&self, _icon: IconRef) -> i32 { 0 }
+    /* ... */
+}
+
+impl TextMetrics for MyBackend {
+#   fn font(&self, _role: FontRole) -> FontId { FontId::UNAVAILABLE }
+#   fn text_width(&self, _font: FontId, _text: &str, _style: FontStyle) -> i32 { 0 }
+#   fn line_height(&self, _font: FontId) -> i32 { 0 }
+    /* ... */
+}
+
+impl Chrome for MyBackend {
+#   fn metric(&self, _metric: ThemeMetric) -> i32 { 0 }
+#   fn draw_header(&self, _title: Option<&str>, _subtitle: Option<&str>) {}
+#   fn draw_sub_header(&self, _rect: Rect, _label: &str, _right: Option<&str>) {}
+#   fn draw_button_hints(&self, _back: &Hint, _confirm: &Hint, _prev: &Hint, _next: &Hint) {}
+#   fn draw_progress_bar(&self, _rect: Rect, _current: u32, _total: u32) {}
+#   fn draw_slider(&self, _rect: Rect, _value: i32, _max: i32) {}
+#   fn draw_scroll_indicator(&self, _r: Rect, _content: i32, _visible: i32, _offset: i32) {}
+#   fn draw_list<'a>(
+#       &self,
+#       _rect: Rect,
+#       _rows: usize,
+#       _selected: i32,
+#       _row: &dyn Fn(usize, RowField) -> Option<&'a str>,
+#   ) {}
+#   fn draw_option_popup<'a>(
+#       &self,
+#       _title: &str,
+#       _options: &dyn Fn(usize) -> Option<&'a str>,
+#       _count: usize,
+#       _selected: i32,
+#   ) {}
+#   fn option_popup_row_rect<'a>(
+#       &self,
+#       _title: &str,
+#       _options: &dyn Fn(usize) -> Option<&'a str>,
+#       _count: usize,
+#       _index: usize,
+#   ) -> Option<Rect> { None }
+#   fn request_update(&self) {}
+    /* ... */
+}
+
+impl InputSource for MyBackend {
+#   fn was_pressed(&self, _button: Button) -> bool { false }
+#   fn is_pressed(&self, _button: Button) -> bool { false }
+#   fn was_released(&self, _button: Button) -> bool { false }
+#   fn has_touch(&self) -> bool { false }
+#   fn tap(&self) -> Option<Point> { None }
+#   fn touch_held(&self) -> Option<Point> { None }
+#   fn touch_released(&self) -> bool { false }
+#   fn swipe(&self) -> SwipeDir { SwipeDir::None }
+#   fn was_back_gesture(&self) -> bool { false }
+#   fn was_home_gesture(&self) -> bool { false }
+    /* ... */
+}
+
+impl Clock for MyBackend {
+#   fn millis(&self) -> u32 { 0 }
+    /* ... */
+}
 
 static BACKEND: MyBackend = MyBackend;
 
@@ -39,6 +113,7 @@ A compile-time assertion is worth adding so a missing trait is caught at the
 definition rather than at the install site:
 
 ```rust
+# use xpui::testing::TestHost as MyBackend;
 const _: fn() = || {
     fn assert_host<T: xpui::host::Host>() {}
     assert_host::<MyBackend>();
@@ -53,6 +128,7 @@ is a different question from what paints the pixels, so it is installed
 separately:
 
 ```rust
+# static SHELL: xpui::testing::TestHost = xpui::testing::TestHost;
 unsafe { xpui::host::install_navigator(&SHELL) };
 ```
 
@@ -110,7 +186,7 @@ xpui::testing::install();
 
 It reports fixed screen and theme dimensions and records everything drawn, so
 you can assert on layout and touch behaviour in an ordinary `cargo test`. The
-framework's own 56 tests use nothing else.
+framework's own tests use nothing else.
 
 ## Worked examples
 
@@ -119,9 +195,10 @@ they are deliberately different shapes:
 
 | Backend | Satisfies | How |
 |---|---|---|
-| `embedded_graphics` | `Canvas`, `TextMetrics` | directly, over a `DrawTarget`; takes `Chrome` from `chrome` |
+| `embedded_graphics` | all five | `Canvas` and `TextMetrics` over a `DrawTarget`; `InputSource` and `Clock` from what the frame loop feeds it; `Chrome` from `chrome` |
 | `fui` | all five | over an FFI boundary, into C++ FreeInkUI |
 | `chrome` | `Chrome` | from `Canvas` primitives, for backends that have no toolkit |
 
-`xpui`'s own `unsafe` is confined to the four lines that read the installed
-host. A backend crossing an FFI boundary holds the rest.
+`xpui`'s own `unsafe` is confined to three places: installing and reading the
+host globals, the single-threaded cells `App` keeps for its navigator, and the
+testing doubles. A backend crossing an FFI boundary holds the rest.

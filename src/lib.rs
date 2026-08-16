@@ -17,12 +17,15 @@
 //! # Layers
 //!
 //! - [`host`] — the traits a backend implements, and the façades widgets call.
-//!   The crate's only `unsafe` is here, around the installed-host global.
 //! - [`geometry`] — [`Point`], [`Size`], [`Rect`], [`Insets`].
 //! - [`view`] — the [`View`] trait and the interaction model.
 //! - [`layout`] — containers that position children: stacks, spacer, modifiers.
 //! - [`widgets`] — leaves that draw: text, lists, sliders, icons.
 //! - [`screen`] — the [`Screen`] contract, its runtime, and the root views.
+//!
+//! `unsafe` is confined to three places and stays there: the installed-host
+//! globals in [`host`], the single-threaded cells in [`app::AppShell`], and the
+//! testing doubles.
 //!
 //! # Portability
 //!
@@ -59,6 +62,16 @@ pub mod testing;
 mod guides {
     #[doc = include_str!("../docs/reference.md")]
     pub mod reference {}
+    #[doc = include_str!("../docs/architecture.md")]
+    pub mod architecture {}
+    #[doc = include_str!("../docs/host.md")]
+    pub mod host {}
+    #[doc = include_str!("../docs/writing-a-widget.md")]
+    pub mod writing_a_widget {}
+    #[doc = include_str!("../README.md")]
+    pub mod readme {}
+    #[doc = include_str!("../../../README.md")]
+    pub mod workspace_readme {}
 }
 
 // `docs/tutorial.md` is proven the same way, but from `examples/tutorial`:

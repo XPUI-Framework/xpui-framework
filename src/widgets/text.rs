@@ -8,12 +8,15 @@ use crate::view::View;
 
 /// Draws a single line of text.
 ///
-/// The string is converted to a NUL-terminated buffer once, at construction,
-/// rather than on every frame — the render path allocating per draw is exactly
-/// the sort of heap churn that fragments a 380 KB heap.
+/// Holds the string it was built with, unchanged: the framework has no C
+/// boundary to satisfy, so a host that needs another representation — a
+/// NUL-terminated buffer for a C renderer, say — makes one at its own edge.
+/// Formatting the string in `update()` and keeping it, rather than calling
+/// `format!` inside `body()`, is what keeps allocation off the render path.
 ///
-/// Size comes from the firmware's own font metrics. Estimating it instead is
-/// what previously let content drift past the bottom of the screen.
+/// Size comes from the host's own font metrics, taken while the tree is laid
+/// out and kept for [`View::size`]. Estimating it instead drifts from what is
+/// painted and pushes content past the bottom of the screen.
 ///
 /// ```rust,ignore
 /// Text::new("Battery")

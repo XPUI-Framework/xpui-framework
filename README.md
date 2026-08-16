@@ -11,16 +11,17 @@ drawing: no screen, no asset name, no setting, no string, and no dependency on
 the thing that paints. It reaches whatever hosts it through a handful of traits
 that a [backend](../backend/) implements. That is what keeps product detail out
 of layout code, what lets the same screen run on FreeInkUI and on
-`embedded_graphics`, and what lets all 56 tests run on a laptop instead of a
-device.
+`embedded_graphics`, and what lets the whole test suite run on a laptop instead
+of a device.
 
 ## At a glance
 
-- **No dependencies.** Not one. ~6,600 lines of Rust, and that is the whole of it.
+- **No dependencies.** Not one, and no build script. What is in `src/` is the
+  whole of it.
 - **`no_std`.** Runs on bare metal; runs on your laptop for tests.
 - **Nothing to draw with.** `xpui` cannot paint a pixel by itself — a backend
   supplies that, through five small traits.
-- **56 tests**, none of which need hardware or a simulator.
+- **Every test runs on a laptop.** None of them needs hardware or a simulator.
 
 ## Getting started
 
@@ -31,6 +32,8 @@ use xpui::{vstack, NavigationScreen, Screen, Stepper, Text, View};
 
 struct Brightness {
     level: i32,
+    /// Built when the value changes rather than when the screen is described.
+    label: String,
 }
 
 /// Everything this screen can be told.
@@ -45,7 +48,7 @@ impl Screen for Brightness {
 
     fn body(&self) -> impl View<Msg> {
         NavigationScreen::new(vstack![12;
-            Text::new(format!("Brightness  {}%", self.level)),
+            Text::new(&self.label),
             Stepper::new(self.level)
                 .on_change(Msg::Set)
                 .on_step(Msg::Step),
@@ -53,10 +56,13 @@ impl Screen for Brightness {
     }
 
     fn update(&mut self, message: Msg) {
-        match message {
-            Msg::Set(level) => self.level = level.clamp(0, 100),
-            Msg::Step(delta) => self.level = (self.level + delta).clamp(0, 100),
-        }
+        self.level = match message {
+            Msg::Set(level) => level.clamp(0, 100),
+            Msg::Step(delta) => (self.level + delta).clamp(0, 100),
+        };
+        // Formatted here, not in `body`. `body` runs on every paint and every
+        // frame carrying input; `update` runs when the value actually changes.
+        self.label = format!("Brightness  {}%", self.level);
     }
 }
 ```
@@ -84,7 +90,7 @@ FreeInkUI, `embedded_graphics`, or a desktop window.
 This is the part worth understanding, and it is simpler than it looks. There are
 **three conversations**, and each one only goes one way.
 
-```
+```text
         your screen                xpui                    the firmware
    ┌───────────────────┐   ┌──────────────────┐   ┌──────────────────────┐
    │                   │   │                  │   │                      │
@@ -124,6 +130,7 @@ measure text, draw themed furniture, read input, tell the time — and installs
 that implementation once:
 
 ```rust
+# static MY_BACKEND: xpui::testing::TestHost = xpui::testing::TestHost;
 // Once, before anything is measured or drawn.
 unsafe { xpui::host::install(&MY_BACKEND) };
 ```

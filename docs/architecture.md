@@ -54,7 +54,17 @@ A widget does not run your code. It carries a value you gave it, and hands that
 value back:
 
 ```rust
+# use xpui::{Screen, Stepper, View};
+# #[derive(Clone, Copy)]
+# enum Msg { Set(i32) }
+# struct Brightness { level: i32 }
+# impl Screen for Brightness {
+#     type Message = Msg;
+#     fn body(&self) -> impl View<Msg> {
 Stepper::new(self.level).on_change(Msg::Set)
+#     }
+#     fn update(&mut self, _message: Msg) {}
+# }
 ```
 
 `Msg::Set` here is not a call — it is the constructor of an enum variant, used
@@ -69,6 +79,12 @@ test a screen by calling `update()` directly with no UI at all.
 A view says *what* it responds to, never *whether it was hit*:
 
 ```rust
+# use xpui::{InputMask, Interactions, Point, Rect, Size, Trigger};
+# #[derive(Clone, Copy)]
+# enum Msg { Tapped }
+# let mut out: Interactions<Msg> = Interactions::new(0);
+# let rect = Rect { origin: Point::ORIGIN, size: Size::new(200, 40) };
+# let msg = Msg::Tapped;
 out.declare(rect, InputMask::TAP, Trigger::Message(msg));
 ```
 
@@ -87,7 +103,7 @@ Two consequences worth stating:
 
 - `xpui` compiles with **no dependencies** and cannot name a backend symbol.
 - Tests install a fake host, so layout, input routing and widget behaviour are
-  all testable on a laptop. That is how there are 56 tests and no simulator.
+  all testable on a laptop. That is how the suite runs with no simulator at all.
 
 See [host.md](host.md) to implement one.
 

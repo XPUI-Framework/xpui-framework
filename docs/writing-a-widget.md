@@ -6,6 +6,9 @@ three required methods and a few optional ones with sensible defaults.
 ## The three you must write
 
 ```rust
+# use xpui::{Point, Rect, Renderer, Size, View};
+# #[derive(Default)]
+# struct Underline { measured: Size }
 impl<M> View<M> for Underline {
     fn measure(&mut self, available: Size) {
         // How big do you want to be, given this much room?
@@ -30,7 +33,16 @@ find out what you want, then again after it has decided where you go.
 **Never measure text by guessing.** Ask the backend:
 
 ```rust
+# use xpui::Font;
+# xpui::testing::install();
+# struct Label { content: String, font: Font }
+# impl Label {
+#     fn width(&self) -> i32 {
+#         let font = self.font;
 let width = font.text_width(&self.content);
+#         width
+#     }
+# }
 ```
 
 Estimating character widths is what used to push content off the bottom of the
@@ -41,6 +53,12 @@ screen.
 Add `interactions` and declare a rectangle:
 
 ```rust
+# use xpui::{InputMask, Interactions, Point, Rect, Size, Trigger, View};
+# struct Underline<M> { measured: Size, message: Option<M> }
+# impl<M: Clone> View<M> for Underline<M> {
+#     fn measure(&mut self, available: Size) { self.measured = Size::new(available.width, 2); }
+#     fn size(&self) -> Size { self.measured }
+#     fn render(&self, _origin: Point) {}
 fn interactions(&mut self, origin: Point, out: &mut Interactions<M>) {
     let Some(message) = self.message.clone() else { return };
     out.declare(
@@ -49,6 +67,7 @@ fn interactions(&mut self, origin: Point, out: &mut Interactions<M>) {
         Trigger::Message(message),
     );
 }
+# }
 ```
 
 The mask is the important choice:
@@ -71,8 +90,13 @@ For anything continuous, do not send one message per pixel. Declare a `Trigger`
 that carries the arithmetic instead:
 
 ```rust
-Trigger::Value { make: Msg::Set, max: 100 }   // absolute, from a position
-Trigger::Step { make: Msg::Nudge }            // relative, -1 / +1
+# use xpui::Trigger;
+# #[derive(Clone, Copy)]
+# enum Msg { Set(i32), Nudge(i32) }
+# let _: [Trigger<Msg>; 2] = [
+Trigger::Value { make: Msg::Set, max: 100 },   // absolute, from a position
+Trigger::Step { make: Msg::Nudge },            // relative, -1 / +1
+# ];
 ```
 
 The runtime turns a touch position into a value and calls `make`. This is how
@@ -102,10 +126,25 @@ measurement or painting.
 Install the fake host and assert on geometry — no hardware, no simulator:
 
 ```rust
+# use xpui::{Point, Size, View};
+# #[derive(Default)]
+# struct Underline { measured: Size }
+# impl Underline { fn new() -> Self { Underline::default() } }
+# impl<M> View<M> for Underline {
+#     fn measure(&mut self, available: Size) { self.measured = Size::new(available.width, 2); }
+#     fn size(&self) -> Size { self.measured }
+#     fn render(&self, _origin: Point) {}
+# }
+xpui::testing::install();
+
 let mut widget = Underline::new();
-widget.measure(Size::new(200, 60));
+View::<()>::measure(&mut widget, Size::new(200, 60));
 assert_eq!(View::<()>::size(&widget).height, 2);
 ```
+
+`Underline` is a `View<M>` for *every* `M`, so both calls have to say which one
+they mean. It makes no difference to a widget that sends no messages, and `()`
+is the usual choice.
 
 The fake also records what was drawn, so you can assert a slider painted a
 dithered track before a solid fill. See
