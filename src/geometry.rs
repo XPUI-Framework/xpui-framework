@@ -1,8 +1,9 @@
 //! Geometry primitives shared by layout and drawing.
 //!
-//! All coordinates are logical screen pixels in the current orientation, the
-//! same space `GfxRenderer` draws in. In portrait an X4 Pro is 480x800; in
-//! landscape 800x480. Never assume either.
+//! All coordinates are logical screen pixels in the current orientation — the
+//! same space the host draws in. Never assume a size or a shape: the panels
+//! this runs on are portrait and landscape, from 296x128 to 800x480, and a
+//! screen that hardcodes either is wrong on most of them.
 
 /// A position on screen.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]

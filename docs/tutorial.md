@@ -70,7 +70,7 @@ not write.
 
 ## 2. Run it
 
-Six lines. `Panel::PORTRAIT` is a 480×800 panel; `Simulator` opens a window and
+Six lines. `Panel::DEFAULT` is a 480×800 panel; `Simulator` opens a window and
 drives the frame loop.
 
 ```rust,no_run
@@ -86,7 +86,7 @@ drives the frame loop.
 # }
 use xpui_simulator::{Panel, Simulator};
 
-Simulator::new(Panel::PORTRAIT)
+Simulator::new(Panel::DEFAULT)
     .title("sleep timer")
     .run(SleepTimer);
 ```
