@@ -67,12 +67,31 @@ impl<H: Host + Drive + 'static> Ui<H> {
     /// Only one `Ui` runs at a time. The rest of the test harness blocks here
     /// rather than racing, so tests in one file need no lock of their own.
     pub fn new<S: Screen + 'static>(screen: S, host: &'static H) -> Ui<H> {
-        // A panicking test poisons the lock. Recover rather than cascading:
-        // the next test installs its own host and starts from a clean log, so
-        // there is no state left to be poisoned by.
-        let guard = SERIAL
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        // Waits, but not forever. Tests in one binary run on several threads,
+        // so a `Ui` legitimately queues behind another; two alive in the *same*
+        // test is a mistake, and blocking on it would hang with no message —
+        // much harder to diagnose than a panic that says what you did.
+        //
+        // A panicking test poisons the lock. Recover rather than cascading: the
+        // next `Ui` installs its own host and resets the log, so there is no
+        // state left to inherit.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+        let guard = loop {
+            match SERIAL.try_lock() {
+                Ok(guard) => break guard,
+                Err(std::sync::TryLockError::Poisoned(poisoned)) => break poisoned.into_inner(),
+                Err(std::sync::TryLockError::WouldBlock) => {
+                    assert!(
+                        std::time::Instant::now() < deadline,
+                        "waited a minute for another `Ui` to finish. Only one at \
+                         a time: it installs the process-wide host, so two would \
+                         draw through each other. If both are in one test, drop \
+                         the first before building the second."
+                    );
+                    std::thread::yield_now();
+                }
+            }
+        };
 
         let recorder = Recorder::wrap(host);
         // Safety: `guard` is held for this `Ui`'s whole life, so nothing else
@@ -201,16 +220,15 @@ impl<H: Host + Drive + 'static> Ui<H> {
     /// The single place that walks the draw log, so what a test can *see* and
     /// what it can *tap* can never disagree.
     fn painted(&self) -> Vec<(String, Rect)> {
-        let from = self
-            .frame
-            .iter()
-            .rposition(|op| matches!(op, DrawOp::OptionPopup { .. }))
-            .unwrap_or(0);
+        Ui::<H>::labels_in(&self.frame)
+    }
 
+    /// The walk itself, over any run of draw calls.
+    fn labels_in(ops: &[DrawOp]) -> Vec<(String, Rect)> {
         let mut out = Vec::new();
         let mut clip: Option<Rect> = None;
 
-        for op in &self.frame[from..] {
+        for op in ops {
             match op {
                 DrawOp::Clip(rect) => clip = *rect,
                 DrawOp::Text {
@@ -272,13 +290,20 @@ impl<H: Host + Drive + 'static> Ui<H> {
                     }
                 }
                 DrawOp::OptionPopup { title, options, .. } => {
+                    // The theme owns a popup's geometry, so it is asked rather
+                    // than guessed. Without this an option is visible and
+                    // untappable: a test could open a picker and never choose
+                    // anything from it.
+                    let lookup = |index: usize| options.get(index).and_then(Option::as_deref);
                     out.push((title.clone(), Rect::new(0, 0, 0, 0)));
-                    out.extend(
-                        options
-                            .iter()
-                            .flatten()
-                            .map(|text| (text.clone(), Rect::new(0, 0, 0, 0))),
-                    );
+
+                    for (index, option) in options.iter().enumerate() {
+                        let Some(text) = option else { continue };
+                        let rect =
+                            Theme::option_popup_row_rect(title, &lookup, options.len(), index)
+                                .unwrap_or(Rect::new(0, 0, 0, 0));
+                        out.push((text.clone(), rect));
+                    }
                 }
                 _ => {}
             }
@@ -313,8 +338,22 @@ impl<H: Host + Drive + 'static> Ui<H> {
         // can tap, and its centre is as likely to land in the row next door.
         let floor = Theme::metric(ThemeMetric::MinTouchSize) / 2;
 
+        // A popup captures input, so once one is up nothing behind it can be
+        // reached. Seeing and tapping part company here and only here: the
+        // content behind a dialog is dimmed rather than hidden, so a person can
+        // still read it — they just cannot touch it.
+        let topmost = self
+            .frame
+            .iter()
+            .rposition(|op| matches!(op, DrawOp::OptionPopup { .. }));
+
+        let reachable: Vec<(String, Rect)> = match topmost {
+            Some(index) => Ui::<H>::labels_in(&self.frame[index..]),
+            None => self.painted(),
+        };
+
         let mut out: Vec<Rect> = Vec::new();
-        for (text, rect) in self.painted() {
+        for (text, rect) in reachable {
             if text == label && rect.height() >= floor.max(2) && !out.contains(&rect) {
                 out.push(rect);
             }
