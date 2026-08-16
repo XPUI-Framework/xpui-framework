@@ -340,6 +340,35 @@ impl<S: Screen> Runtime<S> {
         true
     }
 
+    /// Scrolls when moving the focus could not.
+    ///
+    /// Scrolling is normally a side effect of keeping the focused control
+    /// visible, which works until a screen has nothing focusable on it — a page
+    /// of text, say. On a device with a touchscreen you would swipe; on one
+    /// with only buttons there is no other way to reach the rest, so the
+    /// buttons have to do it.
+    ///
+    /// Half a viewport per press: a whole one loses the line you were reading,
+    /// and a single line takes forever on a panel that refreshes in a second.
+    fn scroll_by(&mut self, delta: isize, interactions: &Interactions<S::Message>) -> bool {
+        let Some((viewport, content_height)) = interactions.viewport() else {
+            return false;
+        };
+
+        let furthest = (content_height - viewport.size.height).max(0);
+        if furthest == 0 {
+            return false;
+        }
+
+        let step = (viewport.size.height / 2).max(1);
+        let next = (self.scroll + delta as i32 * step).clamp(0, furthest);
+        if next == self.scroll {
+            return false;
+        }
+        self.scroll = next;
+        true
+    }
+
     /// One frame of input, in priority order. See the module docs.
     fn loop_(&mut self) {
         // -- touch ----------------------------------------------------------
@@ -427,9 +456,10 @@ impl<S: Screen> Runtime<S> {
                 }
             }
             Button::Up | Button::Down => {
-                let count = self.collect_settled().focusable_count();
+                let interactions = self.collect_settled();
+                let count = interactions.focusable_count();
                 let delta = if key == Button::Up { -1 } else { 1 };
-                if self.move_focus(delta, count) {
+                if self.move_focus(delta, count) || self.scroll_by(delta, &interactions) {
                     request_update();
                 }
             }
