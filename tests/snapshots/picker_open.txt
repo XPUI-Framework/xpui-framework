@@ -1,0 +1,11 @@
+clear
+header      title="Reading" subtitle=-
+list        (16,60 448x84) rows=2 selected=-1
+  row 0  title="Font" subtitle=- value="Serif"
+  row 1  title="Size" subtitle=- value="16"
+hints       back=- confirm=- previous=- next=-
+rect        (0,0 480x800) scrim
+popup       "Font" options=3 selected=1
+  option 0  "Serif"
+  option 1  "Sans"
+  option 2  "Mono"

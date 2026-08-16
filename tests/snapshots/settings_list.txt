@@ -1,0 +1,10 @@
+clear
+header      title="Settings" subtitle=-
+list        (16,60 448x176) rows=3 selected=0
+  row 0  title="Wi-Fi" subtitle=- value="Off"
+  row 1  title="Storage" subtitle="3.1 GB free" value=-
+  row 2  title="About" subtitle=- value=-
+line        (16,248) -> (463,248)
+list        (16,261 448x40) rows=1 selected=-1
+  row 0  title="Hyphenation" subtitle=- value="Off"
+hints       back=- confirm=- previous=- next=-

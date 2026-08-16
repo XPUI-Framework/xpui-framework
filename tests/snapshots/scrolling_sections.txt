@@ -1,0 +1,29 @@
+clear
+header      title="All settings" subtitle=-
+clip        (0,60 480x700)
+sub-header  (16,60 448x17) "Display" right=-
+list        (16,81 448x172) rows=4 selected=0
+  row 0  title="Brightness" subtitle=- value="60%"
+  row 1  title="Warmth" subtitle=- value="30%"
+  row 2  title="Frontlight" subtitle=- value="On"
+  row 3  title="Invert" subtitle=- value="Off"
+sub-header  (16,261 448x17) "Reading" right=-
+list        (16,282 448x172) rows=4 selected=-1
+  row 0  title="Font" subtitle=- value="Serif"
+  row 1  title="Margins" subtitle=- value="Medium"
+  row 2  title="Line spacing" subtitle=- value="1.4"
+  row 3  title="Hyphenation" subtitle=- value="On"
+sub-header  (16,462 448x17) "System" right=-
+list        (16,483 448x172) rows=4 selected=-1
+  row 0  title="Language" subtitle=- value="English"
+  row 1  title="Time zone" subtitle=- value="CEST"
+  row 2  title="Sleep after" subtitle=- value="15 min"
+  row 3  title="Storage" subtitle=- value="3.1 GB free"
+sub-header  (16,663 448x17) "About" right=-
+list        (16,684 448x128) rows=3 selected=-1
+  row 0  title="Firmware" subtitle=- value="1.4.2"
+  row 1  title="Serial" subtitle=- value="X4-0001"
+  row 2  title="Licences" subtitle=- value=-
+clip        none
+scrollbar   (0,60 480x700) content=752 visible=700 offset=0
+hints       back=- confirm=- previous=- next=-

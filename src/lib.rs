@@ -1,0 +1,83 @@
+//! A declarative UI framework for e-ink screens.
+//!
+//! Screens are described as a tree of [`View`]s and painted through whatever
+//! host the application installs. The API is deliberately SwiftUI-shaped:
+//!
+//! ```rust,ignore
+//! NavigationScreen::new(vstack![20;
+//!     Text::new("Firmware"),
+//!     Text::new(version).bold(),
+//!     Spacer::new(),
+//! ])
+//! ```
+//!
+//! See this crate's `README.md` for a walkthrough, and `docs/architecture.md`
+//! for how a frame runs.
+//!
+//! # Layers
+//!
+//! - [`host`] — the traits a backend implements, and the façades widgets call.
+//!   The crate's only `unsafe` is here, around the installed-host global.
+//! - [`geometry`] — [`Point`], [`Size`], [`Rect`], [`Insets`].
+//! - [`view`] — the [`View`] trait and the interaction model.
+//! - [`layout`] — containers that position children: stacks, spacer, modifiers.
+//! - [`widgets`] — leaves that draw: text, lists, sliders, icons.
+//! - [`screen`] — the [`Screen`] contract, its runtime, and the root views.
+//!
+//! # Portability
+//!
+//! Builds `no_std` for bare-metal targets (using `alloc` against whatever heap
+//! the application provides) and against `std` on a desktop so the simulator
+//! and `cargo test` work unchanged. Nothing in this crate may reference a
+//! product, a device or a drawing library — those belong in a backend, and
+//! screens belong in the application.
+
+#![cfg_attr(target_os = "none", no_std)]
+
+extern crate alloc;
+
+pub mod app;
+pub mod geometry;
+pub mod host;
+pub mod layout;
+pub mod screen;
+pub mod view;
+pub mod widgets;
+
+#[cfg(any(test, feature = "testing"))]
+pub mod testing;
+
+/// The guides, compiled.
+///
+/// Every ```rust block in these files is a doctest: `cargo test` builds and
+/// runs it. A snippet that stops matching the API fails CI instead of quietly
+/// teaching the wrong thing to whoever reads it next.
+///
+/// `cfg(doctest)` so this costs nothing in a real build — the markdown is only
+/// pulled in when rustdoc is collecting tests.
+#[cfg(doctest)]
+mod guides {
+    #[doc = include_str!("../docs/reference.md")]
+    pub mod reference {}
+}
+
+// `docs/tutorial.md` is proven the same way, but from `examples/tutorial`:
+// its snippets open a window, and the dependency only ever points inward, so
+// this crate cannot see the simulator.
+
+pub use app::App;
+pub use geometry::{Insets, Point, Rect, Size};
+pub use host::{
+    Button, Font, FontId, FontRole, FontStyle, Hint, IconRef, Input, Navigator, Renderer,
+    ScreenChrome, SwipeDir, Theme, ThemeMetric, finish_screen, millis, present, request_update,
+};
+pub use layout::{
+    Alignment, Flexible, Frame, HStack, Modifiers, Padding, ScrollView, Spacer, Tappable,
+    UNBOUNDED, VStack,
+};
+pub use screen::{NavigationScreen, OverlayPanel, Screen};
+pub use view::{InputMask, Interaction, Interactions, Scrim, Trigger, View, ViewExt, value_at};
+pub use widgets::{
+    Divider, Icon, IconToggle, Image, List, ListRow, Modal, ProgressBar, Section, Slider, Stepper,
+    Text, Toggle,
+};

@@ -1,0 +1,6 @@
+clear
+header      title="Reading" subtitle=-
+list        (16,60 448x84) rows=2 selected=0
+  row 0  title="Font" subtitle=- value="Serif"
+  row 1  title="Size" subtitle=- value="16"
+hints       back=- confirm=- previous=- next=-

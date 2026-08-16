@@ -1,0 +1,25 @@
+[package]
+name = "xpui"
+description = "A declarative UI framework for e-ink firmware"
+readme = "README.md"
+keywords = ["ui", "embedded", "no-std", "eink", "gui"]
+categories = ["embedded", "gui", "no-std"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+# rlib only. This crate is consumed by a backend and an application, which
+# together produce whatever the target actually links — a staticlib for a C++
+# firmware, a binary for a host. Emitting a staticlib here as well produced a
+# 17 MB archive that contributed zero objects to the final link.
+[lib]
+crate-type = ["rlib"]
+
+[features]
+# Exposes the deterministic test doubles in `testing` to downstream crates, so
+# a backend or an application can unit-test layouts without a renderer.
+testing = []
+
+[dependencies]

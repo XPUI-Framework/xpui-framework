@@ -1,0 +1,6 @@
+rect        (0,137 480x663) scrim
+rect        (0,0 480x137) filled background
+header      title="Test" subtitle=-
+text        (16,60) "Aa" font=1003 bold
+slider      (16,85 448x40) 40/100
+rect        (0,135 480x2) filled
