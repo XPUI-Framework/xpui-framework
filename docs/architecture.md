@@ -8,7 +8,7 @@ happens between them, in order. It is short because the design is small.
 | | |
 |---|---|
 | **Your screen** | A struct with `body()` and `update()`. Holds state; touches nothing else. |
-| **The runtime** | [`src/screen/mod.rs`](../src/screen/mod.rs). Drives one screen. |
+| **The runtime** | [`src/screen/runtime/`](../src/screen/runtime/mod.rs). Drives one screen. |
 | **The view tree** | Whatever `body()` returned. Thrown away after each use. |
 | **The host** | A backend. Paints, measures, reads input. |
 
