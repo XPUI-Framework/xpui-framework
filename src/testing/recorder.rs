@@ -8,10 +8,15 @@
 //! where a control ends up, *and* a record of what was drawn, because that is
 //! how a test finds the control it wants to tap. This wraps one to get the other.
 //!
-//! ```rust,ignore
-//! let backend = Backend::leak_for_board(Framebuffer::new(296, 128), board, palette);
-//! let recorded = Recorder::wrap(backend);
-//! unsafe { xpui::host::install(recorded) };
+//! ```rust
+//! # use xpui::host::Host;
+//! # use xpui::testing::Recorder;
+//! /// `backend` is the real host, already sized for the panel under test.
+//! fn install_recording<H: Host + 'static>(backend: &'static H) {
+//!     let recorded = Recorder::wrap(backend);
+//!     // Safety: before the first frame, and never concurrently with one.
+//!     unsafe { xpui::host::install(recorded) };
+//! }
 //! ```
 //!
 //! Everything is forwarded. Nothing is answered from the recording, so a screen

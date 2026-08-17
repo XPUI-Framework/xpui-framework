@@ -10,9 +10,12 @@ use crate::view::View;
 /// Spans the width it is given; its height comes from the theme unless
 /// overridden with [`height`](ProgressBar::height).
 ///
-/// ```rust,ignore
-/// ProgressBar::new(page, total)
-/// ProgressBar::percent(72)
+/// ```rust
+/// # use xpui::ProgressBar;
+/// # xpui::testing::install();
+/// # let (page, total) = (12, 340);
+/// ProgressBar::new(page, total);
+/// ProgressBar::percent(72);
 /// ```
 pub struct ProgressBar {
     current: u32,

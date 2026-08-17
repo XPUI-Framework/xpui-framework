@@ -15,10 +15,17 @@ use crate::view::{InputMask, Interactions, Trigger, View};
 /// The theme owns row height, the selection highlight and pagination, so this
 /// looks and behaves exactly like the C++ list screens.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{List, ListRow};
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Light }
+/// # xpui::testing::install();
+/// # let free = "182 KB";
+/// # let _: List<Msg> =
 /// List::new()
 ///     .push(ListRow::new("Frontlight").value("On").on_tap(Msg::Light))
 ///     .push(ListRow::new("Free Heap").value(free))
+/// # ;
 /// ```
 pub struct List<M> {
     rows: Vec<ListRow<M>>,

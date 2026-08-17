@@ -9,9 +9,16 @@ use crate::view::View;
 /// A stack measures spacers only after its fixed children, against just the
 /// leftover space — so a spacer never pushes content past the edge.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{Spacer, Text, VStack, vstack};
+/// # xpui::testing::install();
+/// # let header = Text::new("Storage");
+/// # let body = Text::new("12 books");
+/// # let footer = Text::new("182 KB free");
+/// # let _: VStack<()> =
 /// // pushes the footer to the bottom of the band
 /// vstack![12; header, body, Spacer::new(), footer]
+/// # ;
 /// ```
 #[derive(Default)]
 pub struct Spacer {

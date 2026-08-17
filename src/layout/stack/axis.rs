@@ -12,10 +12,17 @@ use crate::geometry::{Point, Size};
 /// almost always wants; `Start` stays the default so existing left-aligned
 /// column layouts are unaffected.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{Alignment, HStack, Icon, IconRef, Spacer, Text, hstack};
+/// # xpui::testing::install();
+/// # let gap = 8;
+/// # let label = Text::new("Frontlight");
+/// # let icon = Icon::new(IconRef::new(0)).size(32);
+/// # let _: HStack<()> =
 /// // a 32px icon beside a line of text needs centring, or the text
 /// // hangs off the top of the row
 /// hstack![gap; label, Spacer::new(), icon].align(Alignment::Center)
+/// # ;
 /// ```
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub enum Alignment {

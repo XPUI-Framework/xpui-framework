@@ -18,10 +18,13 @@ use crate::view::View;
 /// out and kept for [`View::size`]. Estimating it instead drifts from what is
 /// painted and pushes content past the bottom of the screen.
 ///
-/// ```rust,ignore
-/// Text::new("Battery")
-/// Text::new(format!("{percent}%")).bold()
-/// Text::new(label).font(Font::ui_small())
+/// ```rust
+/// # use xpui::{Font, Text};
+/// # xpui::testing::install();
+/// # let (percent, label) = (72, "Battery");
+/// Text::new("Battery");
+/// Text::new(format!("{percent}%")).bold();
+/// Text::new(label).font(Font::ui_small());
 /// ```
 pub struct Text {
     content: String,

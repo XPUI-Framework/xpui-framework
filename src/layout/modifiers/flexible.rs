@@ -8,9 +8,15 @@ use crate::view::{Interactions, View};
 /// A slider between fixed `-` and `+` glyphs needs this: without it the slider
 /// reports its natural size and the row does not fill the width.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{HStack, Modifiers, Slider, Text, hstack};
+/// # xpui::testing::install();
+/// # let (gap, v) = (8, 40);
+/// # let (minus, plus) = (Text::new("-"), Text::new("+"));
+/// # let _: HStack<()> =
 /// // the slider takes whatever the -/+ glyphs leave
 /// hstack![gap; minus, Slider::new(v, 100).flexible(), plus]
+/// # ;
 /// ```
 pub struct Flexible<V> {
     child: V,

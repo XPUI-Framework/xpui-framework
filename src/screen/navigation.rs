@@ -19,10 +19,15 @@ use crate::view::{Interactions, View};
 /// slot. Blanking three of them left a five-button device showing only Back,
 /// with no sign that the other buttons did anything.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{Hint, NavigationScreen, Text, vstack};
+/// # xpui::testing::install();
+/// # let (name, value) = ("Free space", "182 KB");
+/// # let _: NavigationScreen<()> =
 /// NavigationScreen::new(vstack![20; Text::new(name), Text::new(value)])
 ///     .title("Storage")                       // else the screen's own title
 ///     .hints(Hint::Standard, Hint::text("Save"), Hint::None, Hint::None)
+/// # ;
 /// ```
 pub struct NavigationScreen<M> {
     content: Box<dyn View<M>>,

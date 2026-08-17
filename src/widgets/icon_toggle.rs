@@ -18,8 +18,19 @@ use crate::widgets::Icon;
 /// past. Give the screen an [`on_key`](crate::Screen::on_key) mapping if the
 /// same action should also be reachable by button.
 ///
-/// ```rust,ignore
-/// IconToggle::new(IconRole::Sun, self.light_on).on_change(Msg::Light)
+/// ```rust
+/// # use xpui::{IconRef, IconToggle};
+/// # /// What a backend publishes; the framework only ever sees the number.
+/// # #[derive(Copy, Clone)]
+/// # enum Glyph { Sun }
+/// # impl From<Glyph> for IconRef {
+/// #     fn from(glyph: Glyph) -> IconRef { IconRef::new(glyph as u16) }
+/// # }
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Light(bool) }
+/// # xpui::testing::install();
+/// # let light_on = true;
+/// IconToggle::new(Glyph::Sun, light_on).on_change(Msg::Light);
 /// ```
 pub struct IconToggle<M> {
     control: Frame<Icon>,

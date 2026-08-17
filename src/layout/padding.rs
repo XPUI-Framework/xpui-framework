@@ -7,9 +7,17 @@ use crate::view::{Interactions, View};
 
 /// Surrounds a child with empty space.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{Padding, Text};
+/// # xpui::testing::install();
+/// # let content = Text::new("Body");
+/// # let _: Padding<()> =
 /// Padding::all(content, 12)
+/// # ;
+/// # let content = Text::new("Body");
+/// # let _: Padding<()> =
 /// Padding::symmetric(content, 16, 8)
+/// # ;
 /// ```
 pub struct Padding<M> {
     child: Box<dyn View<M>>,

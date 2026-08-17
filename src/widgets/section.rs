@@ -13,8 +13,14 @@ use crate::view::{Interactions, View};
 /// section headings elsewhere in the firmware rather than being a bold `Text`
 /// that merely looks similar.
 ///
-/// ```rust,ignore
-/// Section::new(heading, list)
+/// ```rust
+/// # use xpui::{List, ListRow, Section};
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Light }
+/// # xpui::testing::install();
+/// # let heading = "Display";
+/// # let list = List::new().push(ListRow::new("Frontlight").on_tap(Msg::Light));
+/// Section::new(heading, list);
 /// ```
 pub struct Section<M> {
     title: String,

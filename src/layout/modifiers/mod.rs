@@ -3,9 +3,17 @@
 //! All are reached through the [`Modifiers`] extension trait rather than
 //! constructed directly, so a tree reads as a chain:
 //!
-//! ```rust,ignore
-//! Text::new("-").frame(row, row).on_tap(Msg::Decrement)
-//! Slider::new(value, 100).flexible()
+//! ```rust
+//! # use xpui::{Modifiers, Slider, Text};
+//! # #[derive(Clone, Copy)]
+//! # enum Msg { Decrement }
+//! # xpui::testing::install();
+//! # let (row, value) = (44, 40);
+//! // `Text` and `Slider` are views for more than one message type, so a chain
+//! // starting at one has to say which is meant. Inside a tree it never comes
+//! // up: the stack knows its own and passes it down.
+//! Modifiers::<Msg>::frame(Text::new("-"), row, row).on_tap(Msg::Decrement);
+//! Slider::<Msg>::new(value, 100).flexible();
 //! ```
 
 mod flexible;

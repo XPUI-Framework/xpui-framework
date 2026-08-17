@@ -1,9 +1,22 @@
 //! Driving a screen the way a person does.
 //!
-//! ```rust,ignore
-//! let mut ui = Ui::new(Menu::new(), backend);
-//! ui.tap_text("Lists");
-//! assert!(ui.visible_text().iter().any(|line| line == "Rows, subtitles, values"));
+//! ```rust
+//! # use xpui::host::Host;
+//! # use xpui::testing::{Drive, Ui};
+//! # use xpui::{NavigationScreen, Screen, Text, View, vstack};
+//! # struct Menu;
+//! # impl Menu { fn new() -> Menu { Menu } }
+//! # impl Screen for Menu {
+//! #     type Message = ();
+//! #     fn body(&self) -> impl View<()> { NavigationScreen::new(vstack![0; Text::new("Lists")]) }
+//! #     fn update(&mut self, _message: ()) {}
+//! # }
+//! /// `backend` is whatever host the test drives — see [`Drive`].
+//! fn opens_the_list_screen<H: Host + Drive + 'static>(backend: &'static H) {
+//!     let mut ui = Ui::new(Menu::new(), backend);
+//!     ui.tap_text("Lists");
+//!     assert!(ui.visible_text().iter().any(|line| line == "Rows, subtitles, values"));
+//! }
 //! ```
 //!
 //! Everything goes through [`App`] and the installed host, because that is

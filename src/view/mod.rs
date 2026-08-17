@@ -147,8 +147,23 @@ pub trait ViewExt<M>: View<M> + Sized {
     /// This is what lets a component own its state and its own message enum
     /// while still composing into a screen:
     ///
-    /// ```rust,ignore
-    /// vstack![ self.units.view(free).map(Msg::Units) ]
+    /// ```rust
+    /// # use xpui::{Modifiers, Text, VStack, View, ViewExt, vstack};
+    /// # #[derive(Clone, Copy)]
+    /// # enum UnitMsg { Cycle }
+    /// # #[derive(Clone, Copy)]
+    /// # enum Msg { Units(UnitMsg) }
+    /// # struct Units;
+    /// # impl Units {
+    /// #     fn view(&self, _bytes: i32) -> impl View<UnitMsg> + use<> {
+    /// #         Text::new("1 KiB").on_tap(UnitMsg::Cycle)
+    /// #     }
+    /// # }
+    /// # xpui::testing::install();
+    /// # let (units, free) = (Units, 1024);
+    /// # let _: VStack<Msg> =
+    /// vstack![8; units.view(free).map(Msg::Units)]
+    /// # ;
     /// ```
     fn map<P>(self, convert: fn(M) -> P) -> Mapped<Self, M, P> {
         Mapped {

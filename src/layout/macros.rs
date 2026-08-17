@@ -7,12 +7,16 @@
 
 /// A vertical stack.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{Spacer, Text, VStack, vstack};
+/// # xpui::testing::install();
+/// # let _: VStack<()> =
 /// vstack![20;
 ///     Text::new("Title").bold(),
 ///     Text::new("Body"),
 ///     Spacer::new(),
 /// ]
+/// # ;
 /// ```
 ///
 /// Equivalent to `VStack::new(20).push(..).push(..).push(..)`.
@@ -28,8 +32,12 @@ macro_rules! vstack {
 
 /// A horizontal stack. Same shape as [`vstack!`].
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{HStack, Spacer, Text, hstack};
+/// # xpui::testing::install();
+/// # let _: HStack<()> =
 /// hstack![8; Text::new("Battery"), Spacer::new(), Text::new("72%")]
+/// # ;
 /// ```
 #[macro_export]
 macro_rules! hstack {
@@ -43,11 +51,16 @@ macro_rules! hstack {
 
 /// A themed list.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{List, ListRow, list};
+/// # xpui::testing::install();
+/// # let selected = 0;
+/// # let _: List<()> =
 /// list![selected;
 ///     ListRow::new("Wi-Fi").value("On"),
 ///     ListRow::new("Bluetooth").value("Off"),
 /// ]
+/// # ;
 /// ```
 #[macro_export]
 macro_rules! list {

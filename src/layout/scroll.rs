@@ -13,11 +13,20 @@ use crate::view::{InputMask, Interactions, View};
 /// runtime scrolls to keep whatever holds focus on screen, so a screen never
 /// tracks a scroll position itself.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{List, ListRow, NavigationScreen, ScrollView, Section, Text, vstack};
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Row(usize) }
+/// # xpui::testing::install();
+/// # let memory_rows = Text::new("182 KB free");
+/// # let long_list =
+/// #     List::new().extend((0..40).map(|row| ListRow::new("Setting").on_tap(Msg::Row(row))));
+/// # let _: NavigationScreen<Msg> =
 /// NavigationScreen::new(ScrollView::new(vstack![8;
-///     Section::new("Memory", self.memory_rows()),
-///     Section::new("Scrolling", self.long_list()),
+///     Section::new("Memory", memory_rows),
+///     Section::new("Scrolling", long_list),
 /// ]))
+/// # ;
 /// ```
 ///
 /// Content is drawn under a clip, so what overflows is discarded rather than

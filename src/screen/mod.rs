@@ -20,23 +20,26 @@ pub use runtime::Runtime;
 
 /// A screen.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{Screen, Slider, Toggle, View, vstack};
+/// # struct Panel { on: bool, brightness: i32 }
 /// #[derive(Clone, Copy)]
-/// enum Msg { Toggle, Brightness(i32) }
+/// enum Msg { Toggle(bool), Brightness(i32) }
 ///
 /// impl Screen for Panel {
 ///     type Message = Msg;
 ///
 ///     fn body(&self) -> impl View<Msg> {
-///         vstack![
-///             Toggle::new("Frontlight", self.on).on_change(|_| Msg::Toggle),
+///         vstack![12;
+///             Toggle::new("Frontlight", self.on, "On", "Off").on_change(Msg::Toggle),
 ///             Slider::new(self.brightness, 100).on_change(Msg::Brightness),
 ///         ]
 ///     }
 ///
 ///     fn update(&mut self, message: Msg) {
 ///         match message {
-///             Msg::Toggle => self.on = !self.on,
+///             // The state being moved to, so this is never `!self.on`.
+///             Msg::Toggle(next) => self.on = next,
 ///             Msg::Brightness(v) => self.brightness = v,
 ///         }
 ///     }

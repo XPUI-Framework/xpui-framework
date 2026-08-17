@@ -13,10 +13,15 @@ use crate::widgets::{Slider, Text};
 /// expects, and the framework widens anything smaller to the theme's minimum
 /// touch target — so a one-character `-` is still comfortably hittable.
 ///
-/// ```rust,ignore
-/// Stepper::new(self.brightness)
-///     .on_change(Msg::Brightness)   // dragged or tapped on the track
-///     .on_step(Msg::BrightnessStep) // -1 or +1 from the end glyphs
+/// ```rust
+/// # use xpui::Stepper;
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Brightness(i32), BrightnessStep(i32) }
+/// # xpui::testing::install();
+/// # let brightness = 40;
+/// Stepper::new(brightness)
+///     .on_change(Msg::Brightness)    // dragged or tapped on the track
+///     .on_step(Msg::BrightnessStep); // -1 or +1 from the end glyphs
 /// ```
 pub struct Stepper<M> {
     value: i32,

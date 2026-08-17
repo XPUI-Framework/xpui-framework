@@ -7,9 +7,15 @@
 //!
 //! There are two installable things, because they answer to different owners:
 //!
-//! ```rust,ignore
-//! xpui::host::install(&BACKEND);          // what paints
-//! xpui::host::install_navigator(&SHELL);  // what owns the screen stack
+//! ```rust
+//! # use xpui::testing::TestHost;
+//! # static BACKEND: TestHost = TestHost;
+//! # static SHELL: TestHost = TestHost;
+//! // Safety: once, before the first frame, and never concurrently with one.
+//! unsafe {
+//!     xpui::host::install(&BACKEND);          // what paints
+//!     xpui::host::install_navigator(&SHELL);  // what owns the screen stack
+//! }
 //! ```
 //!
 //! A backend crate supplies the first and knows nothing about the second.

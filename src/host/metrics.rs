@@ -57,9 +57,12 @@ pub trait TextMetrics {
 
 /// A font plus the style it is drawn in, as widgets reach for it.
 ///
-/// ```rust,ignore
-/// Text::new("Battery").font(Font::ui_small())
-/// Text::new(value).font(Font::ui().bold())
+/// ```rust
+/// # use xpui::{Font, Text};
+/// # xpui::testing::install();
+/// # let value = "72%";
+/// Text::new("Battery").font(Font::ui_small());
+/// Text::new(value).font(Font::ui().bold());
 /// ```
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Font {

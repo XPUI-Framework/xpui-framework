@@ -20,10 +20,15 @@ use crate::view::{InputMask, Interactions, Scrim, Trigger, View};
 /// The screen owns whether it is open — hold that in your own state and include
 /// the dialog in `body()` while it is true.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::Modal;
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Chose(usize) }
+/// # xpui::testing::install();
+/// # let current = 1;
 /// Modal::picker("Refresh Frequency", ["1 page", "5 pages", "10 pages"])
-///     .selected(self.current)
-///     .on_select(Msg::Chose)
+///     .selected(current)
+///     .on_select(Msg::Chose);
 /// ```
 pub struct Modal<M> {
     title: String,

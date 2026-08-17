@@ -9,10 +9,23 @@ use crate::view::{Interactions, View};
 /// row-height square. Framing it keeps the glyph where the eye expects it, and
 /// gives [`Tappable`] a sensible rect to grow from.
 ///
-/// ```rust,ignore
-/// Text::new("-").frame(row_height, row_height)   // a square tap zone
-/// Icon::new(IconRole::Sun).frame(0, row_height)  // 0 keeps that axis natural
+/// ```rust
+/// # use xpui::{Icon, IconRef, Modifiers, Text};
+/// # /// What a backend publishes; the framework only ever sees the number.
+/// # #[derive(Copy, Clone)]
+/// # enum Glyph { Sun }
+/// # impl From<Glyph> for IconRef {
+/// #     fn from(glyph: Glyph) -> IconRef { IconRef::new(glyph as u16) }
+/// # }
+/// # xpui::testing::install();
+/// # let row_height = 44;
+/// Modifiers::<()>::frame(Text::new("-"), row_height, row_height); // a square tap zone
+/// Modifiers::<()>::frame(Icon::new(Glyph::Sun), 0, row_height);   // 0 keeps that axis natural
 /// ```
+///
+/// `Text` and `Icon` are views for *every* message type, so a frame built from
+/// a bare one has to name which is meant. Inside a tree it never comes up: the
+/// stack supplies the type, and this reads as `child.frame(w, h)`.
 pub struct Frame<V> {
     child: V,
     width: Option<i32>,

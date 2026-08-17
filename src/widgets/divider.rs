@@ -6,8 +6,12 @@ use crate::view::View;
 
 /// A one-pixel line spanning the width it is given, for separating sections.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{Divider, Text, VStack, vstack};
+/// # xpui::testing::install();
+/// # let _: VStack<()> =
 /// vstack![8; Text::new("Wi-Fi"), Divider::new(), Text::new("Bluetooth")]
+/// # ;
 /// ```
 pub struct Divider {
     measured: Size,

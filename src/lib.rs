@@ -3,12 +3,17 @@
 //! Screens are described as a tree of [`View`]s and painted through whatever
 //! host the application installs. The API is deliberately SwiftUI-shaped:
 //!
-//! ```rust,ignore
+//! ```rust
+//! # use xpui::{NavigationScreen, Spacer, Text, vstack};
+//! # xpui::testing::install();
+//! # let version = "1.4.2";
+//! # let _: NavigationScreen<()> =
 //! NavigationScreen::new(vstack![20;
 //!     Text::new("Firmware"),
 //!     Text::new(version).bold(),
 //!     Spacer::new(),
 //! ])
+//! # ;
 //! ```
 //!
 //! See this crate's `README.md` for a walkthrough, and `docs/architecture.md`

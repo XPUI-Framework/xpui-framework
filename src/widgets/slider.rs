@@ -7,11 +7,19 @@ use crate::view::{InputMask, Interactions, Trigger, View};
 /// A horizontal slider showing `value` out of `max`.
 ///
 /// Stateless by design: it draws the value it is given and never changes it.
-/// The screen owns the value and adjusts it in `loop_`, which is how the
-/// firmware's own interval and frontlight screens work.
+/// The screen owns the value and adjusts it in
+/// [`update`](crate::Screen::update), which is how the firmware's own interval
+/// and frontlight screens work.
 ///
-/// ```rust,ignore
-/// Slider::new(self.minutes - MIN, MAX - MIN)
+/// ```rust
+/// # use xpui::Slider;
+/// # xpui::testing::install();
+/// # const MIN: i32 = 5;
+/// # const MAX: i32 = 60;
+/// # let minutes = 15;
+/// # let _: Slider<()> =
+/// Slider::new(minutes - MIN, MAX - MIN)
+/// # ;
 /// ```
 ///
 /// Give it [`on_change`](Slider::on_change) and the framework converts a touch
@@ -47,8 +55,13 @@ impl<M> Slider<M> {
     /// The framework converts the touch position, so the screen never sees
     /// geometry:
     ///
-    /// ```rust,ignore
-    /// Slider::new(self.brightness, 100).on_change(Msg::Brightness)
+    /// ```rust
+    /// # use xpui::Slider;
+    /// # #[derive(Clone, Copy)]
+    /// # enum Msg { Brightness(i32) }
+    /// # xpui::testing::install();
+    /// # let brightness = 40;
+    /// Slider::new(brightness, 100).on_change(Msg::Brightness);
     /// ```
     pub fn on_change(mut self, make: fn(i32) -> M) -> Self {
         self.make = Some(make);

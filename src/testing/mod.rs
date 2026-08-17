@@ -9,7 +9,13 @@
 //! onto that same log, so "was a list drawn" and "what did the frame look
 //! like" can never disagree.
 //!
-//! ```rust,ignore
+//! `no_run` because the last line writes a golden file when one does not exist
+//! yet, which a documentation build has no business doing:
+//!
+//! ```rust,no_run
+//! # use xpui::{Point, Text, VStack, View, testing, vstack};
+//! # let mut view: VStack<()> =
+//! #     vstack![8; Text::new("Wi-Fi"), Text::new("Bluetooth"), Text::new("Storage")];
 //! testing::install();
 //! testing::reset();
 //! view.measure(testing::screen());

@@ -4,7 +4,21 @@
 //! needs nothing here. Everything else — a desktop simulator, a bare-metal
 //! Rust binary, the example gallery — has no such owner, and this is it.
 //!
-//! ```rust,ignore
+//! `no_run` because the loop only ends when the last screen finishes, and this
+//! one never does:
+//!
+//! ```rust,no_run
+//! # use xpui::{App, NavigationScreen, Screen, Text, View, vstack};
+//! # struct MainMenu;
+//! # impl MainMenu { fn new() -> MainMenu { MainMenu } }
+//! # impl Screen for MainMenu {
+//! #     type Message = ();
+//! #     fn body(&self) -> impl View<()> {
+//! #         NavigationScreen::new(vstack![0; Text::new("Main menu")])
+//! #     }
+//! #     fn update(&mut self, _message: ()) {}
+//! # }
+//! # xpui::testing::install();
 //! let mut app = App::new(MainMenu::new());
 //! while app.is_running() {
 //!     app.tick();          // input, then any navigation it asked for

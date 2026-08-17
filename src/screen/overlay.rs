@@ -21,10 +21,19 @@ const EDGE_THICKNESS: i32 = 2;
 /// measuring gives the dismiss threshold: a touch at or below
 /// `panel.size().height` landed on the content showing through.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{OverlayPanel, Scrim, Slider, vstack};
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Brightness(i32), Warmth(i32), Dismiss }
+/// # xpui::testing::install();
+/// # let gap = 12;
+/// # let brightness = Slider::new(40, 100).on_change(Msg::Brightness);
+/// # let warmth = Slider::new(20, 100).on_change(Msg::Warmth);
+/// # let _: OverlayPanel<Msg> =
 /// OverlayPanel::new(vstack![gap; brightness, warmth])
 ///     .scrim(Scrim::Dim)            // push the screen below into the background
 ///     .on_scrim_tap(Msg::Dismiss)   // a touch down there closes the panel
+/// # ;
 /// ```
 pub struct OverlayPanel<M> {
     content: Box<dyn View<M>>,
@@ -68,8 +77,13 @@ impl<M: Clone + 'static> OverlayPanel<M> {
     /// Dims the screen showing below the panel, so the panel reads as the
     /// foreground without its context being repainted or hidden.
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # use xpui::{OverlayPanel, Scrim, Text};
+    /// # xpui::testing::install();
+    /// # let content = Text::new("Frontlight");
+    /// # let _: OverlayPanel<()> =
     /// OverlayPanel::new(content).scrim(Scrim::Dim)
+    /// # ;
     /// ```
     pub fn scrim(mut self, scrim: Scrim) -> Self {
         self.scrim = scrim;

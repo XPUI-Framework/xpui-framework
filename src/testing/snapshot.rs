@@ -11,9 +11,23 @@
 //! Pixels are the other half of the story and belong to whichever backend put
 //! them there; a lossy rendering of a framebuffer does not belong here.
 //!
-//! ```rust,ignore
+//! `no_run` because this writes the golden when one does not exist yet, which
+//! a documentation build has no business doing:
+//!
+//! ```rust,no_run
+//! # use xpui::{App, NavigationScreen, Screen, Text, View, testing, vstack};
+//! # struct Settings;
+//! # impl Screen for Settings {
+//! #     type Message = ();
+//! #     fn body(&self) -> impl View<()> {
+//! #         NavigationScreen::new(vstack![0; Text::new("Settings")])
+//! #     }
+//! #     fn update(&mut self, _message: ()) {}
+//! # }
+//! # testing::install();
+//! # let mut app = App::new(Settings);
 //! testing::reset();
-//! screen.render();
+//! app.render();
 //! testing::assert_snapshot("settings_screen");
 //! ```
 //!

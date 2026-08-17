@@ -42,8 +42,13 @@ impl<M> ListRow<M> {
     /// Both words are supplied by the caller because they vary by setting
     /// (On/Off, Show/Hide) and only the caller can translate them.
     ///
-    /// ```rust,ignore
+    /// ```rust
+    /// # use xpui::ListRow;
+    /// # xpui::testing::install();
+    /// # let on = true;
+    /// # let _: ListRow<()> =
     /// ListRow::toggle("Hyphenation", on, "On", "Off")
+    /// # ;
     /// ```
     pub fn toggle(
         title: impl Into<String>,

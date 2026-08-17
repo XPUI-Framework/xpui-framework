@@ -11,10 +11,16 @@ use crate::view::{InputMask, Interactions, Trigger, View};
 /// impossible thing to hit with a finger, so the target is widened around it —
 /// the same reasoning as `ensureMinTouchRect` in the C++ SDK.
 ///
-/// ```rust,ignore
-/// Text::new("-").on_tap(Msg::Decrement)
-/// row.on_long_press(Msg::ShowContextMenu)
-/// icon.on_touch(Msg::Toggle)   // touch only, stays out of the focus order
+/// ```rust
+/// # use xpui::{Icon, IconRef, Modifiers, Text};
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Decrement, ShowContextMenu, Toggle }
+/// # xpui::testing::install();
+/// # let row = Text::new("Wi-Fi");
+/// # let icon = Icon::new(IconRef::new(0));
+/// Text::new("-").on_tap(Msg::Decrement);
+/// row.on_long_press(Msg::ShowContextMenu);
+/// icon.on_touch(Msg::Toggle);   // touch only, stays out of the focus order
 /// ```
 pub struct Tappable<V, M> {
     child: V,

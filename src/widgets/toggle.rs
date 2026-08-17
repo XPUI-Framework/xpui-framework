@@ -13,9 +13,14 @@ use crate::widgets::{List, ListRow};
 /// theme's list, so it is identical whether it stands alone or sits in a
 /// [`List`].
 ///
-/// ```rust,ignore
-/// Toggle::new("Hyphenation", self.on, "On", "Off")
-///     .on_change(Msg::Hyphenation)
+/// ```rust
+/// # use xpui::Toggle;
+/// # #[derive(Clone, Copy)]
+/// # enum Msg { Hyphenation(bool) }
+/// # xpui::testing::install();
+/// # let on = false;
+/// Toggle::new("Hyphenation", on, "On", "Off")
+///     .on_change(Msg::Hyphenation);
 /// ```
 pub struct Toggle<M> {
     list: List<M>,

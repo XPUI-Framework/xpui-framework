@@ -148,11 +148,15 @@ impl<M> Stack<M> {
 
 /// Lays children out top to bottom.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use xpui::{Spacer, Text, VStack};
+/// # xpui::testing::install();
+/// # let _: VStack<()> =
 /// VStack::new(20)
-///     .push(Text::new("Title").boxed())
-///     .push(Spacer::new().boxed())
-///     .push(Text::new("Footer").boxed())
+///     .push(Text::new("Title"))
+///     .push(Spacer::new())
+///     .push(Text::new("Footer"))
+/// # ;
 /// ```
 pub struct VStack<M>(Stack<M>);
 

@@ -17,8 +17,11 @@ use crate::view::View;
 /// copying: the firmware's own assets are `static const` arrays in flash, and
 /// copying a 1.8 KB logo onto a 200 KB heap to draw it would be absurd.
 ///
-/// ```rust,ignore
-/// Image::new(LOGO_120, 120, 120)
+/// ```rust
+/// # use xpui::Image;
+/// # xpui::testing::install();
+/// # static LOGO_120: [u8; 15 * 120] = [0; 15 * 120];
+/// Image::new(&LOGO_120, 120, 120);
 /// ```
 pub struct Image {
     data: &'static [u8],
@@ -77,9 +80,18 @@ impl<M> View<M> for Image {
 /// not. Sizes come from the registry, so an icon always occupies its natural
 /// size.
 ///
-/// ```rust,ignore
-/// Icon::new(IconRole::Sun).filled(self.light_on)
-/// Icon::new(IconRole::Folder).size(24)
+/// ```rust
+/// # use xpui::{Icon, IconRef};
+/// # /// What a backend publishes; the framework only ever sees the number.
+/// # #[derive(Copy, Clone)]
+/// # enum Glyph { Sun, Folder }
+/// # impl From<Glyph> for IconRef {
+/// #     fn from(glyph: Glyph) -> IconRef { IconRef::new(glyph as u16) }
+/// # }
+/// # xpui::testing::install();
+/// # let light_on = true;
+/// Icon::new(Glyph::Sun).filled(light_on);
+/// Icon::new(Glyph::Folder).size(24);
 /// ```
 pub struct Icon {
     spec: IconRef,
