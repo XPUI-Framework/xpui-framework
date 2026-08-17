@@ -47,10 +47,15 @@ pub trait Navigator: Sync {
     /// Pushes a screen on top of this one.
     ///
     /// Returns `None` when the navigator took it, and `Some(screen)` handing
-    /// it back when it cannot — a host whose stack lives in C++ has no way to
-    /// drive a Rust screen it was never told about. Returning it rather than
-    /// dropping it means a caller can tell the difference; silently
-    /// swallowing the screen would look identical to working.
+    /// it back when it cannot. Returning it rather than dropping it means a
+    /// caller can tell the difference; silently swallowing the screen would
+    /// look identical to working.
+    ///
+    /// A navigator whose stack lives outside Rust **can** take one: the screen
+    /// is a trait object, so it crosses as an opaque handle that the host only
+    /// ever hands back. What a refusal means is that this particular navigator
+    /// has nowhere to put it — a single-screen host, or a stack that already
+    /// has a push queued for this frame.
     ///
     /// Same re-entrancy rule as [`finish`](Navigator::finish): record, then
     /// act after the frame.
