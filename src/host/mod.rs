@@ -11,7 +11,7 @@
 //! # use xpui::testing::TestHost;
 //! # static BACKEND: TestHost = TestHost;
 //! # static SHELL: TestHost = TestHost;
-//! // Safety: once, before the first frame, and never concurrently with one.
+//! // Safety: before the first frame, and never concurrently with one.
 //! unsafe {
 //!     xpui::host::install(&BACKEND);          // what paints
 //!     xpui::host::install_navigator(&SHELL);  // what owns the screen stack
@@ -42,18 +42,26 @@ impl<T> Host for T where T: Canvas + TextMetrics + Chrome + InputSource + Clock 
 
 /// The installed host.
 ///
-/// Written once before the first frame and only read afterwards. A plain static
-/// rather than a lock: the two callers are separate FreeRTOS tasks, but neither
-/// writes, and taking a lock on every text measurement would cost more than the
-/// whole layout pass.
+/// Written between frames and only read inside them. A plain static rather
+/// than a lock: the readers may be separate FreeRTOS tasks, none of them
+/// writes, and taking a lock on every text measurement would cost more than
+/// the whole layout pass.
 static mut HOST: Option<&'static dyn Host> = None;
 
-/// Installs the host. Call once, before any view is measured or drawn.
+/// Installs the host. Call before any view is measured or drawn.
+///
+/// Installing again replaces it, which is how a desktop host shows the same
+/// screens on a different panel: another panel size is another backend. The
+/// host it replaces is a `&'static` and stays valid, so nothing that read the
+/// old one is left dangling.
 ///
 /// # Safety
-/// Must be called before the first `measure`/`render`/`interactions`, and never
-/// concurrently with them. In practice that means from the activity's entry
-/// point, on the main task, before the render task is started.
+/// One thread, and no frame in flight — no `measure`, `render` or
+/// `interactions` running, here or on any other task. **The write has no
+/// synchronisation, so overlapping it with a read is a data race: undefined
+/// behaviour, not a stale pointer you could notice.** In practice that means
+/// from the activity's entry point before the render task is started, or
+/// between frames on the loop's own thread.
 pub unsafe fn install(host: &'static dyn Host) {
     unsafe {
         HOST = Some(host);

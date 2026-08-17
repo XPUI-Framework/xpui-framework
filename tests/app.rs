@@ -374,3 +374,49 @@ fn moving_the_focus_repaints() {
          appear dead: the selection moves internally and is never drawn"
     );
 }
+
+// -- a screen that watches the clock ---------------------------------------
+
+/// Counts the frames it was told about.
+struct Ticker {
+    frames: std::rc::Rc<std::cell::Cell<u32>>,
+}
+
+impl Screen for Ticker {
+    type Message = ();
+
+    fn body(&self) -> impl View<Self::Message> {
+        NavigationScreen::new(vstack![0; Text::new("tick")])
+    }
+
+    fn update(&mut self, _message: Self::Message) {}
+
+    fn tick(&mut self) {
+        self.frames.set(self.frames.get() + 1);
+    }
+}
+
+/// A screen hears about frames where nothing happened.
+///
+/// That is the whole point of the hook: an action held back to see whether a
+/// second press is coming has no other way to learn that the wait is over. A
+/// version called only alongside input would look correct and never fire.
+#[test]
+fn a_screen_is_told_about_quiet_frames() {
+    let _guard = serial();
+    let frames = std::rc::Rc::new(std::cell::Cell::new(0));
+    let mut app = App::new(Ticker {
+        frames: frames.clone(),
+    });
+
+    for _ in 0..5 {
+        app.tick();
+    }
+
+    assert_eq!(
+        frames.get(),
+        5,
+        "no key was pressed in any of those frames, and the screen still has to \
+         hear that time passed"
+    );
+}

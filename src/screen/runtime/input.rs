@@ -58,6 +58,10 @@ impl<S: Screen> Runtime<S> {
 
     /// One frame of input, in priority order. See the module docs.
     pub(in crate::screen) fn loop_(&mut self) {
+        // Before anything else, and on every frame including the quiet ones:
+        // a screen holding a deadline has to hear that one passed.
+        self.screen.tick();
+
         // -- touch ----------------------------------------------------------
         if self.painted && Input::has_touch() {
             if let Some(point) = Input::touch_held() {

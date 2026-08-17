@@ -112,6 +112,21 @@ pub trait Screen {
         None
     }
 
+    /// A frame happened.
+    ///
+    /// Called once per frame, before any input is considered, and on frames
+    /// where nothing arrived at all — which is the point. A screen with a
+    /// deadline has nowhere else to notice that it passed: a countdown, an
+    /// auto-refresh, an action held back to see whether a second press is
+    /// coming.
+    ///
+    /// It takes no argument on purpose. A screen that wants the time asks the
+    /// clock; passing it in would make every screen that ignores it carry a
+    /// parameter, and would fix the units here rather than at the host.
+    ///
+    /// Ask for a repaint if something changed. Nothing else will.
+    fn tick(&mut self) {}
+
     fn on_enter(&mut self) {}
 
     fn on_exit(&mut self) {}
