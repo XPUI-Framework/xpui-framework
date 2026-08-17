@@ -142,10 +142,17 @@ impl<S: Screen> Runtime<S> {
                     self.dispatch(message);
                 }
             }
-            Button::Up | Button::Down => {
+            // The page pair. On a reader these turn pages; everywhere else they
+            // are the second way to walk a list, which is what the devices with
+            // only two side keys rely on.
+            Button::Up | Button::Down | Button::PageBack | Button::PageForward => {
                 let interactions = self.collect_settled();
                 let count = interactions.focusable_count();
-                let delta = if key == Button::Up { -1 } else { 1 };
+                let delta = if matches!(key, Button::Up | Button::PageBack) {
+                    -1
+                } else {
+                    1
+                };
                 if self.move_focus(delta, count) || self.scroll_by(delta, &interactions) {
                     request_update();
                 }
@@ -153,10 +160,23 @@ impl<S: Screen> Runtime<S> {
             Button::Left | Button::Right => {
                 // Nudge whatever holds focus, so one pair of keys drives every
                 // adjustable control instead of the screen wiring them to one.
+                //
+                // When nothing under the focus adjusts, they walk the list
+                // instead. These are the third and fourth keys of a reader's
+                // bottom row, and the firmware labels them Up and Down for
+                // exactly that reason — a screen with no slider on it would
+                // otherwise have two dead keys.
                 let interactions = self.collect_settled();
                 let delta = if key == Button::Left { -1 } else { 1 };
+
                 if let Some(message) = focused_step(&interactions, self.focus, delta) {
                     self.dispatch(message);
+                } else {
+                    let count = interactions.focusable_count();
+                    let step = delta as isize;
+                    if self.move_focus(step, count) || self.scroll_by(step, &interactions) {
+                        request_update();
+                    }
                 }
             }
             Button::Back => finish_screen(),
