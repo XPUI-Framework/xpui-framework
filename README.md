@@ -194,5 +194,6 @@ drop-down that leaves the screen beneath it intact, and can dim it with
 
 - [docs/architecture.md](docs/architecture.md) — how a frame actually runs
 - [docs/writing-a-widget.md](docs/writing-a-widget.md) — adding to the framework
+- [docs/testing.md](docs/testing.md) — the four layers, and driving a screen the way a person does
 - [docs/host.md](docs/host.md) — the contract a backend implements
 - [`crates/backend/`](../backend/) — how a backend fits, and which ones exist

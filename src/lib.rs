@@ -73,6 +73,8 @@ mod guides {
     pub mod host {}
     #[doc = include_str!("../docs/writing-a-widget.md")]
     pub mod writing_a_widget {}
+    #[doc = include_str!("../docs/testing.md")]
+    pub mod testing_guide {}
     #[doc = include_str!("../README.md")]
     pub mod readme {}
     #[doc = include_str!("../../../README.md")]

@@ -83,9 +83,53 @@ them back, sometimes more than once in a frame.
 | `on_key(button)` | `None` | A key, offered **before** the runtime applies its own meaning. Return a message to consume it. |
 | `on_swipe(dir)` | `None` | A swipe, likewise offered first. |
 | `on_background_tap(point)` | `None` | A touch no control claimed. |
+| `tick()` | — | A frame happened. Called once per frame, **before any input is considered and on frames where none arrived**. |
 | `is_overlay()` | `false` | Whether this screen paints over what is already on the panel instead of clearing. |
 | `on_enter()` / `on_exit()` | — | Lifecycle, for work that should not happen in `body()`. |
 | `handle_home_gesture()` | `false` | Return `true` to consume the system home gesture. |
+
+`tick` is where anything depending on *time passing* lives — a countdown, a
+timeout, an auto-refresh, a value that settles a moment after it stops
+changing. Every other method fires because something arrived; this one fires
+because nothing did.
+
+It takes no argument on purpose. A screen that wants the clock asks `millis()`
+and compares; passing the time in would make every screen that ignores it carry
+a parameter, and would fix the units at the trait.
+
+```rust
+use xpui::{Screen, Text, View};
+
+const IDLE_MS: u32 = 30_000;
+
+struct Reader {
+    last_touched: u32,
+    dimmed: bool,
+}
+
+impl Screen for Reader {
+    type Message = ();
+
+    fn tick(&mut self) {
+        // Nothing ever arrives to say a screen has been left alone.
+        if !self.dimmed && xpui::host::millis().wrapping_sub(self.last_touched) > IDLE_MS {
+            self.dimmed = true;
+            xpui::host::request_update();
+        }
+    }
+
+    fn body(&self) -> impl View<()> {
+        Text::new("...")
+    }
+
+    fn update(&mut self, _message: ()) {}
+}
+```
+
+A screen that changes something in `tick` asks for a repaint the same way
+anything else does — the runtime does not assume a tick changed anything, or
+every screen would repaint at frame rate. Only the screen on top ticks; one
+further down the stack is not running.
 
 `title()` returning `None` under a [`NavigationScreen`](#screen-roots) that has
 no title of its own draws an **empty header band**, because that is literally
