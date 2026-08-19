@@ -440,6 +440,174 @@ fn runtime(claims_swipe: bool) -> Runtime<Nav> {
     runtime
 }
 
+// -- editing a value in place -------------------------------------------------
+//
+// A board with four directions and no pair to spare cannot produce Left or
+// Right, so Confirm opens an adjustable control and the keys that walk the list
+// move the value instead. These drive the real `Runtime`, because the mode is
+// entirely about which key means what when.
+
+/// One adjustable control and one ordinary row beneath it.
+struct Dial {
+    value: i32,
+    tapped: usize,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum DialMsg {
+    Set(i32),
+    Step(i32),
+    Tapped,
+}
+
+impl xpui::Screen for Dial {
+    type Message = DialMsg;
+
+    fn body(&self) -> impl View<DialMsg> {
+        vstack![10;
+            Stepper::new(self.value).on_change(DialMsg::Set).on_step(DialMsg::Step),
+            Text::new("a plain row").on_tap(DialMsg::Tapped),
+        ]
+    }
+
+    fn update(&mut self, message: DialMsg) {
+        match message {
+            DialMsg::Set(value) => self.value = value,
+            DialMsg::Step(delta) => self.value += delta,
+            DialMsg::Tapped => self.tapped += 1,
+        }
+    }
+}
+
+fn dial() -> Runtime<Dial> {
+    testing::install();
+    testing::reset();
+    let mut runtime = Runtime::new(Dial {
+        value: 50,
+        tapped: 0,
+    });
+    runtime.render();
+    runtime
+}
+
+/// Presses one key and lets the frame settle, with the clock moving as a real
+/// loop's would.
+fn tap(runtime: &mut Runtime<Dial>, key: Button, now: u32) {
+    testing::set_millis(now);
+    testing::press(key);
+    runtime.loop_();
+    runtime.render();
+}
+
+/// Confirm on something adjustable opens it; on an ordinary row it still fires.
+#[test]
+fn confirm_opens_an_adjustable_control_rather_than_firing_it() {
+    let mut runtime = dial();
+    assert_eq!(runtime.focused_index(), 0, "the stepper holds focus");
+
+    tap(&mut runtime, Button::Confirm, 10);
+    assert_eq!(
+        runtime.screen().value,
+        50,
+        "opening changes nothing by itself"
+    );
+
+    // The proof it opened: Up now moves the value, not the focus.
+    tap(&mut runtime, Button::Up, 20);
+    assert_eq!(runtime.screen().value, 51);
+    assert_eq!(runtime.focused_index(), 0, "and focus stayed put");
+}
+
+/// Up raises and Down lowers — the opposite of what they do in a list.
+#[test]
+fn while_editing_up_raises_and_down_lowers() {
+    let mut runtime = dial();
+    tap(&mut runtime, Button::Confirm, 10);
+
+    tap(&mut runtime, Button::Up, 20);
+    tap(&mut runtime, Button::Up, 30);
+    assert_eq!(runtime.screen().value, 52, "Up walks the number upwards");
+
+    tap(&mut runtime, Button::Down, 40);
+    assert_eq!(runtime.screen().value, 51, "and Down walks it back");
+}
+
+/// Confirm leaves, keeping what the value now reads.
+#[test]
+fn confirm_keeps_the_value_and_closes_the_edit() {
+    let mut runtime = dial();
+    tap(&mut runtime, Button::Confirm, 10);
+    tap(&mut runtime, Button::Up, 20);
+    tap(&mut runtime, Button::Up, 30);
+    assert_eq!(runtime.screen().value, 52);
+
+    tap(&mut runtime, Button::Confirm, 40);
+    assert_eq!(runtime.screen().value, 52, "the value is kept");
+
+    // The proof it closed: Down walks the list again instead of the value.
+    tap(&mut runtime, Button::Down, 50);
+    assert_eq!(runtime.focused_index(), 1, "focus moves once more");
+    assert_eq!(runtime.screen().value, 52, "and the value is left alone");
+}
+
+/// Back puts the value back, and does **not** leave the screen.
+///
+/// Back is the first key on the boards this mode exists for, so a stray press
+/// has to cost the edit and nothing else.
+#[test]
+fn back_restores_the_value_and_stays_on_the_screen() {
+    let mut runtime = dial();
+    tap(&mut runtime, Button::Confirm, 10);
+    tap(&mut runtime, Button::Up, 20);
+    tap(&mut runtime, Button::Up, 30);
+    tap(&mut runtime, Button::Up, 40);
+    assert_eq!(runtime.screen().value, 53, "moved by more than one step");
+
+    tap(&mut runtime, Button::Back, 50);
+    assert_eq!(
+        runtime.screen().value,
+        50,
+        "cancel undoes the whole run, not just the last step"
+    );
+    assert_eq!(
+        testing::finishes(),
+        0,
+        "and the screen is still here — Back closed the edit, nothing more"
+    );
+
+    // A second Back, with no edit open, is an ordinary Back again.
+    tap(&mut runtime, Button::Back, 60);
+    assert_eq!(testing::finishes(), 1, "now it leaves");
+}
+
+/// A value being edited on a slow panel moves by one press, not by several.
+///
+/// The same fault the list had: a refresh blinds the loop for most of a second
+/// and the key still reads as down on the frame after. Editing runs through the
+/// same `active_key`, so it inherits the guard — this is what says so, because
+/// a value that jumps by four is far harder to notice than a list that does.
+#[test]
+fn editing_across_a_panel_refresh_moves_by_one_step() {
+    let mut runtime = dial();
+    tap(&mut runtime, Button::Confirm, 10);
+
+    testing::set_millis(20);
+    testing::hold(Button::Up);
+    runtime.loop_();
+    runtime.render();
+    assert_eq!(runtime.screen().value, 51, "the press itself moves one");
+
+    // The refresh, and the first frame the loop gets to look again.
+    testing::set_millis(850);
+    runtime.loop_();
+    runtime.render();
+    assert_eq!(
+        runtime.screen().value,
+        51,
+        "a gap the loop could not see through must not walk the value"
+    );
+}
+
 // -- auto-repeat --------------------------------------------------------------
 //
 // Repeat is the one piece of input that reads a clock, so it is the one piece

@@ -8,6 +8,25 @@ use crate::geometry::Point;
 use crate::host::{Button, Renderer, request_update};
 use crate::view::{Interactions, View};
 
+/// An adjustable control being changed in place.
+///
+/// A board with four directions and no pair to spare cannot nudge a value with
+/// Left/Right, because nothing produces them — so Confirm opens the control and
+/// the keys that were walking the list start moving the value instead.
+struct Editing {
+    /// Which focusable is being edited. An index rather than a flag: a tree
+    /// that reshuffles under an open edit must not quietly start applying
+    /// steps to whatever moved into the slot.
+    focus: usize,
+    /// Every step applied since it opened, summed.
+    ///
+    /// What makes Back able to undo without the framework ever holding the
+    /// value. The trigger is *relative* — the screen owns the number and is
+    /// handed deltas — so the inverse of a sum of steps is a step, and cancel
+    /// is one more dispatch rather than a snapshot of something we never had.
+    net: i32,
+}
+
 /// Per-screen state the runtime owns so screens never see it.
 struct Repeat {
     button: Option<Button>,
@@ -39,6 +58,8 @@ pub struct Runtime<S: Screen> {
     /// keeping focus visible is the runtime's job — a screen never sees it.
     scroll: i32,
     repeat: Repeat,
+    /// `Some` while a value is being changed in place.
+    editing: Option<Editing>,
 }
 
 impl<S: Screen> Runtime<S> {
@@ -56,7 +77,15 @@ impl<S: Screen> Runtime<S> {
                 fired_at: 0,
                 seen_at: 0,
             },
+            editing: None,
         }
+    }
+
+    /// The screen itself, for a test that needs to read what it now holds.
+    /// Exposed only for tests that drive the runtime directly.
+    #[cfg(any(test, feature = "testing"))]
+    pub fn screen(&self) -> &S {
+        &self.screen
     }
 
     /// Which interaction holds focus. Exposed only for tests that drive the

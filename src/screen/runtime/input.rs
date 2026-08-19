@@ -1,9 +1,9 @@
 //! One frame of input, in the order a screen is offered it.
 
-use super::{Repeat, Runtime};
+use super::{Editing, Repeat, Runtime};
 use crate::host::{Button, Input, SwipeDir, finish_screen, millis, request_update};
 use crate::screen::Screen;
-use crate::screen::routing::{focused_message, focused_step, resolve};
+use crate::screen::routing::{focused, focused_message, focused_step, resolve};
 use crate::view::InputMask;
 
 /// Fire once on press, then repeat after this hold, at this interval.
@@ -77,6 +77,75 @@ impl<S: Screen> Runtime<S> {
         }
         self.repeat.fired_at = now;
         Some(held)
+    }
+
+    /// One frame of input while a value is open.
+    ///
+    /// Up **raises** and Down lowers, which is the opposite of what they mean
+    /// in a list — there Up walks towards the top, here it walks the number
+    /// upwards. Reading the two side by side looks like a sign error and is
+    /// not.
+    fn edit_key(&mut self, key: Button) {
+        let Some(editing) = self.editing.as_ref() else {
+            return;
+        };
+        let focus = editing.focus;
+
+        match key {
+            Button::Up | Button::Down | Button::PageBack | Button::PageForward => {
+                let delta = if matches!(key, Button::Up | Button::PageBack) {
+                    1
+                } else {
+                    -1
+                };
+                let interactions = self.collect_settled();
+                if let Some(message) = focused_step(&interactions, focus, delta) {
+                    if let Some(editing) = self.editing.as_mut() {
+                        editing.net = editing.net.saturating_add(delta);
+                    }
+                    self.dispatch(message);
+                }
+            }
+            // Left/Right still adjust, on a board that has them. Both roads
+            // lead to the same `focused_step`, so a value behaves identically
+            // whichever keys a device offers.
+            Button::Left | Button::Right => {
+                let delta = if key == Button::Left { -1 } else { 1 };
+                let interactions = self.collect_settled();
+                if let Some(message) = focused_step(&interactions, focus, delta) {
+                    if let Some(editing) = self.editing.as_mut() {
+                        editing.net = editing.net.saturating_add(delta);
+                    }
+                    self.dispatch(message);
+                }
+            }
+            // Keep what it now reads.
+            Button::Confirm => {
+                self.editing = None;
+                request_update();
+            }
+            // Put it back, and **do not leave the screen**. Back is the first
+            // key on the boards this mode exists for, so a stray press must
+            // cost the edit and nothing more.
+            //
+            // A screen that clamps swallows steps it cannot apply — a slider
+            // already at its maximum takes `+1` and stays put — so the inverse
+            // of the net delta restores to *within* the clamp rather than to
+            // the exact number it started on. That is deliberate: the
+            // alternative needs the screen to report what it accepted, which
+            // nothing in the trait does.
+            Button::Back => {
+                let net = self.editing.take().map(|editing| editing.net).unwrap_or(0);
+                if net != 0 {
+                    let interactions = self.collect_settled();
+                    if let Some(message) = focused_step(&interactions, focus, -net) {
+                        self.dispatch(message);
+                    }
+                }
+                request_update();
+            }
+            _ => {}
+        }
     }
 
     /// One frame of input, in priority order. See the module docs.
@@ -162,9 +231,33 @@ impl<S: Screen> Runtime<S> {
             return;
         }
 
+        // While a value is open, the same four keys mean something else. Kept
+        // ahead of the ordinary match rather than threaded through it, so the
+        // two readings never half-apply.
+        if self.editing.is_some() {
+            self.edit_key(key);
+            return;
+        }
+
         match key {
             Button::Confirm => {
                 let interactions = self.collect_settled();
+
+                // A control that adjusts has no absolute reading to commit, so
+                // Confirm opens it instead of firing it. On a board with a
+                // Left/Right pair this is a second way in; on one without, it
+                // is the only way, and `focused_message` returning `None` here
+                // is what leaves the branch free.
+                if let Some(item) = focused(&interactions, self.focus)
+                    && item.mask.contains(InputMask::ADJUST)
+                {
+                    self.editing = Some(Editing {
+                        focus: self.focus,
+                        net: 0,
+                    });
+                    request_update();
+                    return;
+                }
 
                 if let Some(message) = focused_message(&interactions, self.focus) {
                     self.dispatch(message);
