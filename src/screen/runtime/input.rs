@@ -28,6 +28,9 @@ impl<S: Screen> Runtime<S> {
     /// one held down.
     fn active_key(&mut self) -> Option<Button> {
         let now = millis();
+        // Every frame that reaches here has looked at input, whatever it
+        // decides — so the gap below measures blindness, not inactivity.
+        let seen_at = core::mem::replace(&mut self.repeat.seen_at, now);
 
         for key in KEYS {
             if Input::was_pressed(key) {
@@ -35,6 +38,7 @@ impl<S: Screen> Runtime<S> {
                     button: Some(key),
                     pressed_at: now,
                     fired_at: now,
+                    seen_at: now,
                 };
                 return Some(key);
             }
@@ -44,6 +48,25 @@ impl<S: Screen> Runtime<S> {
         let held = self.repeat.button?;
         if !Input::is_pressed(held) {
             self.repeat.button = None;
+            return None;
+        }
+        // A hold is something the loop watches, not something it works out
+        // afterwards from a clock. A panel that blocks for most of a second
+        // while it refreshes leaves the loop blind for that whole time, and a
+        // button released during it still reads as down on the frame after —
+        // input is sampled at the top of a frame, and the frame that presented
+        // sampled it before the press had done anything. Crediting that gap to
+        // the hold turns one press into a run of them: on hardware with a
+        // slow panel, a single tap of Down walked the selection several rows.
+        //
+        // So a gap longer than a whole repeat period re-arms the hold instead
+        // of firing it. What is lost is a repeat the person had genuinely
+        // earned by holding through a refresh; what is kept is that a tap
+        // moves by one. Below the threshold nothing changes, and a display
+        // that draws straight through never reaches it.
+        if now.wrapping_sub(seen_at) >= REPEAT_INTERVAL_MS {
+            self.repeat.pressed_at = now;
+            self.repeat.fired_at = now;
             return None;
         }
         if now.wrapping_sub(self.repeat.pressed_at) < REPEAT_DELAY_MS {
@@ -142,6 +165,7 @@ impl<S: Screen> Runtime<S> {
         match key {
             Button::Confirm => {
                 let interactions = self.collect_settled();
+
                 if let Some(message) = focused_message(&interactions, self.focus) {
                     self.dispatch(message);
                 }

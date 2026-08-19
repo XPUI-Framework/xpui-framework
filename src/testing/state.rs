@@ -12,6 +12,7 @@ thread_local! {
     pub(super) static NOW: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
     pub(super) static SWIPE: core::cell::Cell<SwipeDir> = const { core::cell::Cell::new(SwipeDir::None) };
     pub(super) static PRESSED: core::cell::Cell<Option<Button>> = const { core::cell::Cell::new(None) };
+    pub(super) static HELD: core::cell::Cell<Option<Button>> = const { core::cell::Cell::new(None) };
     pub(super) static SWIPE_MOVES_SELECTION: core::cell::Cell<bool> = const { core::cell::Cell::new(false) };
     pub(super) static FINISHES: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
     pub(super) static UPDATES: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
@@ -27,6 +28,7 @@ pub fn reset() {
     OPS.with(|ops| ops.borrow_mut().clear());
     SWIPE.with(|swipe| swipe.set(SwipeDir::None));
     PRESSED.with(|pressed| pressed.set(None));
+    HELD.with(|held| held.set(None));
     SWIPE_MOVES_SELECTION.with(|flag| flag.set(false));
     FINISHES.with(|count| count.set(0));
     UPDATES.with(|count| count.set(0));
@@ -48,6 +50,21 @@ pub fn set_swipe(direction: SwipeDir) {
 /// Cleared by [`reset`], and consumed when read, so it fires exactly once.
 pub fn press(button: Button) {
     PRESSED.with(|pressed| pressed.set(Some(button)));
+}
+
+/// Reports the edge *and* leaves the button down, as a finger does.
+///
+/// [`press`] alone is a key tapped so briefly that no frame ever saw it held,
+/// which is not what hardware sends and is why auto-repeat went untested long
+/// enough to reach a board. Ended with [`release`].
+pub fn hold(button: Button) {
+    press(button);
+    HELD.with(|held| held.set(Some(button)));
+}
+
+/// Lifts whatever [`hold`] put down.
+pub fn release() {
+    HELD.with(|held| held.set(None));
 }
 
 /// Chooses which way a swipe moves focus, so both readings can be tested.

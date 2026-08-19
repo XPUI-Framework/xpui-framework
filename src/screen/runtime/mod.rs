@@ -14,6 +14,9 @@ struct Repeat {
     /// When the current press started, and when it last fired.
     pressed_at: u32,
     fired_at: u32,
+    /// When input was last looked at, so a frame can tell how long the loop
+    /// went without seeing the button it believes is held.
+    seen_at: u32,
 }
 
 /// Drives a [`Screen`]: owns focus, input routing, repeat timing and the
@@ -51,6 +54,7 @@ impl<S: Screen> Runtime<S> {
                 button: None,
                 pressed_at: 0,
                 fired_at: 0,
+                seen_at: 0,
             },
         }
     }

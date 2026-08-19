@@ -6,7 +6,7 @@ use alloc::string::ToString;
 
 use super::metrics::{READER_FONT, UI_FONT, UI_SMALL_FONT, line_height, screen, text_width};
 use super::ops::{DrawOp, RectKind};
-use super::state::{FINISHES, NOW, PRESENTS, PRESSED, SWIPE, SWIPE_MOVES_SELECTION, push};
+use super::state::{FINISHES, HELD, NOW, PRESENTS, PRESSED, SWIPE, SWIPE_MOVES_SELECTION, push};
 use crate::geometry::{Point, Rect, Size};
 use crate::host::{
     Canvas, Clock, FontId, FontRole, FontStyle, IconRef, InputSource, Navigator, TextMetrics,
@@ -195,8 +195,10 @@ impl InputSource for TestHost {
         })
     }
 
-    fn is_pressed(&self, _button: Button) -> bool {
-        false
+    fn is_pressed(&self, button: Button) -> bool {
+        // A level, not an edge: it stays true until the test lets go, which is
+        // what auto-repeat reads.
+        HELD.with(|held| held.get() == Some(button))
     }
 
     fn was_released(&self, _button: Button) -> bool {

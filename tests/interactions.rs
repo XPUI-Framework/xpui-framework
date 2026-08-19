@@ -440,6 +440,82 @@ fn runtime(claims_swipe: bool) -> Runtime<Nav> {
     runtime
 }
 
+// -- auto-repeat --------------------------------------------------------------
+//
+// Repeat is the one piece of input that reads a clock, so it is the one piece
+// that can be fooled by a frame that took a long time. Both of these drive the
+// real `Runtime`, because the arithmetic is the whole behaviour.
+
+/// One tap moves one row, even when the panel then blocks for most of a second.
+///
+/// The Badger's e-ink refresh is around 800 ms and the loop is blind for all of
+/// it: the frame that presented sampled input *before* the press did anything,
+/// and the finger comes off somewhere inside the refresh, so the level still
+/// reads down on the frame after. Repeat used to credit that whole gap to the
+/// hold and fire — a single press of Down walked the selection several rows,
+/// which is what it did on real hardware.
+#[test]
+fn a_slow_panel_does_not_turn_one_press_into_many() {
+    let mut runtime = runtime(false);
+    assert_eq!(runtime.focused_index(), 0);
+
+    testing::set_millis(0);
+    testing::hold(Button::Down);
+    runtime.loop_();
+    assert_eq!(runtime.focused_index(), 1, "the press itself moves one row");
+
+    // The refresh, and the first frame the loop gets to look again.
+    testing::set_millis(830);
+    runtime.loop_();
+    assert_eq!(
+        runtime.focused_index(),
+        1,
+        "a gap the loop could not see through is not a hold"
+    );
+}
+
+/// And repeat still repeats when the loop can actually watch the button.
+///
+/// The other half of the pair: the guard above must cost nothing on a display
+/// that draws straight through, which is every frame the Tufty and the
+/// simulator run.
+#[test]
+fn a_button_held_across_frames_the_loop_can_see_still_repeats() {
+    let mut runtime = runtime(false);
+
+    testing::set_millis(0);
+    testing::hold(Button::Down);
+    runtime.loop_();
+    assert_eq!(runtime.focused_index(), 1);
+
+    // Ten-millisecond frames, which is what both boards' loops wait.
+    let mut now = 0;
+    while now < 490 {
+        now += 10;
+        testing::set_millis(now);
+        runtime.loop_();
+    }
+    assert_eq!(
+        runtime.focused_index(),
+        1,
+        "nothing repeats before the delay is up"
+    );
+
+    testing::set_millis(500);
+    runtime.loop_();
+    assert_eq!(runtime.focused_index(), 2, "past the delay it repeats");
+
+    // And it stops when the finger does.
+    testing::release();
+    testing::set_millis(1_000);
+    runtime.loop_();
+    assert_eq!(
+        runtime.focused_index(),
+        2,
+        "a released button does not repeat"
+    );
+}
+
 /// Swiping up walks *down* the list — the direction the content moves under the
 /// finger, and the inverse of what `Button::Up` does. `HomeActivity` maps swipe
 /// Up to `nextIndex`; a Rust screen must feel identical.
