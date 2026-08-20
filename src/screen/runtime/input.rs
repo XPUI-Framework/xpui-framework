@@ -100,22 +100,18 @@ impl<S: Screen> Runtime<S> {
                 };
                 let interactions = self.collect_settled();
                 if let Some(message) = focused_step(&interactions, focus, delta) {
-                    if let Some(editing) = self.editing.as_mut() {
-                        editing.net = editing.net.saturating_add(delta);
-                    }
                     self.dispatch(message);
                 }
             }
-            // Left/Right still adjust, on a board that has them. Both roads
-            // lead to the same `focused_step`, so a value behaves identically
-            // whichever keys a device offers.
+            // A board that has this pair never opens an edit, so these arrive
+            // only from a host that sends them while answering that it has no
+            // pair — the simulator's keyboard does exactly that. Routed to the
+            // same `focused_step` as everything else so the value moves the way
+            // it would anywhere, rather than being silently dropped.
             Button::Left | Button::Right => {
                 let delta = if key == Button::Left { -1 } else { 1 };
                 let interactions = self.collect_settled();
                 if let Some(message) = focused_step(&interactions, focus, delta) {
-                    if let Some(editing) = self.editing.as_mut() {
-                        editing.net = editing.net.saturating_add(delta);
-                    }
                     self.dispatch(message);
                 }
             }
@@ -127,18 +123,13 @@ impl<S: Screen> Runtime<S> {
             // Put it back, and **do not leave the screen**. Back is the first
             // key on the boards this mode exists for, so a stray press must
             // cost the edit and nothing more.
-            //
-            // A screen that clamps swallows steps it cannot apply — a slider
-            // already at its maximum takes `+1` and stays put — so the inverse
-            // of the net delta restores to *within* the clamp rather than to
-            // the exact number it started on. That is deliberate: the
-            // alternative needs the screen to report what it accepted, which
-            // nothing in the trait does.
             Button::Back => {
-                let net = self.editing.take().map(|editing| editing.net).unwrap_or(0);
-                if net != 0 {
+                let start = self.editing.take().map(|editing| editing.start);
+                if let Some(start) = start {
                     let interactions = self.collect_settled();
-                    if let Some(message) = focused_step(&interactions, focus, -net) {
+                    if let Some(item) = focused(&interactions, focus)
+                        && let Some(message) = item.trigger.restore(start)
+                    {
                         self.dispatch(message);
                     }
                 }
@@ -243,17 +234,19 @@ impl<S: Screen> Runtime<S> {
             Button::Confirm => {
                 let interactions = self.collect_settled();
 
-                // A control that adjusts has no absolute reading to commit, so
-                // Confirm opens it instead of firing it. On a board with a
-                // Left/Right pair this is a second way in; on one without, it
-                // is the only way, and `focused_message` returning `None` here
-                // is what leaves the branch free.
-                if let Some(item) = focused(&interactions, self.focus)
+                // Confirm opens an adjustable control rather than firing it —
+                // and only where there is no pair to nudge it with, because
+                // that pair is otherwise the way in. `focused_message` declines
+                // the same controls, which is what leaves this branch free.
+                if !Input::has_left_right_keys()
+                    && let Some(item) = focused(&interactions, self.focus)
                     && item.mask.contains(InputMask::ADJUST)
+                    && item.trigger.is_editable()
+                    && let Some(start) = item.trigger.reading()
                 {
                     self.editing = Some(Editing {
                         focus: self.focus,
-                        net: 0,
+                        start,
                     });
                     request_update();
                     return;

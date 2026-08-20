@@ -24,12 +24,20 @@ use crate::view::{InputMask, Interactions, Trigger, View};
 ///
 /// Give it [`on_change`](Slider::on_change) and the framework converts a touch
 /// into a value for you, applying the same rounding the C++ screens use.
+///
+/// **It is also a focus stop**: Up and Down reach it, and Left and Right move
+/// it one step against its own bounds, so a board with no touchscreen can still
+/// change it. [`without_focus`](Slider::without_focus) gives that up, for a
+/// track inside a larger control that owns the stop itself.
 pub struct Slider<M> {
     value: i32,
     max: i32,
     /// Built when a drag or tap lands on the track; `None` leaves the slider
     /// display-only.
     make: Option<fn(i32) -> M>,
+    /// Set when this slider is the track of a larger control, which then owns
+    /// the focus stop. See [`Slider::without_focus`].
+    embedded: bool,
     measured: Size,
 }
 
@@ -41,6 +49,7 @@ impl<M> Slider<M> {
             value,
             max,
             make: None,
+            embedded: false,
             measured: Size::ZERO,
         }
     }
@@ -67,6 +76,25 @@ impl<M> Slider<M> {
         self.make = Some(make);
         self
     }
+
+    /// Drops this slider's focus stop, for a track inside a larger control that
+    /// owns the stop itself.
+    ///
+    /// Keys are what a focus stop is for, so this drops the ability to be
+    /// nudged with it.
+    ///
+    /// A [`Stepper`](crate::Stepper) is deliberately **one** focus stop and
+    /// three touch targets: its two glyphs and the track it wraps. Without this
+    /// the track would be a second stop inside it and Up/Down would stop twice
+    /// on one row — which is the thing that made a stepper a single stop in the
+    /// first place.
+    ///
+    /// Touch is unaffected: an embedded track still drags and still takes a
+    /// tap, because it is still a place a finger can land.
+    pub fn without_focus(mut self) -> Self {
+        self.embedded = true;
+        self
+    }
 }
 
 impl<M> View<M> for Slider<M> {
@@ -84,16 +112,25 @@ impl<M> View<M> for Slider<M> {
 
     fn interactions(&mut self, origin: Point, out: &mut Interactions<M>) {
         let Some(make) = self.make else { return };
-        // Touch only: DRAG so the framework feeds held frames here and nowhere
-        // else, TAP so a jab on the track jumps to that value. Button access is
-        // the job of whatever owns the slider - see `Stepper`, which makes the
-        // whole row one focus stop rather than three.
+
+        // DRAG so the framework feeds held frames here and nowhere else, TAP so
+        // a jab on the track jumps to that value.
+        //
+        // FOCUS and ADJUST unless something larger owns the stop. Without them
+        // a slider is unreachable by any key, which on a device with no
+        // touchscreen leaves it visible and impossible to move.
+        let mut mask = InputMask::TAP.union(InputMask::DRAG);
+        if !self.embedded {
+            mask = mask.union(InputMask::FOCUS).union(InputMask::ADJUST);
+        }
+
         out.declare(
             self.bounds(origin),
-            InputMask::TAP.union(InputMask::DRAG),
+            mask,
             Trigger::Value {
                 make,
                 max: self.max,
+                value: self.value,
             },
         );
     }

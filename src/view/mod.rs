@@ -1,8 +1,10 @@
 //! The `View` trait every UI element implements.
 
 mod interaction;
+mod trigger;
 
-pub use interaction::{InputMask, Interaction, Interactions, Trigger, value_at};
+pub use interaction::{InputMask, Interaction, Interactions};
+pub use trigger::{Trigger, value_at};
 
 use alloc::boxed::Box;
 

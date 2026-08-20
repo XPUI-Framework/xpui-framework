@@ -290,7 +290,7 @@ second scroll view would share the first one's position.
 | `List` / `ListRow` | A themed, selectable list. `ListRow::new(t).subtitle(s).value(v).on_tap(msg)`. |
 | `ListRow::toggle(t, on, on_label, off_label)` | A boolean setting as a row. |
 | `ProgressBar::new(current, total)` | Or `ProgressBar::percent(72)`. `.height(px)` overrides the theme. |
-| `Slider::new(value, max)` | A bare track. `.on_change(Msg::V)` reports drags and taps. Also `Slider::percent(72)`. |
+| `Slider::new(value, max)` | A track. `.on_change(Msg::V)` reports drags, taps and key nudges. A focus stop unless `.without_focus()` hands the stop — and with it all key access — to a control that wraps it. Also `Slider::percent(72)`. |
 | `Stepper::new(value)` | `−` / track / `+` as one control, over `0..=100`; `Stepper::ranged(v, max)` for anything else. `.on_change`, `.on_step`. |
 | `Toggle::new(label, on, on_label, off_label)` | A boolean row. `.on_change(Msg::V)` receives the **next** state. |
 | `Modal::picker(title, options)` | A centred option dialog. `.selected(i)`, `.on_select(Msg::V)`, `.scrim(Scrim::Dim)`. Also `Modal::confirm` and `Modal::new`. |
@@ -506,13 +506,17 @@ touch and buttons cannot drift apart. A `List` highlights whichever row holds
 focus with no screen code at all.
 
 **Left/Right nudge whatever holds focus.** A control that opts into adjustment
-(`Stepper` does) receives `-1` / `+1` there, so one pair of keys drives every
-adjustable setting on a screen rather than the screen wiring keys to one of
-them. **Confirm opens such a control rather than firing it** — there is no
-absolute value to commit, so it enters an edit mode instead, on every device.
-[Spec 30](../../../docs/specs/30-editing-a-value-with-one-key.md) is what will
-make that mode visible and make it conditional on
-`Input::has_left_right_keys()`.
+— `Slider` and `Stepper` both do — is moved by one step there, so one pair of
+keys drives every adjustable setting on a screen rather than the screen wiring
+keys to one of them.
+
+**Confirm never fires an adjustable control.** On a device with the pair it does
+nothing at all: the pair is the way in. On a device without one it opens the
+control instead, and the keys that were walking the list move the value until
+Confirm keeps it or Back puts it back. **That mode is not yet drawn** — nothing
+on the panel says the keys have changed meaning, which is
+[spec 30](../../../docs/specs/30-editing-a-value-with-one-key.md)'s remaining
+half.
 
 **A composite is one focus stop.** A `Stepper` offers three touch targets — `−`,
 the track, `+` — but a single stop for buttons, so Up/Down move between settings

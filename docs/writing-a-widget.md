@@ -78,6 +78,7 @@ The mask is the important choice:
 | `DRAG` | Every frame while a finger is down — sliders want this. |
 | `FOCUS` | Joins the Up/Down focus order for hardware buttons. |
 | `LONG_PRESS` | A press held past the threshold. |
+| `ADJUST` | Moved one step at a time by Left/Right rather than fired by Confirm. What a value control declares. |
 | `DEFAULT` | `TAP` plus `FOCUS`: what most controls want. |
 
 If your control is small, you do not need to grow it for fingers — `Tappable`
@@ -93,14 +94,28 @@ that carries the arithmetic instead:
 # use xpui::Trigger;
 # #[derive(Clone, Copy)]
 # enum Msg { Set(i32), Nudge(i32) }
+# let reading = 40;
 # let _: [Trigger<Msg>; 2] = [
-Trigger::Value { make: Msg::Set, max: 100 },   // absolute, from a position
-Trigger::Step { make: Msg::Nudge },            // relative, -1 / +1
+// absolute, from a position
+Trigger::Value { make: Msg::Set, max: 100, value: reading },
+// relative, -1 / +1
+Trigger::Step { make: Msg::Nudge, set: Some(Msg::Set), value: reading },
 # ];
 ```
 
 The runtime turns a touch position into a value and calls `make`. This is how
 `Slider` and `Stepper` work.
+
+**`value` is what the control reads right now**, and both kinds carry it. An
+absolute control needs it to be *nudged* — one step of an absolute value is
+`value + delta`, and without it Left and Right could focus a control and still
+not change it.
+
+**`set` on a relative control is what makes it editable.** A nudge is worth
+whatever the screen decides — a frontlight row reads one as five units — so no
+count of nudges can put a value back where it was. An absolute setter can, and a
+control without one can still be nudged but never opens an edit, because an edit
+that cannot be cancelled is a trap.
 
 ## The optional methods
 

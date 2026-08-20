@@ -10,7 +10,7 @@ use xpui::testing::{self, MIN_TOUCH_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use xpui::{
     Alignment, Button, HStack, Input, InputMask, Interactions, List, ListRow, Modal, Modifiers,
     NavigationScreen, Point, Rect, ScrollView, Section, Size, Slider, Spacer, Stepper, SwipeDir,
-    Text, Toggle, Trigger, VStack, View, hstack, value_at, vstack,
+    Text, Toggle, Trigger, VStack, View, ViewExt, hstack, value_at, vstack,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -488,6 +488,295 @@ fn dial() -> Runtime<Dial> {
     });
     runtime.render();
     runtime
+}
+
+/// A control reached through `map` keeps everything an editor needs.
+///
+/// `ViewExt::map` re-boxes a trigger so a sub-component can speak its own
+/// message type, and every field has to survive the crossing: the reading an
+/// edit opens on, the bounds a nudge clamps against, and the setter that puts
+/// the value back. Drop the setter and the control silently stops being
+/// editable — on a board with no Left/Right pair that is a row no key can
+/// change, which is the same fault the unmapped path had.
+///
+/// Nothing in this repository maps a value control yet, so without this the
+/// mapped half of four `Trigger` methods is unreached.
+#[test]
+fn a_mapped_control_can_still_be_nudged_and_put_back() {
+    testing::install();
+    testing::reset();
+
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    enum Outer {
+        Inner(DialMsg),
+    }
+
+    let mut view = Stepper::new(40)
+        .on_change(DialMsg::Set)
+        .on_step(DialMsg::Step)
+        .map(Outer::Inner);
+
+    let mut out = Interactions::new(0);
+    view.measure(screen());
+    view.interactions(Point::ORIGIN, &mut out);
+
+    let item = out
+        .items()
+        .iter()
+        .find(|item| item.mask.contains(InputMask::ADJUST))
+        .expect("a mapped stepper is still adjustable");
+
+    assert_eq!(
+        item.trigger.reading(),
+        Some(40),
+        "the reading has to cross, or an edit opens on nothing"
+    );
+    assert!(
+        item.trigger.is_editable(),
+        "and the setter has to cross, or the control cannot be put back"
+    );
+    assert_eq!(
+        item.trigger.resolve_step(1),
+        Some(Outer::Inner(DialMsg::Step(1))),
+        "a nudge arrives as the outer message"
+    );
+    assert_eq!(
+        item.trigger.restore(40),
+        None,
+        "restoring to where it already reads asks for nothing"
+    );
+    assert_eq!(
+        item.trigger.restore(25),
+        Some(Outer::Inner(DialMsg::Set(25))),
+        "and restoring sets the value outright, through the conversion"
+    );
+}
+
+/// A slider nudged by a key stops at its own ends.
+///
+/// An absolute control is nudged by resolving `value + delta`, so without a
+/// clamp Left at zero sends `-1` and Right at the maximum sends `max + 1`. A
+/// screen that clamps hides it; one that does not stores a value outside the
+/// range it declared, and the track then draws past its own end.
+///
+/// Asserted at both ends, because a clamp with one bound is the easier mistake.
+#[test]
+fn nudging_a_slider_stops_at_its_ends() {
+    testing::install();
+    testing::reset();
+
+    let at = |value: i32, delta: i32| {
+        let mut slider = Slider::new(value, 100).on_change(DialMsg::Set);
+        let mut out = Interactions::new(0);
+        slider.measure(screen());
+        slider.interactions(Point::ORIGIN, &mut out);
+        out.items()
+            .iter()
+            .find(|item| item.mask.contains(InputMask::ADJUST))
+            .expect("a slider is adjustable")
+            .trigger
+            .resolve_step(delta)
+    };
+
+    assert_eq!(
+        at(0, -1),
+        Some(DialMsg::Set(0)),
+        "Left at zero stays at zero"
+    );
+    assert_eq!(at(0, 1), Some(DialMsg::Set(1)), "and Right still moves");
+    assert_eq!(
+        at(100, 1),
+        Some(DialMsg::Set(100)),
+        "Right at the maximum stays at the maximum"
+    );
+    assert_eq!(at(100, -1), Some(DialMsg::Set(99)), "and Left still moves");
+}
+
+/// The same control on a screen that refuses what it cannot hold.
+///
+/// Clamping is the ordinary case — every value row in the gallery does it — and
+/// it is what broke cancel: a screen at its maximum takes `+1` and stays put,
+/// so a framework counting the steps it *sent* believes in a move the value
+/// never made.
+struct ClampedDial {
+    value: i32,
+}
+
+impl xpui::Screen for ClampedDial {
+    type Message = DialMsg;
+
+    fn body(&self) -> impl View<DialMsg> {
+        vstack![10;
+            Stepper::new(self.value).on_change(DialMsg::Set).on_step(DialMsg::Step),
+        ]
+    }
+
+    fn update(&mut self, message: DialMsg) {
+        match message {
+            DialMsg::Set(value) => self.value = value.clamp(0, 100),
+            DialMsg::Step(delta) => self.value = (self.value + delta).clamp(0, 100),
+            DialMsg::Tapped => {}
+        }
+    }
+}
+
+/// One nudge, five units — what a frontlight row does.
+///
+/// The other way a cancel computed from steps goes wrong, and the one spec 26
+/// got right: a screen that scales reads an inverse total of `-4` as `-20`.
+struct ScaledDial {
+    value: i32,
+}
+
+impl xpui::Screen for ScaledDial {
+    type Message = DialMsg;
+
+    fn body(&self) -> impl View<DialMsg> {
+        vstack![10;
+            Stepper::new(self.value).on_change(DialMsg::Set).on_step(DialMsg::Step),
+        ]
+    }
+
+    fn update(&mut self, message: DialMsg) {
+        match message {
+            DialMsg::Set(value) => self.value = value.clamp(0, 100),
+            DialMsg::Step(delta) => self.value = (self.value + delta * 5).clamp(0, 100),
+            DialMsg::Tapped => {}
+        }
+    }
+}
+
+/// Cancel is exact when a step is worth more than one unit.
+///
+/// A nudge means whatever the screen decides, so no count of nudges can undo an
+/// edit: four Ups here move 20, and asking for `-4` back moves 20 the other way
+/// only by luck of the scale. Cancel sets the value it opened on instead.
+#[test]
+fn cancelling_an_edit_is_exact_when_a_step_is_scaled() {
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    let mut runtime = Runtime::new(ScaledDial { value: 30 });
+    runtime.render();
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    runtime.render();
+
+    for _ in 0..4 {
+        testing::press(Button::Up);
+        runtime.loop_();
+        runtime.render();
+    }
+    assert_eq!(
+        runtime.screen().value,
+        50,
+        "four Ups of five units each — the scale is the point of this screen"
+    );
+
+    testing::press(Button::Back);
+    runtime.loop_();
+    runtime.render();
+
+    assert_eq!(
+        runtime.screen().value,
+        30,
+        "cancel must land on what the edit opened on, whatever a step is worth"
+    );
+}
+
+/// A control that can only be nudged never opens an edit.
+///
+/// An edit that cannot be cancelled is worse than no edit: the keys change
+/// meaning and Back cannot put the value back. A `Stepper` with no `on_change`
+/// has no way to be set, so Confirm leaves it alone.
+#[test]
+fn a_control_with_no_way_back_is_not_editable() {
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    struct NudgeOnly {
+        value: i32,
+    }
+    impl xpui::Screen for NudgeOnly {
+        type Message = DialMsg;
+        fn body(&self) -> impl View<DialMsg> {
+            vstack![10; Stepper::new(self.value).on_step(DialMsg::Step)]
+        }
+        fn update(&mut self, message: DialMsg) {
+            if let DialMsg::Step(delta) = message {
+                self.value += delta;
+            }
+        }
+    }
+
+    let mut runtime = Runtime::new(NudgeOnly { value: 10 });
+    runtime.render();
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    runtime.render();
+
+    // No edit opened, so Up still walks the list rather than moving the value.
+    testing::press(Button::Up);
+    runtime.loop_();
+    runtime.render();
+
+    assert_eq!(
+        runtime.screen().value,
+        10,
+        "Confirm must not open an edit on a control it cannot put back"
+    );
+}
+
+/// Cancel puts the value back exactly, even when the screen swallowed steps.
+///
+/// From 98, four Ups against a maximum of 100: two land and two are refused.
+/// Cancelling used to dispatch the inverse of the four it had counted and leave
+/// the value on **96** — below where the edit began, which is the one thing a
+/// cancel must never do. The restore is computed from what the control reads
+/// now, so the swallowed steps cannot enter into it.
+#[test]
+fn cancelling_an_edit_restores_a_clamped_value_exactly() {
+    testing::install();
+    testing::reset();
+    // The mode only exists on a board with no Left/Right pair.
+    testing::set_has_left_right_keys(false);
+
+    let mut runtime = Runtime::new(ClampedDial { value: 98 });
+    runtime.render();
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    runtime.render();
+
+    for _ in 0..4 {
+        testing::press(Button::Up);
+        runtime.loop_();
+        runtime.render();
+    }
+    assert_eq!(
+        runtime.screen().value,
+        100,
+        "two of the four Ups should have been swallowed by the clamp"
+    );
+
+    testing::press(Button::Back);
+    runtime.loop_();
+    runtime.render();
+
+    assert_eq!(
+        runtime.screen().value,
+        98,
+        "cancel must land on exactly what the edit opened on"
+    );
+    assert_eq!(
+        testing::finishes(),
+        0,
+        "and it must cost the edit, not the screen"
+    );
 }
 
 /// Presses one key and lets the frame settle, with the clock moving as a real

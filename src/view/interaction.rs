@@ -1,14 +1,15 @@
-//! What a widget declares, and what a touch or a key turns it into.
+//! What a widget declares: the regions it owns, and the focus order over them.
 //!
 //! A widget never hit-tests. It declares the regions it owns and the message
 //! each produces, and the runtime resolves one frame of input against that
-//! list. See [`crate::screen`] for the resolution itself.
+//! list. What a declaration turns into is [`Trigger`](crate::view::Trigger);
+//! see [`crate::screen`] for the resolution itself.
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
 use crate::geometry::Rect;
-use crate::host::{Theme, ThemeMetric};
+use crate::view::Trigger;
 
 /// Which kinds of input an interaction accepts.
 ///
@@ -27,9 +28,14 @@ impl InputMask {
     pub const DRAG: InputMask = InputMask(1 << 2);
     /// A press held past the long-press threshold.
     pub const LONG_PRESS: InputMask = InputMask(1 << 3);
-    /// Left/Right nudge this control while it holds focus. A stepper says yes;
-    /// it is what lets buttons drive a value without the screen wiring keys to
-    /// one particular control.
+    /// This control is moved one step at a time rather than fired.
+    ///
+    /// Three things follow from it, which is why it is a mask and not a
+    /// property of the trigger: Left/Right nudge it while it holds focus,
+    /// Confirm declines to fire it, and on a device with no Left/Right pair
+    /// Confirm may open it for editing instead. A `Slider` and a `Stepper` both
+    /// say yes. It is what lets keys drive a value without the screen wiring
+    /// them to one particular control.
     pub const ADJUST: InputMask = InputMask(1 << 4);
 
     /// What an ordinary control wants: tappable, and reachable by button.
@@ -55,88 +61,6 @@ impl core::ops::BitOr for InputMask {
     fn bitor(self, rhs: InputMask) -> InputMask {
         self.union(rhs)
     }
-}
-
-/// What an interaction produces when it fires.
-///
-/// [`Trigger::Message`] covers buttons, rows and toggles: the widget knows what
-/// it means, so it builds the message when the tree is built. [`Trigger::Value`]
-/// is for controls whose message depends on *where* the touch landed — the
-/// framework converts the position and calls the constructor, so no screen
-/// re-derives slider geometry.
-pub enum Trigger<M> {
-    Message(M),
-    Value {
-        make: fn(i32) -> M,
-        max: i32,
-    },
-    /// A relative nudge: `-1` or `+1` from Left/Right, or from a `-`/`+` glyph.
-    /// Distinct from [`Trigger::Value`] because the screen adds the delta to
-    /// whatever it currently holds, rather than being handed an absolute.
-    Step {
-        make: fn(i32) -> M,
-    },
-    /// A value control seen through [`ViewExt::map`].
-    ///
-    /// Composing two function pointers is not itself a function pointer, so a
-    /// mapped value control is the one case that needs a closure. It costs one
-    /// small allocation per touch frame, and only for components that actually
-    /// wrap a slider — the alternative was dropping the interaction, which
-    /// would silently make the control dead.
-    MappedValue {
-        make: Box<dyn Fn(i32) -> M>,
-        max: i32,
-    },
-    /// A step control seen through [`ViewExt::map`]; see [`Trigger::MappedValue`].
-    MappedStep {
-        make: Box<dyn Fn(i32) -> M>,
-    },
-}
-
-impl<M: Clone> Trigger<M> {
-    /// Resolves to a message. `x` is the touch position, ignored by controls
-    /// that do not depend on it.
-    ///
-    /// Public so a test can assert what a control *would* send without driving
-    /// the whole runtime.
-    pub fn resolve(&self, rect: Rect, x: i32) -> M {
-        match self {
-            Trigger::Message(message) => message.clone(),
-            Trigger::Value { make, max } => make(value_at(rect, x, *max)),
-            Trigger::MappedValue { make, max } => make(value_at(rect, x, *max)),
-            // A step has no absolute reading; Confirm on one does nothing,
-            // which is why `focused_message` skips it.
-            Trigger::Step { make } => make(0),
-            Trigger::MappedStep { make } => make(0),
-        }
-    }
-
-    /// The message for a relative nudge, or `None` for a control that has no
-    /// meaningful step.
-    pub fn resolve_step(&self, delta: i32) -> Option<M> {
-        match self {
-            Trigger::Step { make } => Some(make(delta)),
-            Trigger::MappedStep { make } => Some(make(delta)),
-            _ => None,
-        }
-    }
-}
-
-/// The value a touch at `x` represents within `track`.
-///
-/// Rounds to nearest, matching the `(permille * range + 500) / 1000` the C++
-/// slider screens use, so dragging feels identical in both.
-///
-/// The inset and knob width come from the theme rather than from constants
-/// here: the host draws the knob, and a copy of its dimensions would keep
-/// converting touches against the old geometry the day the theme changed it.
-pub fn value_at(track: Rect, x: i32, max: i32) -> i32 {
-    let inset = Theme::metric(ThemeMetric::SliderSideInset);
-    let knob = Theme::metric(ThemeMetric::SliderKnobWidth);
-
-    let usable = (track.width() - inset * 2 - knob).max(1);
-    let offset = (x - track.x() - inset - knob / 2).clamp(0, usable);
-    (offset * max + usable / 2) / usable
 }
 
 /// One interactive region, as declared by the widget that owns it.
@@ -327,19 +251,25 @@ impl<M> Interactions<M> {
         for item in inner.items {
             let trigger = match item.trigger {
                 Trigger::Message(message) => Trigger::Message(convert(message)),
-                Trigger::Value { make, max } => Trigger::MappedValue {
-                    make: Box::new(move |value| convert(make(value))),
+                Trigger::Value { make, max, value } => Trigger::MappedValue {
+                    make: Box::new(move |v| convert(make(v))),
                     max,
+                    value,
                 },
-                Trigger::MappedValue { make, max } => Trigger::MappedValue {
-                    make: Box::new(move |value| convert(make(value))),
+                Trigger::MappedValue { make, max, value } => Trigger::MappedValue {
+                    make: Box::new(move |v| convert(make(v))),
                     max,
+                    value,
                 },
-                Trigger::Step { make } => Trigger::MappedStep {
+                Trigger::Step { make, set, value } => Trigger::MappedStep {
                     make: Box::new(move |delta| convert(make(delta))),
+                    set: set.map(|set| Box::new(move |v| convert(set(v))) as Box<dyn Fn(i32) -> M>),
+                    value,
                 },
-                Trigger::MappedStep { make } => Trigger::MappedStep {
+                Trigger::MappedStep { make, set, value } => Trigger::MappedStep {
                     make: Box::new(move |delta| convert(make(delta))),
+                    set: set.map(|set| Box::new(move |v| convert(set(v))) as Box<dyn Fn(i32) -> M>),
+                    value,
                 },
             };
             self.items.push(Interaction {

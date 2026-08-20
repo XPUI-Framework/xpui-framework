@@ -153,7 +153,7 @@ do, and [`crates/backend/`](../backend/) for the real ones.
 | [`List` / `ListRow`](src/widgets/list/) | Rows drawn by the backend's own theme |
 | [`Section`](src/widgets/section.rs) | A titled group of anything |
 | [`Toggle`](src/widgets/toggle.rs) | A boolean row reading On / Off |
-| [`Slider`](src/widgets/slider.rs) | A bare track |
+| [`Slider`](src/widgets/slider.rs) | A track, moved by a drag, a tap or a key |
 | [`Stepper`](src/widgets/stepper.rs) | `−`, track and `+` as one control |
 | [`ProgressBar`](src/widgets/progress.rs) | Determinate progress |
 | [`Divider`](src/widgets/divider.rs) | A one-pixel rule |

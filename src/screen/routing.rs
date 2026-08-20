@@ -6,7 +6,7 @@
 //! lifecycle around it.
 
 use crate::Point;
-use crate::view::{InputMask, Interactions, Trigger};
+use crate::view::{InputMask, Interactions};
 
 /// The message from the first interaction under `point` that accepts `kind`.
 ///
@@ -55,12 +55,14 @@ pub(crate) fn focused_step<M: Clone>(
 pub(crate) fn focused_message<M: Clone>(interactions: &Interactions<M>, focus: usize) -> Option<M> {
     let item = focused(interactions, focus)?;
 
-    // Confirm on an adjustable control does nothing: there is no absolute
-    // reading to commit, and Left/Right are what drive it.
-    if matches!(
-        item.trigger,
-        Trigger::Step { .. } | Trigger::MappedStep { .. }
-    ) {
+    // **Confirm never fires an adjustable control.** Whether one can be
+    // *opened* for editing is a separate and narrower question the runtime
+    // asks, because that needs a way back as well.
+    //
+    // Asked of the mask rather than of the trigger's shape: an absolute
+    // trigger fired from a focus rather than a touch has no position to
+    // resolve, and resolves at the centre of its own track.
+    if item.mask.contains(InputMask::ADJUST) {
         return None;
     }
 

@@ -13,18 +13,35 @@ use crate::view::{Interactions, View};
 /// A board with four directions and no pair to spare cannot nudge a value with
 /// Left/Right, because nothing produces them — so Confirm opens the control and
 /// the keys that were walking the list start moving the value instead.
+///
+/// **Only on such a board.** A device with the pair nudges the value where it
+/// stands and never opens this, which is what
+/// [`InputSource::has_left_right_keys`](crate::host::InputSource::has_left_right_keys)
+/// is asked. Opening it everywhere is what quietly took over a reader's two
+/// page-turn keys.
+///
+/// **Nothing on the panel says the keys have changed meaning.** Until the
+/// focused and editing states are drawn, a person can only find out by pressing
+/// something and watching what moves.
 struct Editing {
-    /// Which focusable is being edited. An index rather than a flag: a tree
-    /// that reshuffles under an open edit must not quietly start applying
-    /// steps to whatever moved into the slot.
-    focus: usize,
-    /// Every step applied since it opened, summed.
+    /// Which focusable is being edited.
     ///
-    /// What makes Back able to undo without the framework ever holding the
-    /// value. The trigger is *relative* — the screen owns the number and is
-    /// handed deltas — so the inverse of a sum of steps is a step, and cancel
-    /// is one more dispatch rather than a snapshot of something we never had.
-    net: i32,
+    /// An index rather than a flag so the edit stays pinned to the control it
+    /// opened on when `Runtime::focus` moves under it — a swipe still walks the
+    /// list while a value is open, and the keys must keep reaching the value.
+    ///
+    /// **It is not protection against the tree reshuffling.** Looking a control
+    /// up by index hands back whatever now sits there, so a rebuild that
+    /// reorders the focusables under an open edit points this at a different
+    /// control, and cancel would set *that* one to the value this edit opened
+    /// on. No screen here reshuffles mid-edit; nothing stops one.
+    focus: usize,
+    /// What the control read when the edit opened, so cancel can set it back.
+    ///
+    /// A number rather than a running total of the steps that were sent — see
+    /// [`Trigger::restore`](crate::view::Trigger::restore) for why a total
+    /// cannot put a value back.
+    start: i32,
 }
 
 /// Per-screen state the runtime owns so screens never see it.

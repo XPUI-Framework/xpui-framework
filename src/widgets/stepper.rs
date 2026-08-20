@@ -69,7 +69,7 @@ impl<M: Clone + 'static> Stepper<M> {
         let row_height = Theme::metric(ThemeMetric::ListRowHeight);
         let gap = Theme::metric(ThemeMetric::VerticalSpacing);
 
-        let mut slider = Slider::new(self.value, self.max);
+        let mut slider = Slider::new(self.value, self.max).without_focus();
         if let Some(make) = self.change {
             slider = slider.on_change(make);
         }
@@ -125,7 +125,13 @@ impl<M: Clone + 'static> View<M> for Stepper<M> {
             out.declare(
                 self.bounds(origin),
                 InputMask::FOCUS.union(InputMask::ADJUST),
-                Trigger::Step { make: step },
+                Trigger::Step {
+                    make: step,
+                    // The track's own setter, so an edit opened here can be
+                    // cancelled exactly whatever a step is worth to the screen.
+                    set: self.change,
+                    value: self.value,
+                },
             );
         }
     }
