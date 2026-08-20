@@ -620,6 +620,49 @@ impl xpui::Screen for ClampedDial {
     }
 }
 
+/// A swipe cannot walk the focus out from under an open edit.
+///
+/// Touch and swipe are resolved before the keys and know nothing about the
+/// edit, so a swipe used to move the highlight while the keys carried on
+/// driving the control it left — the value and the thing that looks selected
+/// disagreeing, with no way back to noticing it.
+#[test]
+fn a_swipe_is_declined_while_a_value_is_open() {
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    let mut runtime = Runtime::new(Dial {
+        value: 50,
+        tapped: 0,
+    });
+    runtime.render();
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    runtime.render();
+    let focus = runtime.focused_index();
+
+    testing::set_swipe(SwipeDir::Up);
+    runtime.loop_();
+    runtime.render();
+
+    assert_eq!(
+        runtime.focused_index(),
+        focus,
+        "the swipe must not move the highlight while a value is open"
+    );
+
+    // And the keys still reach the value they opened on.
+    testing::press(Button::Up);
+    runtime.loop_();
+    assert_eq!(
+        runtime.screen().value,
+        51,
+        "the edit still owns the keys after the declined swipe"
+    );
+}
+
 /// One nudge, five units — what a frontlight row does.
 ///
 /// The other way a cancel computed from steps goes wrong, and the one spec 26

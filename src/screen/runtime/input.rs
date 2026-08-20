@@ -3,7 +3,7 @@
 use super::{Editing, Repeat, Runtime};
 use crate::host::{Button, Input, SwipeDir, finish_screen, millis, request_update};
 use crate::screen::Screen;
-use crate::screen::routing::{focused, focused_message, focused_step, resolve};
+use crate::screen::routing::{adjustable, focused, focused_message, focused_step, resolve};
 use crate::view::InputMask;
 
 /// Fire once on press, then repeat after this hold, at this interval.
@@ -146,7 +146,13 @@ impl<S: Screen> Runtime<S> {
         self.screen.tick();
 
         // -- touch ----------------------------------------------------------
-        if self.painted && Input::has_touch() {
+        //
+        // **Declined while a value is open.** Touch and swipe run ahead of the
+        // keys and know nothing about the edit, so a finger could set the value
+        // the keys are driving, or walk the focus out from under it and leave
+        // the keys acting on a control the highlight has left. A mode only some
+        // inputs respect is not a mode.
+        if self.editing.is_none() && self.painted && Input::has_touch() {
             if let Some(point) = Input::touch_held() {
                 let interactions = self.collect_settled();
                 if let Some(message) = resolve(&interactions, point, InputMask::DRAG) {
@@ -178,11 +184,11 @@ impl<S: Screen> Runtime<S> {
 
         // -- swipe ----------------------------------------------------------
         // A vertical swipe anywhere moves focus, which is what the C++ screens
-        // do (HomeActivity). Which way is a preference, because both readings
+        // do (HomeActivity). Declined during an edit, as touch is. Which way is a preference, because both readings
         // are defensible: by default the swipe drags the *content*, so swiping
         // up walks down the list; with `swipe_moves_selection` it drags the
         // *selection*, so swiping up moves focus up like Button::Up.
-        if self.painted {
+        if self.editing.is_none() && self.painted {
             let direction = Input::swipe();
             if direction != SwipeDir::None {
                 if let Some(message) = self.screen.on_swipe(direction) {
@@ -240,9 +246,9 @@ impl<S: Screen> Runtime<S> {
                 // the same controls, which is what leaves this branch free.
                 if !Input::has_left_right_keys()
                     && let Some(item) = focused(&interactions, self.focus)
-                    && item.mask.contains(InputMask::ADJUST)
-                    && item.trigger.is_editable()
+                    && adjustable(item)
                     && let Some(start) = item.trigger.reading()
+                    && item.trigger.is_editable()
                 {
                     self.editing = Some(Editing {
                         focus: self.focus,

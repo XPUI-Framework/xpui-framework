@@ -6,7 +6,7 @@
 //! lifecycle around it.
 
 use crate::Point;
-use crate::view::{InputMask, Interactions};
+use crate::view::{InputMask, Interaction, Interactions};
 
 /// The message from the first interaction under `point` that accepts `kind`.
 ///
@@ -38,6 +38,21 @@ pub(crate) fn focused<M>(
         .nth(focus)
 }
 
+/// Whether this is a control the keys move rather than fire.
+///
+/// **One question, asked in three places**, because a control that was
+/// adjustable to one of them and not the others is how a mode opens that
+/// nothing can drive: spec 26 tested `ADJUST` to enter an edit and `ADJUST`
+/// plus a step trigger to act on it, so a control with the first and not the
+/// second opened a mode where every key did nothing.
+///
+/// Whether an edit may *open* on it is a further question — that needs a way
+/// back as well, and [`Trigger::is_editable`](crate::view::Trigger::is_editable)
+/// is the one that asks it.
+pub(crate) fn adjustable<M: Clone>(item: &Interaction<M>) -> bool {
+    item.mask.contains(InputMask::ADJUST)
+}
+
 /// A relative nudge for the focused control, for Left/Right.
 pub(crate) fn focused_step<M: Clone>(
     interactions: &Interactions<M>,
@@ -45,7 +60,7 @@ pub(crate) fn focused_step<M: Clone>(
     delta: i32,
 ) -> Option<M> {
     let item = focused(interactions, focus)?;
-    if !item.mask.contains(InputMask::ADJUST) {
+    if !adjustable(item) {
         return None;
     }
     item.trigger.resolve_step(delta)
@@ -55,14 +70,11 @@ pub(crate) fn focused_step<M: Clone>(
 pub(crate) fn focused_message<M: Clone>(interactions: &Interactions<M>, focus: usize) -> Option<M> {
     let item = focused(interactions, focus)?;
 
-    // **Confirm never fires an adjustable control.** Whether one can be
-    // *opened* for editing is a separate and narrower question the runtime
-    // asks, because that needs a way back as well.
-    //
-    // Asked of the mask rather than of the trigger's shape: an absolute
-    // trigger fired from a focus rather than a touch has no position to
-    // resolve, and resolves at the centre of its own track.
-    if item.mask.contains(InputMask::ADJUST) {
+    // **Confirm never fires a control the keys move.** Asked through
+    // `adjustable` rather than of the trigger's shape: an absolute trigger
+    // fired from a focus rather than a touch has no position to resolve, and
+    // resolves at the centre of its own track.
+    if adjustable(item) {
         return None;
     }
 
