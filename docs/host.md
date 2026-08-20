@@ -14,7 +14,7 @@ worth reading if you are changing one of those, or writing a new one.
 | `Canvas` | Fill and stroke rectangles, draw text, lines, bitmaps, icons | [canvas.rs](../src/host/canvas.rs) |
 | `TextMetrics` | Width and line height for a string in a font | [metrics.rs](../src/host/metrics.rs) |
 | `Chrome` | Header, button hints, list rows, dialogs, and "repaint please" — your theme | [chrome.rs](../src/host/chrome.rs) |
-| `InputSource` | Buttons, taps, drags, gestures for one frame | [input.rs](../src/host/input.rs) |
+| `InputSource` | Buttons, taps, drags and gestures for one frame — and what keys the device has at all | [input.rs](../src/host/input.rs) |
 | `Clock` | Milliseconds since boot | [clock.rs](../src/host/clock.rs) |
 
 Implement all five on one type and it satisfies `Host` automatically:
@@ -88,6 +88,7 @@ impl InputSource for MyBackend {
 #   fn is_pressed(&self, _button: Button) -> bool { false }
 #   fn was_released(&self, _button: Button) -> bool { false }
 #   fn has_touch(&self) -> bool { false }
+#   fn has_left_right_keys(&self) -> bool { false }
 #   fn tap(&self) -> Option<Point> { None }
 #   fn touch_held(&self) -> Option<Point> { None }
 #   fn touch_released(&self) -> bool { false }
@@ -195,7 +196,7 @@ they are deliberately different shapes:
 
 | Backend | Satisfies | How |
 |---|---|---|
-| `embedded_graphics` | all five | `Canvas` and `TextMetrics` over a `DrawTarget`; `InputSource` and `Clock` from what the frame loop feeds it; `Chrome` from `chrome` |
+| `embedded_graphics` | all five | `Canvas` and `TextMetrics` over a `DrawTarget`; `InputSource` and `Clock` from what the frame loop feeds it, except the key question, which comes from the board; `Chrome` from `chrome` |
 | `fui` | all five | over an FFI boundary, into C++ FreeInkUI |
 | `chrome` | `Chrome` | from `Canvas` primitives, for backends that have no toolkit |
 

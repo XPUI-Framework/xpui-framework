@@ -8,7 +8,7 @@
 use xpui::screen::{Driver, Runtime};
 use xpui::testing::{self, MIN_TOUCH_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use xpui::{
-    Alignment, Button, HStack, InputMask, Interactions, List, ListRow, Modal, Modifiers,
+    Alignment, Button, HStack, Input, InputMask, Interactions, List, ListRow, Modal, Modifiers,
     NavigationScreen, Point, Rect, ScrollView, Section, Size, Slider, Spacer, Stepper, SwipeDir,
     Text, Toggle, Trigger, VStack, View, hstack, value_at, vstack,
 };
@@ -954,6 +954,79 @@ fn the_arrows_move_the_highlight_inside_the_dialog() {
     testing::press(Button::Down);
     runtime.loop_();
     assert_eq!(highlight(&mut runtime), 1, "Down moves it back");
+}
+
+/// A screen that changes a value the way its device allows.
+///
+/// The two paths a value control has: nudge it where it stands, which needs a
+/// Left/Right pair, or enter it and leave again, which needs only Confirm and
+/// the keys that walk the list. Which one a device can offer is not something
+/// a screen may assume — [`Input::has_left_right_keys`] is how it asks.
+struct Nudged {
+    value: i32,
+}
+
+impl xpui::Screen for Nudged {
+    type Message = i32;
+
+    fn body(&self) -> impl View<i32> {
+        Text::new(if Input::has_left_right_keys() {
+            "Left and Right"
+        } else {
+            "Confirm to edit"
+        })
+    }
+
+    fn on_key(&self, key: Button) -> Option<i32> {
+        match key {
+            Button::Left if Input::has_left_right_keys() => Some(self.value - 1),
+            Button::Right if Input::has_left_right_keys() => Some(self.value + 1),
+            _ => None,
+        }
+    }
+
+    fn update(&mut self, message: i32) {
+        self.value = message;
+    }
+}
+
+/// A screen can find out what the device offers, and act on it.
+///
+/// Both halves matter and they fail differently. The label is what a person
+/// reads before pressing anything, and a device that cannot nudge must not
+/// promise it can; the key is whether the press does anything at all.
+///
+/// `Nudged` is a stand-in, not the shipped path: no widget branches on this
+/// yet, so a value control still enters an edit mode on every device and a
+/// reader's page-turn keys still move the value. Assuming rather than asking is
+/// what put that there; this is the asking, and the branch is still to come.
+#[test]
+fn a_screen_asks_what_the_device_can_do() {
+    for present in [false, true] {
+        testing::install();
+        testing::reset();
+        testing::set_has_left_right_keys(present);
+
+        let mut runtime = Runtime::new(Nudged { value: 5 });
+        runtime.render();
+
+        let labels = testing::render(&testing::ops_log());
+        let promised = labels.contains("Left and Right");
+        assert_eq!(
+            promised, present,
+            "a device with has_left_right_keys={present} must not be told otherwise"
+        );
+
+        testing::press(Button::Right);
+        runtime.loop_();
+
+        let expected = if present { 6 } else { 5 };
+        assert_eq!(
+            runtime.screen().value,
+            expected,
+            "Right with has_left_right_keys={present}"
+        );
+    }
 }
 
 /// Both readings of a vertical swipe are supported, because both are

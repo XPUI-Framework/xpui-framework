@@ -40,16 +40,38 @@ pub enum SwipeDir {
     Down = 4,
 }
 
-/// One frame of input.
+/// One frame of input, and what the device it came from can do.
 ///
 /// Edge queries are true for exactly one frame. Nothing is consumed by reading,
 /// so the framework may ask the same question more than once per frame.
+///
+/// One of these is not about a frame at all:
+/// [`has_left_right_keys`](InputSource::has_left_right_keys) describes the
+/// device and answers the same thing every time it is asked. Everything else
+/// here is about *this* frame — [`has_touch`](InputSource::has_touch) included,
+/// which reports whether this frame carries any touch at all, down or just
+/// lifted, and never whether the panel has a digitiser.
 pub trait InputSource {
     fn was_pressed(&self, button: Button) -> bool;
     fn is_pressed(&self, button: Button) -> bool;
     fn was_released(&self, button: Button) -> bool;
 
     fn has_touch(&self) -> bool;
+
+    /// Whether the device has a Left/Right pair to nudge a value with.
+    ///
+    /// A control that changes a value needs to know. With the pair, Left and
+    /// Right move the value where it stands. Without one, the keys that would
+    /// do the nudging are already busy walking between rows, so the value has
+    /// to be entered and left again instead.
+    ///
+    /// **Deliberately not defaulted.** A backend that forgot to answer would
+    /// inherit whichever behaviour the default picked, on every device it
+    /// drives, with nothing to notice.
+    ///
+    /// Answering it is not the same as acting on it: a control has to read this
+    /// and branch. Nothing in the framework does so on the caller's behalf.
+    fn has_left_right_keys(&self) -> bool;
 
     /// A completed tap, at the position the finger went down.
     fn tap(&self) -> Option<Point>;
@@ -98,6 +120,11 @@ impl Input {
 
     pub fn has_touch() -> bool {
         super::current().has_touch()
+    }
+
+    /// See [`InputSource::has_left_right_keys`].
+    pub fn has_left_right_keys() -> bool {
+        super::current().has_left_right_keys()
     }
 
     pub fn tap() -> Option<Point> {

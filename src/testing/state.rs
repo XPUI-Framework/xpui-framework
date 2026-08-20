@@ -14,6 +14,7 @@ thread_local! {
     pub(super) static PRESSED: core::cell::Cell<Option<Button>> = const { core::cell::Cell::new(None) };
     pub(super) static HELD: core::cell::Cell<Option<Button>> = const { core::cell::Cell::new(None) };
     pub(super) static SWIPE_MOVES_SELECTION: core::cell::Cell<bool> = const { core::cell::Cell::new(false) };
+    pub(super) static HAS_LEFT_RIGHT_KEYS: core::cell::Cell<bool> = const { core::cell::Cell::new(false) };
     pub(super) static FINISHES: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
     pub(super) static UPDATES: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
     pub(super) static PRESENTS: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
@@ -30,6 +31,7 @@ pub fn reset() {
     PRESSED.with(|pressed| pressed.set(None));
     HELD.with(|held| held.set(None));
     SWIPE_MOVES_SELECTION.with(|flag| flag.set(false));
+    HAS_LEFT_RIGHT_KEYS.with(|flag| flag.set(false));
     FINISHES.with(|count| count.set(0));
     UPDATES.with(|count| count.set(0));
     PRESENTS.with(|count| count.set(0));
@@ -71,6 +73,14 @@ pub fn release() {
 /// See [`InputSource::swipe_moves_selection`](crate::host::InputSource::swipe_moves_selection).
 pub fn set_swipe_moves_selection(enabled: bool) {
     SWIPE_MOVES_SELECTION.with(|flag| flag.set(enabled));
+}
+
+/// Says whether the device the fake stands for has a Left/Right pair, so a
+/// control that branches on it can be tested both ways. `false` until set, and
+/// reset to `false` by [`reset`].
+/// See [`InputSource::has_left_right_keys`](crate::host::InputSource::has_left_right_keys).
+pub fn set_has_left_right_keys(present: bool) {
+    HAS_LEFT_RIGHT_KEYS.with(|flag| flag.set(present));
 }
 
 /// Moves the fake clock, so repeat timing is deterministic.

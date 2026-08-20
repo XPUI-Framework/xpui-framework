@@ -6,7 +6,9 @@ use alloc::string::ToString;
 
 use super::metrics::{READER_FONT, UI_FONT, UI_SMALL_FONT, line_height, screen, text_width};
 use super::ops::{DrawOp, RectKind};
-use super::state::{FINISHES, HELD, NOW, PRESENTS, PRESSED, SWIPE, SWIPE_MOVES_SELECTION, push};
+use super::state::{
+    FINISHES, HAS_LEFT_RIGHT_KEYS, HELD, NOW, PRESENTS, PRESSED, SWIPE, SWIPE_MOVES_SELECTION, push,
+};
 use crate::geometry::{Point, Rect, Size};
 use crate::host::{
     Canvas, Clock, FontId, FontRole, FontStyle, IconRef, InputSource, Navigator, TextMetrics,
@@ -207,6 +209,10 @@ impl InputSource for TestHost {
 
     fn has_touch(&self) -> bool {
         false
+    }
+
+    fn has_left_right_keys(&self) -> bool {
+        HAS_LEFT_RIGHT_KEYS.with(|flag| flag.get())
     }
 
     fn tap(&self) -> Option<Point> {

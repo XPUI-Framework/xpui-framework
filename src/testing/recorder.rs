@@ -316,6 +316,10 @@ impl<H: Host + 'static> InputSource for Recorder<H> {
         self.inner.was_home_gesture()
     }
 
+    fn has_left_right_keys(&self) -> bool {
+        self.inner.has_left_right_keys()
+    }
+
     fn swipe_moves_selection(&self) -> bool {
         self.inner.swipe_moves_selection()
     }

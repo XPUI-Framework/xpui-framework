@@ -52,8 +52,8 @@ pub use ops::{DrawOp, RectKind, RowCells, render};
 pub use recorder::Recorder;
 pub use snapshot::assert_snapshot;
 pub use state::{
-    finishes, hold, ops_log, presents, press, release, reset, set_millis, set_swipe,
-    set_swipe_moves_selection, updates,
+    finishes, hold, ops_log, presents, press, release, reset, set_has_left_right_keys, set_millis,
+    set_swipe, set_swipe_moves_selection, updates,
 };
 #[cfg(not(target_os = "none"))]
 pub use ui::{Drive, Ui};

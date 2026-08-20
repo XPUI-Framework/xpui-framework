@@ -508,8 +508,11 @@ focus with no screen code at all.
 **Left/Right nudge whatever holds focus.** A control that opts into adjustment
 (`Stepper` does) receives `-1` / `+1` there, so one pair of keys drives every
 adjustable setting on a screen rather than the screen wiring keys to one of
-them. Confirm on such a control does nothing: there is no absolute value to
-commit.
+them. **Confirm opens such a control rather than firing it** — there is no
+absolute value to commit, so it enters an edit mode instead, on every device.
+[Spec 30](../../../docs/specs/30-editing-a-value-with-one-key.md) is what will
+make that mode visible and make it conditional on
+`Input::has_left_right_keys()`.
 
 **A composite is one focus stop.** A `Stepper` offers three touch targets — `−`,
 the track, `+` — but a single stop for buttons, so Up/Down move between settings
@@ -530,6 +533,13 @@ control, not the widened area.
 same list the same way. Which way it walks is the host's preference
 (`InputSource::swipe_moves_selection`): by default the swipe drags the
 *content*, so swiping up moves focus down.
+
+**Ask what the device has, never assume it.** `Input::has_left_right_keys()`
+answers whether there is a pair to nudge a value with. No rule of thumb about
+the shape of a device gets it right — two devices of the same family differ —
+and the host has no default to fall back on, precisely so a backend cannot
+inherit a guess. Which device answers what is
+[`xpui-boards`](../../boards/README.md)' to say, not this page's.
 
 **Auto-repeat is free.** A key fires on press, then repeats after 500ms at 500ms
 intervals, whether the runtime claimed it or a screen did.
@@ -935,10 +945,11 @@ assert_eq!(Input::tap(), None);
 | `is_pressed(b)` | Whether it is down now |
 | `tap()` | A completed tap, at the position the finger went down |
 | `touch_held()` | Where the finger is while it is down — what a drag needs |
-| `has_touch()` / `touch_released()` | Whether the panel is being touched at all |
+| `has_touch()` / `touch_released()` | Whether *this frame* carries a touch — not whether the panel has a digitiser |
 | `swipe()` | The `SwipeDir` for this frame |
 | `was_back_gesture()` / `was_home_gesture()` | System gestures |
 | `swipe_moves_selection()` | Which way a vertical swipe walks focus |
+| `has_left_right_keys()` | Whether the device has a pair to nudge a value with |
 
 The fifteen buttons are `Back`, `Confirm`, `Left`, `Right`, `Up`, `Down`,
 `Power`, `PageBack`, `PageForward`, `NavNext`, `NavPrevious` and the four
