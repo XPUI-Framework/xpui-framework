@@ -135,6 +135,8 @@ pub struct App {
     stack: Vec<Box<dyn Driver>>,
     shell: &'static AppShell,
     dirty: bool,
+    /// Whether the root screen may be finished. See [`App::keep_root`].
+    keep_root: bool,
 }
 
 impl App {
@@ -152,9 +154,33 @@ impl App {
             stack: Vec::new(),
             shell,
             dirty: true,
+            keep_root: false,
         };
         app.push(root);
         app
+    }
+
+    /// Refuses to finish the root screen, for a host with nothing underneath it.
+    ///
+    /// A window and a C++ host both have somewhere to return to, so by default
+    /// the last screen finishing ends the app — that is what closes the
+    /// simulator. **A device does not.** There the stack emptying stops the
+    /// frame loop, and a board that stops answering is indistinguishable from
+    /// one that crashed, because every other key goes quiet with it.
+    ///
+    /// **This is why the decision belongs here and not in a host.**
+    /// `Button::Back` means three things, tried in order: a screen may claim it
+    /// through `on_key`, an open edit cancels with it, and only then does it
+    /// finish the screen. A host that withholds the key instead suppresses all
+    /// three to prevent the third, so a screen cannot dismiss its own picker
+    /// and a value opened on a root screen can be committed but never
+    /// cancelled. Declining the *pop* leaves the first two meanings alone.
+    ///
+    /// Every host that owns no stack underneath its root wants this, and one
+    /// solving it for itself reaches for the key rather than the pop.
+    pub fn keep_root(mut self) -> Self {
+        self.keep_root = true;
+        self
     }
 
     /// Pushes a screen and shows it.
@@ -192,6 +218,11 @@ impl App {
         self.stack.len()
     }
 
+    /// Whether the screen on top is a root this app refuses to finish.
+    fn is_root_kept(&self) -> bool {
+        self.keep_root && self.stack.len() <= 1
+    }
+
     /// Whether the screen has changed since it was last painted.
     pub fn is_dirty(&self) -> bool {
         self.dirty || crate::host::chrome::needs_paint()
@@ -213,8 +244,20 @@ impl App {
         // Order is pop-then-push, so a screen that finishes itself and opens a
         // replacement in one frame ends up with the replacement on top of the
         // screen it came from, not on top of itself.
-        let finished = self.shell.take_finish().then(|| self.pop()).flatten();
-        if let Some(next) = self.shell.take_pending() {
+        // Both read before either is acted on, and both read even when the
+        // request is declined: a finish left set would fire against whatever
+        // was pushed next, frames later and on a different screen.
+        let asked = self.shell.take_finish();
+        let next = self.shell.take_pending();
+
+        // A root being *replaced* is not being emptied, so it pops as usual and
+        // the replacement becomes the new root. Declining here as well would
+        // leave the old screen under the new one for the life of the firmware —
+        // a splash under a menu, on a 64 kB heap — and would reverse the
+        // pop-then-push order the rest of this block exists to keep.
+        let keep = self.is_root_kept() && next.is_none();
+        let finished = (asked && !keep).then(|| self.pop()).flatten();
+        if let Some(next) = next {
             self.push_driver(next);
         }
         // Last, so a screen's `Drop` cannot re-enter a stack still being

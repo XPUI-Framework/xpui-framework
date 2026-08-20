@@ -168,6 +168,160 @@ fn finishing_the_last_screen_ends_the_app() {
     assert!(!app.is_running(), "the loop has nothing left to run");
 }
 
+// -- a root a device cannot leave --------------------------------------------
+
+/// Finishes itself and opens a replacement in the same frame.
+struct Replacer;
+
+impl Screen for Replacer {
+    type Message = ();
+
+    fn body(&self) -> impl View<Self::Message> {
+        NavigationScreen::new(vstack![0; Text::new("splash")])
+    }
+
+    fn update(&mut self, _message: Self::Message) {}
+
+    fn on_key(&self, key: Button) -> Option<Self::Message> {
+        if key == Button::Confirm {
+            finish_screen();
+            present(Leaf { name: "Menu" });
+        }
+        None
+    }
+}
+
+/// Counts the Backs that reach it, without claiming them.
+///
+/// Deliberately returns `None`: a screen that *claimed* Back would never reach
+/// the policy under test. What this proves is that the key arrives at all —
+/// which a host withholding it at the pin is what takes away.
+struct Rooted {
+    backs: std::rc::Rc<std::cell::Cell<u32>>,
+}
+
+impl Screen for Rooted {
+    type Message = ();
+
+    fn body(&self) -> impl View<Self::Message> {
+        NavigationScreen::new(vstack![0; Text::new("root")])
+    }
+
+    fn update(&mut self, _message: Self::Message) {}
+
+    fn on_key(&self, key: Button) -> Option<Self::Message> {
+        if key == Button::Back {
+            self.backs.set(self.backs.get() + 1);
+        }
+        None
+    }
+}
+
+/// A host with nothing under its root keeps running when Back reaches it.
+///
+/// A board whose stack empties stops its frame loop, and a board that stops
+/// answering looks exactly like one that crashed — every other key goes quiet
+/// with it.
+#[test]
+fn a_kept_root_survives_the_key_that_would_finish_it() {
+    let _guard = serial();
+    let mut app = App::new(Leaf { name: "Only" }).keep_root();
+
+    testing::press(Button::Confirm);
+    app.tick();
+
+    assert_eq!(app.depth(), 1, "the root is still on the stack");
+    assert!(app.is_running(), "and the loop still has something to run");
+}
+
+/// Keeping the root does not take the key away from the screen.
+///
+/// This is the half a host-side guard destroys. Declining the *pop* leaves Back
+/// free to mean what a screen or an open edit wants it to mean; withholding the
+/// key means a screen cannot dismiss its own picker and a value opened here
+/// could be committed but never cancelled.
+#[test]
+fn a_kept_root_still_sees_back() {
+    let _guard = serial();
+    let backs = std::rc::Rc::new(std::cell::Cell::new(0));
+    let mut app = App::new(Rooted {
+        backs: std::rc::Rc::clone(&backs),
+    })
+    .keep_root();
+
+    testing::press(Button::Back);
+    app.tick();
+    testing::press(Button::Back);
+    app.tick();
+
+    assert_eq!(backs.get(), 2, "both presses reached the screen's on_key");
+    assert!(app.is_running(), "and neither ended the app");
+}
+
+/// The root is kept; anything above it pops as it always did.
+///
+/// The bound matters as much as the policy. Without it a board would open a
+/// screen from its menu and never get back — worse than the fault this
+/// replaces, and every board using it would be stuck until it was re-flashed.
+#[test]
+fn keeping_the_root_does_not_pin_the_screens_above_it() {
+    let _guard = serial();
+    let mut app = App::new(Leaf { name: "Root" }).keep_root();
+    app.push(Leaf { name: "Second" });
+    assert_eq!(app.depth(), 2);
+
+    testing::press(Button::Confirm);
+    app.tick();
+
+    assert_eq!(app.depth(), 1, "the screen above the root still finishes");
+    assert!(app.is_running());
+}
+
+/// A root that replaces itself is replaced, not stacked on.
+///
+/// Finishing and presenting in one frame is how a splash becomes a menu. The
+/// root is kept from being *emptied*, not from being swapped — pinning it here
+/// too would leave the splash alive underneath for the life of the firmware,
+/// and Back from the menu would land on it.
+#[test]
+fn a_kept_root_can_still_replace_itself() {
+    let _guard = serial();
+    let mut app = App::new(Replacer).keep_root();
+
+    testing::press(Button::Confirm);
+    app.tick();
+
+    assert_eq!(
+        app.depth(),
+        1,
+        "the replacement is the root, not a screen on it"
+    );
+    assert!(app.is_running());
+}
+
+/// A request declined at the root does not fire later./// A request declined at the root does not fire later.
+///
+/// `finish_screen` sets a flag the shell clears when it acts on it. Left set
+/// while the root declines it, the next push would be popped straight back off
+/// by a request made frames earlier against a different screen.
+#[test]
+fn a_declined_finish_is_not_remembered() {
+    let _guard = serial();
+    let mut app = App::new(Leaf { name: "Only" }).keep_root();
+
+    testing::press(Button::Confirm);
+    app.tick();
+    assert_eq!(app.depth(), 1);
+
+    app.push(Leaf { name: "Second" });
+    assert_eq!(app.depth(), 2);
+
+    // A frame with no key pressed. The stale request, if it were kept, would
+    // pop the screen just pushed.
+    app.tick();
+    assert_eq!(app.depth(), 2, "the declined request did not carry over");
+}
+
 /// Same hazard in the other direction: a screen pushing from inside its frame.
 #[test]
 fn presenting_pushes_after_the_frame() {
