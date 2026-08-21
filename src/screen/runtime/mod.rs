@@ -5,7 +5,9 @@ mod input;
 
 use super::Screen;
 use crate::geometry::Point;
-use crate::host::{Button, Renderer, request_update};
+use crate::host::ValueMode;
+use crate::host::{Button, Input, Renderer, request_update};
+use crate::screen::routing::{adjustable, focused};
 use crate::view::{Interactions, View};
 
 /// An adjustable control being changed in place.
@@ -20,9 +22,10 @@ use crate::view::{Interactions, View};
 /// is asked. Opening it everywhere is what quietly took over a reader's two
 /// page-turn keys.
 ///
-/// **Nothing on the panel says the keys have changed meaning.** Until the
-/// focused and editing states are drawn, a person can only find out by pressing
-/// something and watching what moves.
+/// **The panel says so while it is open.** The focused control is drawn in
+/// [`ControlState::Editing`](crate::host::ControlState) rather than
+/// `Focused` — what that looks like is the backend's to decide — and the hint
+/// bar takes the board's words for Cancel and Done over Back and Confirm.
 struct Editing {
     /// Which focusable is being edited.
     ///
@@ -33,15 +36,20 @@ struct Editing {
     /// **It is not protection against the tree reshuffling.** Looking a control
     /// up by index hands back whatever now sits there, so a rebuild that
     /// reorders the focusables under an open edit points this at a different
-    /// control, and cancel would set *that* one to the value this edit opened
-    /// on. No screen here reshuffles mid-edit; nothing stops one.
+    /// control, and **Confirm would commit this edit's value to *that* one**.
+    /// Cancel is safe either way, since it dispatches nothing. No screen here
+    /// reshuffles mid-edit; nothing stops one.
     focus: usize,
-    /// What the control read when the edit opened, so cancel can set it back.
+    /// **The value, while the edit owns it.**
     ///
-    /// A number rather than a running total of the steps that were sent — see
-    /// [`Trigger::restore`](crate::view::Trigger::restore) for why a total
-    /// cannot put a value back.
-    start: i32,
+    /// Seeded from what the control read when the edit opened, moved by every
+    /// key since, and dispatched once by Confirm. The screen's own value does
+    /// not move until then, so cancel has nothing to put back — it drops this
+    /// and the screen is already as it was.
+    ///
+    /// The control paints from here rather than from the screen: see
+    /// [`Interactions::editing_value`](crate::view::Interactions::editing_value).
+    value: i32,
 }
 
 /// Per-screen state the runtime owns so screens never see it.
@@ -205,9 +213,32 @@ impl<S: Screen> Runtime<S> {
         let mut view = self.screen.body();
         view.measure(Renderer::screen_size());
 
-        let mut out = Interactions::new(self.focus).scrolled(self.scroll);
+        let mut out = Interactions::new(self.focus)
+            .scrolled(self.scroll)
+            .editing(self.editing.as_ref().map(|editing| editing.value));
         view.interactions(Point::ORIGIN, &mut out);
         out
+    }
+
+    /// What the focused control is doing, for the hint bar.
+    ///
+    /// Read from the same walk that painted, so the bar and the control cannot
+    /// disagree about which frame they are describing.
+    fn value_mode(&self, interactions: &Interactions<S::Message>) -> ValueMode {
+        if self.editing.is_some() {
+            return ValueMode::Open;
+        }
+        // Offered only where Confirm would actually open it: a device with a
+        // Left/Right pair nudges the value in place and never opens anything,
+        // so promising Edit there would name a key that does nothing.
+        let openable = !Input::has_left_right_keys()
+            && focused(interactions, self.focus)
+                .is_some_and(|item| adjustable(item) && item.trigger.is_editable());
+        if openable {
+            ValueMode::Openable
+        } else {
+            ValueMode::None
+        }
     }
 
     /// Applies a message and schedules the repaint the screen would otherwise
@@ -281,8 +312,15 @@ impl<S: Screen> Runtime<S> {
         } else {
             Interactions::new(self.focus)
         }
-        .scrolled(self.scroll);
+        .scrolled(self.scroll)
+        .editing(self.editing.as_ref().map(|editing| editing.value));
         view.interactions(Point::ORIGIN, &mut out);
+
+        // Said before the tree paints, because the hint bar is inside it. The
+        // screen supplied those hints and does not know a value is open; this
+        // is what lets the bar say so without the screen being told.
+        crate::host::set_value_mode(self.value_mode(&out));
+
         view.render(Point::ORIGIN);
 
         self.painted = true;

@@ -21,7 +21,8 @@ Implement all five on one type and it satisfies `Host` automatically:
 
 ```rust,no_run
 # use xpui::host::{
-#     Button, Canvas, Chrome, Clock, FontId, FontRole, FontStyle, Hint, IconRef, InputSource,
+#     Button, Canvas, Chrome, Clock, ControlState, FontId, FontRole, FontStyle, Hint, IconRef,
+#     InputSource,
 #     RowField, SwipeDir, TextMetrics, ThemeMetric,
 # };
 # use xpui::{Point, Rect, Size};
@@ -56,7 +57,7 @@ impl Chrome for MyBackend {
 #   fn draw_sub_header(&self, _rect: Rect, _label: &str, _right: Option<&str>) {}
 #   fn draw_button_hints(&self, _back: &Hint, _confirm: &Hint, _prev: &Hint, _next: &Hint) {}
 #   fn draw_progress_bar(&self, _rect: Rect, _current: u32, _total: u32) {}
-#   fn draw_slider(&self, _rect: Rect, _value: i32, _max: i32) {}
+#   fn draw_slider(&self, _rect: Rect, _value: i32, _max: i32, _state: ControlState) {}
 #   fn draw_scroll_indicator(&self, _r: Rect, _content: i32, _visible: i32, _offset: i32) {}
 #   fn draw_list<'a>(
 #       &self,

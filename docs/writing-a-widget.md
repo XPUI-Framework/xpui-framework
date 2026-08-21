@@ -99,7 +99,7 @@ that carries the arithmetic instead:
 // absolute, from a position
 Trigger::Value { make: Msg::Set, max: 100, value: reading },
 // relative, -1 / +1
-Trigger::Step { make: Msg::Nudge, set: Some(Msg::Set), value: reading },
+Trigger::Step { make: Msg::Nudge, set: Some(Msg::Set), max: 100, value: reading },
 # ];
 ```
 
@@ -112,10 +112,17 @@ absolute control needs it to be *nudged* — one step of an absolute value is
 not change it.
 
 **`set` on a relative control is what makes it editable.** A nudge is worth
-whatever the screen decides — a frontlight row reads one as five units — so no
-count of nudges can put a value back where it was. An absolute setter can, and a
-control without one can still be nudged but never opens an edit, because an edit
-that cannot be cancelled is a trap.
+whatever the screen decides — a frontlight row reads one as five units — so a
+nudge cannot express "this is the number now". An open edit has to: the
+framework holds the value while the keys move it and dispatches once, at
+Confirm, with an absolute. A control without a setter can still be nudged but
+never opens an edit.
+
+**`max` bounds the value while the framework holds it.** Outside an edit a
+relative control never needs one — the screen adds the delta to whatever it has
+and clamps however it likes. Inside one the framework owns the number, and a
+working copy nothing bounds runs off the end of the track and commits something
+the panel never showed.
 
 ## The optional methods
 

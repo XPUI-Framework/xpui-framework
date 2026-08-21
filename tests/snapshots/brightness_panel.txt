@@ -3,8 +3,8 @@ header      title="Light" subtitle=-
 text        (16,60) "Brightness" font=1003 regular
 text        (446,60) "60%" font=1003 regular
 text        (33,100) "-" font=1003 regular
-slider      (68,89 344x40) 60/100
+slider      (68,89 344x40) 60/100 focused
 text        (441,100) "+" font=1003 regular
 slider      (16,141 448x40) 60/100
 progress    (16,193 448x6) 60/100
-hints       back=- confirm="Save" previous="" next=""
+hints       back=- confirm="<edit>" previous="" next=""

@@ -4,7 +4,7 @@
 //! relative nudge — and the runtime turns one frame of input into the screen's
 //! own message. Separate from the declaration itself because the arithmetic
 //! lives here: converting a touch position into a value, nudging an absolute
-//! control by one step, and putting a value back where an edit found it.
+//! control by one step, and moving the copy an open edit holds.
 
 use alloc::boxed::Box;
 
@@ -38,20 +38,28 @@ pub enum Trigger<M> {
     /// whatever it currently holds, rather than being handed an absolute.
     Step {
         make: fn(i32) -> M,
+        /// The top of the control's own range, so a held edit can clamp.
+        ///
+        /// A relative control does not need it to nudge — the screen adds the
+        /// delta to whatever it holds and clamps however it likes. An open edit
+        /// does: the framework owns the value while it is open, and a working
+        /// copy nothing bounds marches past the end of the track and commits a
+        /// number the screen never showed.
+        max: i32,
         /// The message that sets this control outright, when it has one.
         ///
         /// **What makes a relative control editable.** `make` takes a *nudge*,
         /// and a nudge is worth whatever the screen decides — a frontlight row
-        /// reads one as five units. So a nudge cannot express "put it back
-        /// where it was": asking for `-4` moves a screen that scales by 20.
-        /// An absolute setter can, exactly, whatever the screen does with a
-        /// step. Without one a control can still be nudged; it just cannot be
-        /// edited, because an edit that cannot be cancelled is a trap.
+        /// reads one as five units. So a nudge cannot express "the value is
+        /// this now", which is the one message an open edit sends: it holds the
+        /// value while the keys move it and commits an absolute at Confirm.
+        /// Without a setter a control can still be nudged; it just cannot be
+        /// edited, because there would be no way to commit what was shown.
         set: Option<fn(i32) -> M>,
         /// What the control reads right now — see [`Trigger::Value::value`].
         ///
         /// A relative control does not need it to step, but an editor does: it
-        /// is what an edit opens on and what cancel puts back.
+        /// is what an edit opens on.
         value: i32,
     },
     /// A value control seen through [`ViewExt::map`](crate::view::ViewExt::map).
@@ -70,6 +78,7 @@ pub enum Trigger<M> {
     MappedStep {
         make: Box<dyn Fn(i32) -> M>,
         set: Option<Box<dyn Fn(i32) -> M>>,
+        max: i32,
         value: i32,
     },
 }
@@ -106,17 +115,23 @@ impl<M: Clone> Trigger<M> {
         match self {
             Trigger::Step { make, .. } => Some(make(delta)),
             Trigger::MappedStep { make, .. } => Some(make(delta)),
+            // `max.max(0)` for the same reason as `stepped`: `i32::clamp`
+            // panics when its low bound exceeds its high, and a control with no
+            // room to move is empty everywhere else rather than an error.
             Trigger::Value { make, max, value } => {
-                Some(make(value.saturating_add(delta).clamp(0, *max)))
+                Some(make(value.saturating_add(delta).clamp(0, (*max).max(0))))
             }
             Trigger::MappedValue { make, max, value } => {
-                Some(make(value.saturating_add(delta).clamp(0, *max)))
+                Some(make(value.saturating_add(delta).clamp(0, (*max).max(0))))
             }
             Trigger::Message(_) => None,
         }
     }
 
-    /// What the control reads now, for an editor that has to put it back.
+    /// What the control reads now, for an editor to open on.
+    ///
+    /// Read once, on the frame an edit opens, to seed the copy the framework
+    /// then owns. Cancel needs nothing from it: the screen's value never moved.
     ///
     /// `None` for a control with no reading at all — a row, a button — which is
     /// also every control an edit can never open on.
@@ -147,9 +162,10 @@ impl<M: Clone> Trigger<M> {
 
     /// Whether an edit can open on this control at all.
     ///
-    /// It needs a reading to open on and a way to be put back. Anything else is
-    /// a mode a person can enter and not leave as they found it, which is worse
-    /// than not offering the mode.
+    /// It needs a reading to open on and a way to be **set outright**, because
+    /// that is what Confirm dispatches. A control that can only be nudged would
+    /// give a person a mode they could enter and move and never commit, which
+    /// is worse than not offering the mode.
     pub fn is_editable(&self) -> bool {
         match self {
             // Absolute by construction: it can always be set to what it read.
@@ -160,19 +176,35 @@ impl<M: Clone> Trigger<M> {
         }
     }
 
-    /// The message that puts the control back to `target`, or `None` when it is
-    /// already there or cannot be set.
+    /// One step from `from`, held inside the control's own range.
     ///
-    /// **Absolute, never a sum of steps.** Undoing an edit by dispatching the
-    /// inverse of the steps that were sent is wrong twice over: a screen that
-    /// clamps swallows steps, so the total counts moves the value never made,
-    /// and a screen that scales reads the total as a nudge and multiplies it.
-    /// Setting the value it opened on is exact for both.
-    pub fn restore(&self, target: i32) -> Option<M> {
-        if self.reading()? == target {
-            return None;
-        }
-        self.set_to(target)
+    /// **For a value the framework is holding, not one the screen owns.** An
+    /// open edit keeps its own copy and paints from it, so the arithmetic has
+    /// to happen here rather than in the screen's `update`; `resolve_step` is
+    /// the other half, for the boards that nudge a value in place.
+    ///
+    /// A step is one unit of the control's range, including for
+    /// [`Trigger::Step`], whose `make` a screen is free to scale. That scale is
+    /// what a *nudge* is worth to a screen holding its own value; inside an
+    /// open edit the framework holds it, and a unit is a unit of the track the
+    /// knob is moving along.
+    ///
+    /// `None` for a control with no value at all — a row, a button.
+    ///
+    /// A control whose `max` is not positive has a value and no room to move
+    /// it, and answers `0`: the rest of the framework treats such a control as
+    /// empty rather than as an error — `Slider::render` and the chrome's
+    /// `draw_slider` both decline to paint one — and `i32::clamp` **panics**
+    /// when its low bound exceeds its high, which on a device is an abort.
+    pub fn stepped(&self, from: i32, delta: i32) -> Option<i32> {
+        let max = match self {
+            Trigger::Value { max, .. }
+            | Trigger::MappedValue { max, .. }
+            | Trigger::Step { max, .. }
+            | Trigger::MappedStep { max, .. } => *max,
+            Trigger::Message(_) => return None,
+        };
+        Some(from.saturating_add(delta).clamp(0, max.max(0)))
     }
 }
 

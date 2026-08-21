@@ -97,7 +97,24 @@ pub struct Interactions<M> {
     /// The scrolling viewport and the height of what it holds, published by the
     /// scroll view during the walk so the runtime can keep focus visible.
     viewport: Option<(Rect, i32)>,
+    /// Whether the control that owns the current focus stop is the one being
+    /// walked into. See [`Interactions::parent_focused`].
+    parent_focused: bool,
+    /// The open edit's working value, when one is open on the control at
+    /// `focus`. See [`Interactions::is_editing`].
+    ///
+    /// **The framework's copy, not the screen's.** While an edit is open the
+    /// screen's value does not move, so the control has to paint from this or
+    /// paint a number that ignores the keys.
+    editing: Option<i32>,
 }
+
+/// A focus index no declaration can ever have, meaning "the focus is not in
+/// this subtree at all".
+///
+/// A tree would have to declare `usize::MAX` focusable regions to reach it, and
+/// each one costs a `Vec` entry.
+const NO_FOCUS: usize = usize::MAX;
 
 impl<M> Interactions<M> {
     /// A collector for a tree whose focused control is at `focus`.
@@ -110,6 +127,8 @@ impl<M> Interactions<M> {
             scroll: 0,
             viewport: None,
             ignoring: false,
+            parent_focused: false,
+            editing: None,
         }
     }
 
@@ -127,6 +146,8 @@ impl<M> Interactions<M> {
             scroll: 0,
             viewport: None,
             ignoring: true,
+            parent_focused: false,
+            editing: None,
         }
     }
 
@@ -150,8 +171,6 @@ impl<M> Interactions<M> {
         focused
     }
 
-    /// How many interactions can hold focus. The runtime wraps its cursor on
-    /// this.
     /// Discards everything declared so far: this view is the only thing
     /// reachable while it is present.
     ///
@@ -168,6 +187,56 @@ impl<M> Interactions<M> {
         self.focusable = 0;
         self.captured = Some(preferred_focus);
         self.ignoring = false;
+    }
+
+    /// Whether the control being walked into is the one holding focus.
+    ///
+    /// **For a widget that declares no focus stop of its own.** A `Stepper`
+    /// takes one stop for the whole control and embeds a track that takes
+    /// none, so the track has nothing to learn from its own declaration and
+    /// asks the control that wrapped it instead.
+    pub fn parent_focused(&self) -> bool {
+        self.parent_focused
+    }
+
+    /// Says the subtree about to be walked belongs to a focused control.
+    ///
+    /// Set around the walk and put back afterwards, so a second control further
+    /// down the tree does not inherit the answer.
+    pub fn set_parent_focused(&mut self, focused: bool) {
+        self.parent_focused = focused;
+    }
+
+    /// Whether the control at `focus` is open for editing.
+    ///
+    /// The runtime owns the edit; a widget cannot know from its own declaration
+    /// that the keys have changed meaning.
+    ///
+    /// **A widget's question, not a screen's.** It is here rather than on
+    /// `Screen` or in `update` because a value widget genuinely needs it — a
+    /// third-party slider cannot paint the working copy without
+    /// [`editing_value`](Interactions::editing_value) — and off the screen's
+    /// own path because a screen that branched on the mode would make it the
+    /// screen's rather than the framework's. Nothing prevents a screen from
+    /// writing a `View` to read it; the design makes that the awkward way round
+    /// rather than the obvious one.
+    pub fn is_editing(&self) -> bool {
+        self.editing.is_some()
+    }
+
+    /// The open edit's working value, for the control the edit is open on.
+    ///
+    /// A control that holds focus while this is `Some` **is** that control —
+    /// there is one focus — so it paints this rather than the value it was
+    /// built with.
+    pub fn editing_value(&self) -> Option<i32> {
+        self.editing
+    }
+
+    /// Says the focused control is open, for the runtime that opened it.
+    pub(crate) fn editing(mut self, open: Option<i32>) -> Self {
+        self.editing = open;
+        self
     }
 
     /// Starts the walk with a scroll offset the scroll view should apply.
@@ -224,6 +293,8 @@ impl<M> Interactions<M> {
             .map(|item| item.rect)
     }
 
+    /// How many interactions can hold focus. The runtime wraps its cursor on
+    /// this.
     pub fn focusable_count(&self) -> usize {
         self.focusable
     }
@@ -239,8 +310,30 @@ impl<M> Interactions<M> {
     /// A collector for a sub-component, positioned so its focus numbering
     /// continues this one's. A mapped component's controls therefore sit in the
     /// parent's focus order exactly where they appear in the tree.
+    ///
+    /// **Everything a widget can ask crosses with it.** A sub-component is a
+    /// tree like any other: a `Slider` inside one has to learn that it holds
+    /// focus, that the control wrapping it does, and that an edit is open on
+    /// it, exactly as it would unmapped. A child built without them makes a
+    /// mapped value control paint the screen's value while the keys move a copy
+    /// it cannot see — the invisible mode this framework has already removed
+    /// once.
     pub(crate) fn child<N>(&self) -> Interactions<N> {
-        Interactions::new(self.focus.saturating_sub(self.focusable))
+        // `saturating_sub` would answer `0` when the focus is *behind* this
+        // subtree, telling the first thing inside it that it holds a focus that
+        // is somewhere above. `NO_FOCUS` is the honest answer: nothing here.
+        let focus = self.focus.checked_sub(self.focusable).unwrap_or(NO_FOCUS);
+        Interactions {
+            items: Vec::new(),
+            focus,
+            focusable: 0,
+            captured: None,
+            scroll: self.scroll,
+            viewport: None,
+            ignoring: self.ignoring,
+            parent_focused: self.parent_focused,
+            editing: self.editing,
+        }
     }
 
     /// Folds a sub-component's interactions in, translating its messages.
@@ -261,14 +354,26 @@ impl<M> Interactions<M> {
                     max,
                     value,
                 },
-                Trigger::Step { make, set, value } => Trigger::MappedStep {
+                Trigger::Step {
+                    make,
+                    set,
+                    max,
+                    value,
+                } => Trigger::MappedStep {
                     make: Box::new(move |delta| convert(make(delta))),
                     set: set.map(|set| Box::new(move |v| convert(set(v))) as Box<dyn Fn(i32) -> M>),
+                    max,
                     value,
                 },
-                Trigger::MappedStep { make, set, value } => Trigger::MappedStep {
+                Trigger::MappedStep {
+                    make,
+                    set,
+                    max,
+                    value,
+                } => Trigger::MappedStep {
                     make: Box::new(move |delta| convert(make(delta))),
                     set: set.map(|set| Box::new(move |v| convert(set(v))) as Box<dyn Fn(i32) -> M>),
+                    max,
                     value,
                 },
             };

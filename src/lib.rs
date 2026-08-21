@@ -88,8 +88,9 @@ mod guides {
 pub use app::App;
 pub use geometry::{Insets, Point, Rect, Size};
 pub use host::{
-    Button, Font, FontId, FontRole, FontStyle, Hint, IconRef, Input, Navigator, Renderer,
-    ScreenChrome, SwipeDir, Theme, ThemeMetric, finish_screen, millis, present, request_update,
+    Button, ControlState, Font, FontId, FontRole, FontStyle, Hint, HintWord, IconRef, Input,
+    Navigator, Renderer, ScreenChrome, SwipeDir, Theme, ThemeMetric, finish_screen, millis,
+    present, request_update,
 };
 pub use layout::{
     Alignment, Flexible, Frame, HStack, Modifiers, Padding, ScrollView, Spacer, Tappable,

@@ -56,6 +56,32 @@ pub enum ThemeMetric {
     SpacingSmall = 16,
 }
 
+/// What the keys will do to a control next, so a person can see it.
+///
+/// A value row on a device with no Left/Right pair changes what four keys mean
+/// when it opens, and until this existed nothing on the panel said so: the
+/// frame that opened the mode was identical to the frame before it. On a slow
+/// panel that is a full refresh spent painting the same pixels.
+///
+/// Crossing the C ABI as an integer, like the row field beside it, so a host
+/// written in C++ can switch on it.
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub enum ControlState {
+    /// The keys are elsewhere. Draw it as the value it holds and nothing more.
+    #[default]
+    Idle = 0,
+    /// The keys would act on this control if they moved a value now. Other
+    /// focusable things already show this — match whatever a focused list row
+    /// does rather than inventing a second idiom.
+    Focused = 1,
+    /// The control is open: the keys that walked the list are moving this
+    /// value, Confirm keeps it, and Back drops the edit rather than leaving the
+    /// screen. Must be distinguishable from [`Focused`](ControlState::Focused)
+    /// at a glance, or the mode is still invisible.
+    Editing = 2,
+}
+
 /// Which piece of a list row is being asked for.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RowField {
@@ -82,8 +108,8 @@ pub trait Chrome {
 
     /// The themed slider: a track, a fill up to `value`, and a knob over both.
     /// The host owns every dimension of it; the framework says only where it
-    /// goes and how far along it is.
-    fn draw_slider(&self, rect: Rect, value: i32, max: i32);
+    /// goes, how far along it is, and what the keys will do to it next.
+    fn draw_slider(&self, rect: Rect, value: i32, max: i32, state: ControlState);
 
     /// The scroll indicator beside a scrolling region: how much of `content`
     /// the `rect`-sized window shows, and how far down it sits. The host draws
@@ -140,6 +166,19 @@ pub enum Hint {
     None,
     /// A label this screen supplies.
     Text(String),
+    /// The host's word for opening a value control.
+    ///
+    /// **Not a string.** The framework does not know what language its reader
+    /// uses, which is the same reason [`Standard`](Hint::Standard) is not one;
+    /// a host answers with its own word. The runtime asks for this over the
+    /// Confirm key when the focused control can be edited.
+    Edit,
+    /// The host's word for keeping what a value now reads. Over Confirm while
+    /// a control is open.
+    Done,
+    /// The host's word for putting a value back. Over Back while a control is
+    /// open — the key that would otherwise leave the screen.
+    Cancel,
 }
 
 impl Hint {
@@ -147,14 +186,51 @@ impl Hint {
         Hint::Text(label.into())
     }
 
-    /// What the host should draw: `None` means "your standard label".
+    /// What the host should draw: `None` means "a word of your own", and
+    /// [`word`](Hint::word) says which.
     pub fn label(&self) -> Option<&str> {
         match self {
-            Hint::Standard => None,
+            Hint::Standard | Hint::Edit | Hint::Done | Hint::Cancel => None,
             Hint::None => Some(""),
             Hint::Text(text) => Some(text),
         }
     }
+
+    /// Which of the host's own words this slot wants, when
+    /// [`label`](Hint::label) says it wants one.
+    ///
+    /// Crossing the C ABI as an integer beside the label pointer, so a host can
+    /// switch on it: 0 is the standard label for whichever key the slot is,
+    /// and the rest are words the four standard ones have no room for.
+    pub fn word(&self) -> HintWord {
+        match self {
+            Hint::Edit => HintWord::Edit,
+            Hint::Done => HintWord::Done,
+            Hint::Cancel => HintWord::Cancel,
+            Hint::Standard | Hint::None | Hint::Text(_) => HintWord::Standard,
+        }
+    }
+}
+
+/// Which of a host's own words a hint slot is asking for.
+///
+/// The four standard labels are chosen by the key a slot sits over — Back,
+/// Select, Up, Down. These three are chosen by what the framework is *doing*,
+/// and no key implies them.
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
+pub enum HintWord {
+    /// Whatever this slot's key is normally called.
+    #[default]
+    Standard = 0,
+    /// "This control can be opened" — offered over Confirm when the keys are on
+    /// a value the framework could take over.
+    Edit = 1,
+    /// "Keep what this now reads" — over Confirm while a value is open.
+    Done = 2,
+    /// "Leave it as you found it" — over Back while a value is open, where Back
+    /// would otherwise leave the screen.
+    Cancel = 3,
 }
 
 /// The active theme, as widgets reach for it.
@@ -184,8 +260,8 @@ impl Theme {
         super::current().draw_progress_bar(rect, current, total)
     }
 
-    pub fn draw_slider(rect: Rect, value: i32, max: i32) {
-        super::current().draw_slider(rect, value, max)
+    pub fn draw_slider(rect: Rect, value: i32, max: i32, state: ControlState) {
+        super::current().draw_slider(rect, value, max, state)
     }
 
     pub fn draw_scroll_indicator(rect: Rect, content: i32, visible: i32, offset: i32) {

@@ -13,7 +13,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use crate::geometry::{Point, Rect, Size};
-use crate::host::{FontStyle, IconRef};
+use crate::host::{ControlState, FontStyle, IconRef};
 
 /// How a rectangle was painted.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -96,6 +96,7 @@ pub enum DrawOp {
         rect: Rect,
         value: i32,
         max: i32,
+        state: ControlState,
     },
     ScrollIndicator {
         rect: Rect,
@@ -239,8 +240,18 @@ impl DrawOp {
                 current,
                 total,
             } => alloc::format!("progress    {} {}/{}", rect_text(*rect), current, total),
-            DrawOp::Slider { rect, value, max } => {
-                alloc::format!("slider      {} {}/{}", rect_text(*rect), value, max)
+            DrawOp::Slider {
+                rect,
+                value,
+                max,
+                state,
+            } => {
+                let mode = match state {
+                    ControlState::Idle => "",
+                    ControlState::Focused => " focused",
+                    ControlState::Editing => " editing",
+                };
+                alloc::format!("slider      {} {}/{}{}", rect_text(*rect), value, max, mode)
             }
             DrawOp::ScrollIndicator {
                 rect,

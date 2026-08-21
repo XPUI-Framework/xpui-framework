@@ -114,25 +114,34 @@ impl<M: Clone + 'static> View<M> for Stepper<M> {
     }
 
     fn interactions(&mut self, origin: Point, out: &mut Interactions<M>) {
-        if let Some(row) = &mut self.row {
-            row.interactions(origin, out);
-        }
-
         // One focus stop for the whole control, adjusted by Left/Right. Without
         // this a stepper would be three stops - minus, track, plus - and Up/Down
         // would walk through glyphs instead of between settings.
-        if let Some(step) = self.step {
+        //
+        // **Declared before the row**, so the track inside can be told whether
+        // the keys are on it: an embedded slider takes no focus of its own and
+        // has nothing else to learn it from. The order is free — the glyphs are
+        // touch-only and this declaration takes no tap, so nothing else moves.
+        let focused = self.step.is_some_and(|step| {
             out.declare(
                 self.bounds(origin),
                 InputMask::FOCUS.union(InputMask::ADJUST),
                 Trigger::Step {
                     make: step,
-                    // The track's own setter, so an edit opened here can be
-                    // cancelled exactly whatever a step is worth to the screen.
+                    // The track's own setter, so an open edit can commit an
+                    // absolute value whatever a step is worth to the screen.
                     set: self.change,
+                    max: self.max,
                     value: self.value,
                 },
-            );
+            )
+        });
+
+        if let Some(row) = &mut self.row {
+            let outer = out.parent_focused();
+            out.set_parent_focused(focused);
+            row.interactions(origin, out);
+            out.set_parent_focused(outer);
         }
     }
 }

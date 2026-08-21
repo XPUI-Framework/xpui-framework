@@ -512,11 +512,20 @@ keys to one of them.
 
 **Confirm never fires an adjustable control.** On a device with the pair it does
 nothing at all: the pair is the way in. On a device without one it opens the
-control instead, and the keys that were walking the list move the value until
-Confirm keeps it or Back puts it back. **That mode is not yet drawn** — nothing
-on the panel says the keys have changed meaning, which is
-[spec 30](../../../docs/specs/30-editing-a-value-with-one-key.md)'s remaining
-half.
+control instead, and the keys that were walking the list move the value.
+
+**The framework holds the value while it is open.** Up and Down move a copy the
+screen never sees; **Confirm dispatches one message** with what the panel was
+showing, and **Back dispatches nothing at all** and does not leave the screen.
+So a screen that persists on every change writes once for an edit rather than
+once per press, and cancelling is exact whether the screen clamps, scales a
+nudge, or neither — there is nothing to put back.
+
+**The panel says the mode is open.** The control is drawn focused when the keys
+are on it and differently again when it is open — what that looks like is the
+backend's choice — and the hint bar takes the board's words for Edit, Done and
+Cancel over whatever the screen asked for. A screen is not told any of this and
+does not need to be.
 
 **A composite is one focus stop.** A `Stepper` offers three touch targets — `−`,
 the track, `+` — but a single stop for buttons, so Up/Down move between settings
@@ -707,6 +716,14 @@ back, confirm, previous, next — and the host reorders them to match the user's
 button layout. Blank three of them and a device with no touch panel shows no
 sign that its other buttons do anything, which is why the default is not "Back
 only".
+
+**The runtime overrides Back and Confirm while a value control is in play**, and
+a screen cannot prevent it: focused on something openable, Confirm reads the
+board's word for Edit; with it open, Confirm reads Done and Back reads Cancel.
+A screen that set `Hint::text("Quit")` over Back will see Cancel there for as
+long as the edit is open. That is deliberate — the mode belongs to the
+framework, and a bar naming what a key *used* to do is worse than one the screen
+did not choose.
 
 `.overlay(view)` and `.overlay_if(cond, view)` put a view over the content — a
 dialog, typically. It is measured against the whole panel rather than the

@@ -8,9 +8,9 @@
 use xpui::screen::{Driver, Runtime};
 use xpui::testing::{self, MIN_TOUCH_SIZE, SCREEN_HEIGHT, SCREEN_WIDTH};
 use xpui::{
-    Alignment, Button, HStack, Input, InputMask, Interactions, List, ListRow, Modal, Modifiers,
-    NavigationScreen, Point, Rect, ScrollView, Section, Size, Slider, Spacer, Stepper, SwipeDir,
-    Text, Toggle, Trigger, VStack, View, ViewExt, hstack, value_at, vstack,
+    Alignment, Button, HStack, Hint, Input, InputMask, Interactions, List, ListRow, Modal,
+    Modifiers, NavigationScreen, Point, Rect, ScrollView, Section, Size, Slider, Spacer, Stepper,
+    SwipeDir, Text, Toggle, Trigger, VStack, View, ViewExt, hstack, value_at, vstack,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -451,6 +451,9 @@ fn runtime(claims_swipe: bool) -> Runtime<Nav> {
 struct Dial {
     value: i32,
     tapped: usize,
+    /// How many messages the screen was handed — the count an edit that holds
+    /// its value has to keep at one.
+    dispatches: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -471,6 +474,7 @@ impl xpui::Screen for Dial {
     }
 
     fn update(&mut self, message: DialMsg) {
+        self.dispatches += 1;
         match message {
             DialMsg::Set(value) => self.value = value,
             DialMsg::Step(delta) => self.value += delta,
@@ -479,12 +483,47 @@ impl xpui::Screen for Dial {
     }
 }
 
+/// What the panel says the value is, from the last frame it painted.
+///
+/// **Not the screen's field.** While an edit is open the framework holds the
+/// value and the screen's has not moved, so this is the only place the working
+/// copy is observable — which is the point: it is what a person sees.
+fn painted_value(ops: &[xpui::testing::DrawOp]) -> i32 {
+    // The last one in the log, so a caller that has driven several frames reads
+    // the newest rather than the first ever painted.
+    ops.iter()
+        .rev()
+        .find_map(|op| match op {
+            xpui::testing::DrawOp::Slider { value, .. } => Some(*value),
+            _ => None,
+        })
+        .expect("the screen draws a slider")
+}
+
+/// What state the panel painted the control in, from the last frame.
+fn slider_state_of(ops: &[xpui::testing::DrawOp]) -> xpui::ControlState {
+    ops.iter()
+        .rev()
+        .find_map(|op| match op {
+            xpui::testing::DrawOp::Slider { state, .. } => Some(*state),
+            _ => None,
+        })
+        .expect("the screen draws a slider")
+}
+
+/// The value on the panel after one more settled frame.
+fn shown<S: xpui::Screen>(runtime: &mut Runtime<S>) -> i32 {
+    runtime.render();
+    painted_value(&testing::ops_log())
+}
+
 fn dial() -> Runtime<Dial> {
     testing::install();
     testing::reset();
     let mut runtime = Runtime::new(Dial {
         value: 50,
         tapped: 0,
+        dispatches: 0,
     });
     runtime.render();
     runtime
@@ -502,7 +541,7 @@ fn dial() -> Runtime<Dial> {
 /// Nothing in this repository maps a value control yet, so without this the
 /// mapped half of four `Trigger` methods is unreached.
 #[test]
-fn a_mapped_control_can_still_be_nudged_and_put_back() {
+fn a_mapped_control_can_still_be_nudged_and_committed() {
     testing::install();
     testing::reset();
 
@@ -533,7 +572,7 @@ fn a_mapped_control_can_still_be_nudged_and_put_back() {
     );
     assert!(
         item.trigger.is_editable(),
-        "and the setter has to cross, or the control cannot be put back"
+        "and the setter has to cross, or an edit could never be committed"
     );
     assert_eq!(
         item.trigger.resolve_step(1),
@@ -541,14 +580,14 @@ fn a_mapped_control_can_still_be_nudged_and_put_back() {
         "a nudge arrives as the outer message"
     );
     assert_eq!(
-        item.trigger.restore(40),
-        None,
-        "restoring to where it already reads asks for nothing"
+        item.trigger.set_to(25),
+        Some(Outer::Inner(DialMsg::Set(25))),
+        "and committing sets the value outright, through the conversion"
     );
     assert_eq!(
-        item.trigger.restore(25),
-        Some(Outer::Inner(DialMsg::Set(25))),
-        "and restoring sets the value outright, through the conversion"
+        item.trigger.stepped(100, 1),
+        Some(100),
+        "the bound has to cross too, or an open edit runs off the end of the track"
     );
 }
 
@@ -600,6 +639,7 @@ fn nudging_a_slider_stops_at_its_ends() {
 /// never made.
 struct ClampedDial {
     value: i32,
+    dispatches: usize,
 }
 
 impl xpui::Screen for ClampedDial {
@@ -612,12 +652,666 @@ impl xpui::Screen for ClampedDial {
     }
 
     fn update(&mut self, message: DialMsg) {
+        self.dispatches += 1;
         match message {
             DialMsg::Set(value) => self.value = value.clamp(0, 100),
             DialMsg::Step(delta) => self.value = (self.value + delta).clamp(0, 100),
             DialMsg::Tapped => {}
         }
     }
+}
+
+/// Opening a value changes the frame, and changes it differently from focus.
+///
+/// The whole complaint against spec 26's mode was that entering it repainted an
+/// identical frame — on a Badger, a second of the panel's life spent saying
+/// nothing. Three states, three pictures: idle, focused, open. If any two match,
+/// the mode is invisible and the refresh that entered it bought nothing.
+#[test]
+fn the_three_states_of_a_value_row_look_different() {
+    use xpui::testing::DrawOp;
+
+    let slider_state = |ops: &[DrawOp]| {
+        ops.iter()
+            .find_map(|op| match op {
+                DrawOp::Slider { state, .. } => Some(*state),
+                _ => None,
+            })
+            .expect("the screen draws a slider")
+    };
+
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    // One value control and one plain row, so the keys have somewhere else to
+    // be and the control has a state to change out of.
+    let mut runtime = Runtime::new(Dial {
+        value: 50,
+        tapped: 0,
+        dispatches: 0,
+    });
+    runtime.render();
+    let focused = testing::ops_log();
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    testing::reset();
+    runtime.render();
+    let editing = testing::ops_log();
+
+    assert_eq!(
+        slider_state(&focused),
+        xpui::ControlState::Focused,
+        "the keys are on this row, and it says so"
+    );
+    assert_eq!(
+        slider_state(&editing),
+        xpui::ControlState::Editing,
+        "and it says something else once the keys are moving the value"
+    );
+    assert_ne!(
+        testing::render(&focused),
+        testing::render(&editing),
+        "entering the mode must change the frame — an identical repaint is a \
+         second of a slow panel's life spent saying nothing"
+    );
+
+    // And leaving it. Cancel is the harder direction: it dispatches nothing at
+    // all, so the *only* thing that can differ is what the mode itself paints.
+    // If this frame matched the one before it, the refresh that closed the mode
+    // bought nothing either.
+    testing::press(Button::Back);
+    runtime.loop_();
+    testing::reset();
+    runtime.render();
+    let closed = testing::ops_log();
+
+    assert_ne!(
+        testing::render(&editing),
+        testing::render(&closed),
+        "and leaving it must change the frame back"
+    );
+    assert_eq!(
+        slider_state(&closed),
+        xpui::ControlState::Focused,
+        "to the one the keys were on before it opened"
+    );
+}
+
+/// The hint bar names the mode, and names it with the board's own words.
+///
+/// The runtime owns the edit and the screen paints the bar, so this is the one
+/// path that has to carry a fact from one to the other without letting a screen
+/// read it. What is asserted here is the vocabulary reaching the chrome —
+/// `Hint::Edit`, `Hint::Done`, `Hint::Cancel` — because which *word* each of
+/// those becomes is the board's business and is asserted where the board is.
+#[test]
+fn the_hint_bar_offers_edit_then_done_and_cancel() {
+    use xpui::testing::DrawOp;
+
+    /// The bar's Back and Confirm slots, as the chrome was told to paint them.
+    fn slots(ops: &[DrawOp]) -> (Option<String>, Option<String>) {
+        ops.iter()
+            .rev()
+            .find_map(|op| match op {
+                DrawOp::Hints(slots) => Some((slots[0].clone(), slots[1].clone())),
+                _ => None,
+            })
+            .expect("the screen paints a hint bar")
+    }
+
+    struct Bar {
+        value: i32,
+    }
+    impl xpui::Screen for Bar {
+        type Message = DialMsg;
+        fn body(&self) -> impl View<DialMsg> {
+            NavigationScreen::new(vstack![10;
+                Stepper::new(self.value).on_change(DialMsg::Set).on_step(DialMsg::Step),
+            ])
+            .title("Light")
+            .hints(Hint::Standard, Hint::text("Save"), Hint::None, Hint::None)
+        }
+        fn update(&mut self, message: DialMsg) {
+            if let DialMsg::Set(value) = message {
+                self.value = value;
+            }
+        }
+    }
+
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    let mut runtime = Runtime::new(Bar { value: 50 });
+    runtime.render();
+    assert_eq!(
+        slots(&testing::ops_log()),
+        (None, Some("<edit>".to_string())),
+        "focused on something openable, Confirm offers to open it — over the \
+         screen's own \"Save\", which it does not get to keep"
+    );
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    runtime.render();
+    assert_eq!(
+        slots(&testing::ops_log()),
+        (Some("<cancel>".to_string()), Some("<done>".to_string())),
+        "and with it open, both keys say what they now do"
+    );
+
+    testing::press(Button::Back);
+    runtime.loop_();
+    runtime.render();
+    assert_eq!(
+        slots(&testing::ops_log()),
+        (None, Some("<edit>".to_string())),
+        "closing puts the offer back"
+    );
+}
+
+/// A board with a Left/Right pair is never offered the mode, so never the words.
+///
+/// Confirm does not open an edit there — the pair nudges the value in place —
+/// and a bar promising Edit would name a key that does nothing.
+#[test]
+fn a_board_with_the_pair_is_never_offered_the_mode() {
+    use xpui::testing::DrawOp;
+
+    struct Bar {
+        value: i32,
+    }
+    impl xpui::Screen for Bar {
+        type Message = DialMsg;
+        fn body(&self) -> impl View<DialMsg> {
+            NavigationScreen::new(vstack![10;
+                Stepper::new(self.value).on_change(DialMsg::Set).on_step(DialMsg::Step),
+            ])
+            .hints(Hint::Standard, Hint::text("Save"), Hint::None, Hint::None)
+        }
+        fn update(&mut self, _message: DialMsg) {}
+    }
+
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(true);
+
+    let mut runtime = Runtime::new(Bar { value: 50 });
+    runtime.render();
+
+    let confirm = testing::ops_log()
+        .iter()
+        .rev()
+        .find_map(|op| match op {
+            DrawOp::Hints(slots) => Some(slots[1].clone()),
+            _ => None,
+        })
+        .expect("the screen paints a hint bar");
+    assert_eq!(
+        confirm,
+        Some("Save".to_string()),
+        "the screen's own word stands where the mode never opens"
+    );
+}
+
+/// "The control wrapping you holds focus" crosses `map` as well.
+///
+/// A composite that owns one focus stop and embeds a track that takes none
+/// tells the track through `set_parent_focused` — that is how `Stepper` works,
+/// and the mechanism is `pub` so anything else can. Nothing in this repository
+/// puts a `map` between the two, so this asks the collector directly rather
+/// than through a screen: the contract is that a child sees what its parent
+/// was told, and a child that did not would paint an embedded track unfocused
+/// inside a focused control.
+#[test]
+fn a_mapped_child_inherits_the_focus_of_the_control_wrapping_it() {
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    enum Outer {
+        Inner(DialMsg),
+    }
+
+    testing::install();
+    testing::reset();
+
+    let mut view = Slider::new(20, 100)
+        .on_change(DialMsg::Set)
+        .without_focus()
+        .map(Outer::Inner);
+    view.measure(screen());
+
+    let mut out: Interactions<Outer> = Interactions::new(0);
+    out.set_parent_focused(true);
+    view.interactions(Point::ORIGIN, &mut out);
+    view.render(Point::ORIGIN);
+    assert_eq!(
+        slider_state_of(&testing::ops_log()),
+        xpui::ControlState::Focused,
+        "the track is inside a focused control, mapping or no mapping"
+    );
+
+    testing::reset();
+    let mut out: Interactions<Outer> = Interactions::new(0);
+    out.set_parent_focused(false);
+    view.interactions(Point::ORIGIN, &mut out);
+    view.render(Point::ORIGIN);
+    assert_eq!(
+        slider_state_of(&testing::ops_log()),
+        xpui::ControlState::Idle,
+        "and unfocused when it is not"
+    );
+}
+
+/// A value control behind `map` gets the whole mode, not half of it.
+///
+/// `Interactions::child` builds the collector a sub-component declares into. It
+/// used to build a bare one, so a `Slider` inside a mapped component learned
+/// neither that an edit was open nor what the working value was: the knob stood
+/// still while the keys moved a copy it could not see, the hint bar promised
+/// Cancel and Done because the runtime reads its own state, and Confirm then
+/// jumped the screen to a number the panel had never shown. That is exactly the
+/// invisible mode this whole mechanism exists to remove, reintroduced for every
+/// component that speaks its own message type.
+#[test]
+fn a_mapped_value_control_shows_the_open_edit() {
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    enum Outer {
+        Inner(DialMsg),
+    }
+
+    struct Wrapped {
+        value: i32,
+        dispatches: usize,
+    }
+    impl xpui::Screen for Wrapped {
+        type Message = Outer;
+        fn body(&self) -> impl View<Outer> {
+            vstack![10;
+                Stepper::new(self.value)
+                    .on_change(DialMsg::Set)
+                    .on_step(DialMsg::Step)
+                    .map(Outer::Inner),
+            ]
+        }
+        fn update(&mut self, message: Outer) {
+            self.dispatches += 1;
+            let Outer::Inner(inner) = message;
+            if let DialMsg::Set(value) = inner {
+                self.value = value;
+            }
+        }
+    }
+
+    let mut runtime = Runtime::new(Wrapped {
+        value: 50,
+        dispatches: 0,
+    });
+    runtime.render();
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    runtime.render();
+
+    for _ in 0..4 {
+        testing::press(Button::Up);
+        runtime.loop_();
+        runtime.render();
+    }
+
+    let ops = testing::ops_log();
+    assert_eq!(
+        painted_value(&ops),
+        54,
+        "the knob has to follow the keys through the mapping too"
+    );
+    assert_eq!(
+        slider_state_of(&ops),
+        xpui::ControlState::Editing,
+        "and the control has to look open, or the bar promises a mode nothing shows"
+    );
+    assert_eq!(runtime.screen().value, 50, "with the screen still untold");
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    assert_eq!(
+        runtime.screen().value,
+        54,
+        "and Confirm commits what was shown"
+    );
+    assert_eq!(runtime.screen().dispatches, 1);
+}
+
+/// A mapped control does not paint itself focused when the keys are elsewhere.
+///
+/// `child` used to hand a sub-component `focus.saturating_sub(focusable)`,
+/// which answers `0` when the focus is *behind* the subtree — so the first
+/// control inside a mapped component believed it held a focus sitting on a row
+/// above it. Two things looked selected and one was. Invisible while a focused
+/// slider looked like an unfocused one; a wrong highlight now that it does not.
+#[test]
+fn a_mapped_control_is_not_focused_when_the_focus_is_above_it() {
+    testing::install();
+    testing::reset();
+
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    enum Outer {
+        Inner(DialMsg),
+    }
+
+    struct Above {
+        value: i32,
+    }
+    impl xpui::Screen for Above {
+        type Message = Outer;
+        fn body(&self) -> impl View<Outer> {
+            vstack![10;
+                Text::new("a plain row").on_tap(Outer::Inner(DialMsg::Tapped)),
+                Stepper::new(self.value)
+                    .on_change(DialMsg::Set)
+                    .on_step(DialMsg::Step)
+                    .map(Outer::Inner),
+            ]
+        }
+        fn update(&mut self, _message: Outer) {}
+    }
+
+    let mut runtime = Runtime::new(Above { value: 50 });
+    runtime.render();
+
+    assert_eq!(runtime.focused_index(), 0, "the keys are on the plain row");
+    assert_eq!(
+        slider_state_of(&testing::ops_log()),
+        xpui::ControlState::Idle,
+        "so the control below it must not look selected"
+    );
+
+    // And it does light up when the focus reaches it, so the fix is not simply
+    // "a mapped control is never focused".
+    testing::press(Button::Down);
+    runtime.loop_();
+    testing::reset();
+    runtime.render();
+    assert_eq!(
+        slider_state_of(&testing::ops_log()),
+        xpui::ControlState::Focused,
+        "and it must light up when the keys arrive"
+    );
+}
+
+/// A control with no room to move does not bring the device down.
+///
+/// `i32::clamp` panics when its low bound exceeds its high, which on a device is
+/// an abort rather than a message. Everywhere else in the framework a
+/// non-positive `max` is empty and harmless — `Slider::render` and the chrome's
+/// `draw_slider` both decline to paint one — so the edit path has to agree
+/// rather than fault. A list-backed control sized `len - 1` reaches zero the
+/// day the list is empty, and negative the day it is built from a bad count.
+#[test]
+fn an_empty_control_can_be_opened_without_panicking() {
+    for max in [-1, 0] {
+        testing::install();
+        testing::reset();
+        testing::set_has_left_right_keys(false);
+
+        struct Empty {
+            max: i32,
+        }
+        impl xpui::Screen for Empty {
+            type Message = DialMsg;
+            fn body(&self) -> impl View<DialMsg> {
+                vstack![10; Slider::new(0, self.max).on_change(DialMsg::Set)]
+            }
+            fn update(&mut self, _message: DialMsg) {}
+        }
+
+        let mut runtime = Runtime::new(Empty { max });
+        runtime.render();
+
+        testing::press(Button::Confirm);
+        runtime.loop_();
+        runtime.render();
+        testing::press(Button::Up);
+        runtime.loop_();
+        runtime.render();
+        testing::press(Button::Confirm);
+        runtime.loop_();
+        runtime.render();
+    }
+}
+
+/// A composite puts "my control holds the keys" back when it is done.
+///
+/// `Stepper` sets the flag around its own row so the track inside learns it,
+/// and has to clear it afterwards: the collector is one object walked over the
+/// whole tree, so a flag left set makes **everything declared after** the
+/// stepper believe it sits inside a focused control. A `Slider::without_focus`
+/// further down the screen then paints itself selected while the keys are
+/// elsewhere.
+#[test]
+fn a_composite_does_not_leave_its_focus_flag_set_behind_it() {
+    testing::install();
+    testing::reset();
+
+    struct After {
+        value: i32,
+        trailing: i32,
+    }
+    impl xpui::Screen for After {
+        type Message = DialMsg;
+        fn body(&self) -> impl View<DialMsg> {
+            vstack![10;
+                Stepper::new(self.value).on_change(DialMsg::Set).on_step(DialMsg::Step),
+                // A bare track with no stop of its own, outside the stepper.
+                Slider::new(self.trailing, 100).on_change(DialMsg::Set).without_focus(),
+            ]
+        }
+        fn update(&mut self, _message: DialMsg) {}
+    }
+
+    let mut runtime = Runtime::new(After {
+        value: 50,
+        trailing: 20,
+    });
+    runtime.render();
+    assert_eq!(runtime.focused_index(), 0, "the keys are on the stepper");
+
+    let painted: Vec<(i32, xpui::ControlState)> = testing::ops_log()
+        .iter()
+        .filter_map(|op| match op {
+            xpui::testing::DrawOp::Slider { value, state, .. } => Some((*value, *state)),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        painted,
+        vec![
+            (50, xpui::ControlState::Focused),
+            (20, xpui::ControlState::Idle),
+        ],
+        "the stepper's own track is selected; the one after it is not"
+    );
+}
+
+/// An open edit moves **its own** control and no other.
+///
+/// The working value reaches every widget through the collector, so a `Slider`
+/// that painted it without first checking that it holds the focus would paint
+/// *every* slider on the screen at the edited value. On the gallery's Controls
+/// screen that is Brightness sliding from 60 to 27 while Warmth is being
+/// edited — two controls moving for one set of keys, and nothing red.
+#[test]
+fn an_open_edit_leaves_the_other_controls_alone() {
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    struct Two {
+        first: i32,
+        second: i32,
+    }
+    impl xpui::Screen for Two {
+        type Message = DialMsg;
+        fn body(&self) -> impl View<DialMsg> {
+            vstack![10;
+                Slider::new(self.first, 100).on_change(DialMsg::Set),
+                Slider::new(self.second, 100).on_change(DialMsg::Set),
+            ]
+        }
+        fn update(&mut self, _message: DialMsg) {}
+    }
+
+    let mut runtime = Runtime::new(Two {
+        first: 60,
+        second: 25,
+    });
+    runtime.render();
+
+    // Down to the second slider, open it, and move it well away from the first.
+    testing::press(Button::Down);
+    runtime.loop_();
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    for _ in 0..4 {
+        testing::press(Button::Up);
+        runtime.loop_();
+    }
+    testing::reset();
+    runtime.render();
+
+    let painted: Vec<i32> = testing::ops_log()
+        .iter()
+        .filter_map(|op| match op {
+            xpui::testing::DrawOp::Slider { value, .. } => Some(*value),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        painted,
+        vec![60, 29],
+        "only the control the keys are on moves; the other keeps the screen's value"
+    );
+}
+
+/// Left and Right move an open edit too, where a host sends them anyway.
+///
+/// A board with the pair never opens an edit, so these keys should be
+/// unreachable here — except that a host is free to send them while answering
+/// that it has no pair, which the simulator's keyboard does on every board.
+/// Dropping the arm makes the arrow keys dead inside the mode, and the human
+/// check for this spec is done by clicking the drawn keys rather than typing,
+/// so nothing would find it.
+#[test]
+fn arrow_keys_move_an_open_edit_when_a_host_sends_them() {
+    let mut runtime = dial();
+    tap(&mut runtime, Button::Confirm, 10);
+
+    tap(&mut runtime, Button::Right, 20);
+    tap(&mut runtime, Button::Right, 30);
+    assert_eq!(
+        painted_value(&testing::ops_log()),
+        52,
+        "Right raises inside an open edit"
+    );
+
+    tap(&mut runtime, Button::Left, 40);
+    assert_eq!(painted_value(&testing::ops_log()), 51, "and Left lowers it");
+    assert_eq!(
+        runtime.screen().dispatches,
+        0,
+        "through the same held copy as every other key"
+    );
+}
+
+/// A key that cannot move the value further spends no refresh.
+///
+/// Against the end of the track Up has nothing to do, and asking for a repaint
+/// is a second of a slow panel's life spent painting the frame that is already
+/// there. Step 6 of the spec, at the one place it is easy to lose.
+#[test]
+fn a_key_against_the_end_of_the_track_asks_for_no_repaint() {
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    let mut runtime = Runtime::new(ClampedDial {
+        value: 100,
+        dispatches: 0,
+    });
+    runtime.render();
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    runtime.render();
+
+    let before = testing::updates();
+    testing::press(Button::Up);
+    runtime.loop_();
+    assert_eq!(
+        testing::updates(),
+        before,
+        "already at the maximum: nothing moved, so nothing is repainted"
+    );
+
+    // And a key that *can* move it still asks, so this is not simply "Up never
+    // repaints".
+    testing::press(Button::Down);
+    runtime.loop_();
+    assert!(
+        testing::updates() > before,
+        "a key that moves the value still asks for its frame"
+    );
+}
+
+/// The bar offers Edit only where Confirm would really open something.
+///
+/// A `Stepper` with no `on_change` can be nudged and never opened — there is no
+/// absolute setter, so Confirm has nothing to commit. Promising Edit over a key
+/// that does nothing is worse than promising nothing. The runtime half of this
+/// is covered by `a_control_that_cannot_be_committed_is_not_editable`; this is the
+/// bar.
+#[test]
+fn the_bar_offers_no_edit_on_a_control_that_cannot_be_opened() {
+    use xpui::testing::DrawOp;
+
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    struct NudgeOnly {
+        value: i32,
+    }
+    impl xpui::Screen for NudgeOnly {
+        type Message = DialMsg;
+        fn body(&self) -> impl View<DialMsg> {
+            NavigationScreen::new(vstack![10;
+                Stepper::new(self.value).on_step(DialMsg::Step),
+            ])
+            .hints(Hint::Standard, Hint::text("Save"), Hint::None, Hint::None)
+        }
+        fn update(&mut self, _message: DialMsg) {}
+    }
+
+    let mut runtime = Runtime::new(NudgeOnly { value: 10 });
+    runtime.render();
+
+    let confirm = testing::ops_log()
+        .iter()
+        .rev()
+        .find_map(|op| match op {
+            DrawOp::Hints(slots) => Some(slots[1].clone()),
+            _ => None,
+        })
+        .expect("the screen paints a hint bar");
+    assert_eq!(
+        confirm,
+        Some("Save".to_string()),
+        "the screen's own word stands where Confirm cannot open anything"
+    );
 }
 
 /// A swipe cannot walk the focus out from under an open edit.
@@ -635,6 +1329,7 @@ fn a_swipe_is_declined_while_a_value_is_open() {
     let mut runtime = Runtime::new(Dial {
         value: 50,
         tapped: 0,
+        dispatches: 0,
     });
     runtime.render();
 
@@ -657,7 +1352,7 @@ fn a_swipe_is_declined_while_a_value_is_open() {
     testing::press(Button::Up);
     runtime.loop_();
     assert_eq!(
-        runtime.screen().value,
+        shown(&mut runtime),
         51,
         "the edit still owns the keys after the declined swipe"
     );
@@ -669,6 +1364,7 @@ fn a_swipe_is_declined_while_a_value_is_open() {
 /// got right: a screen that scales reads an inverse total of `-4` as `-20`.
 struct ScaledDial {
     value: i32,
+    dispatches: usize,
 }
 
 impl xpui::Screen for ScaledDial {
@@ -681,6 +1377,7 @@ impl xpui::Screen for ScaledDial {
     }
 
     fn update(&mut self, message: DialMsg) {
+        self.dispatches += 1;
         match message {
             DialMsg::Set(value) => self.value = value.clamp(0, 100),
             DialMsg::Step(delta) => self.value = (self.value + delta * 5).clamp(0, 100),
@@ -689,18 +1386,22 @@ impl xpui::Screen for ScaledDial {
     }
 }
 
-/// Cancel is exact when a step is worth more than one unit.
+/// Cancel costs nothing on a screen that scales a step.
 ///
-/// A nudge means whatever the screen decides, so no count of nudges can undo an
-/// edit: four Ups here move 20, and asking for `-4` back moves 20 the other way
-/// only by luck of the scale. Cancel sets the value it opened on instead.
+/// A nudge means whatever the screen decides — five units here — so no count of
+/// nudges could ever undo an edit: asking for `-4` back moves 20 the other way
+/// only by luck of the scale. Nothing is dispatched at all now, so the scale
+/// cannot enter into it: the screen's value never left 30 to be put back.
 #[test]
-fn cancelling_an_edit_is_exact_when_a_step_is_scaled() {
+fn cancelling_an_edit_is_free_when_a_step_is_scaled() {
     testing::install();
     testing::reset();
     testing::set_has_left_right_keys(false);
 
-    let mut runtime = Runtime::new(ScaledDial { value: 30 });
+    let mut runtime = Runtime::new(ScaledDial {
+        value: 30,
+        dispatches: 0,
+    });
     runtime.render();
 
     testing::press(Button::Confirm);
@@ -713,9 +1414,16 @@ fn cancelling_an_edit_is_exact_when_a_step_is_scaled() {
         runtime.render();
     }
     assert_eq!(
+        shown(&mut runtime),
+        34,
+        "the panel follows the keys: one unit of the track per press, not one \
+         of the screen's five-unit nudges — inside an open edit the framework \
+         owns the value"
+    );
+    assert_eq!(
         runtime.screen().value,
-        50,
-        "four Ups of five units each — the scale is the point of this screen"
+        30,
+        "and the screen has not been told a thing"
     );
 
     testing::press(Button::Back);
@@ -725,17 +1433,23 @@ fn cancelling_an_edit_is_exact_when_a_step_is_scaled() {
     assert_eq!(
         runtime.screen().value,
         30,
-        "cancel must land on what the edit opened on, whatever a step is worth"
+        "cancel leaves it exactly where it was, whatever a step is worth"
+    );
+    assert_eq!(
+        runtime.screen().dispatches,
+        0,
+        "and dispatches nothing at all — there is nothing to put back"
     );
 }
 
 /// A control that can only be nudged never opens an edit.
 ///
-/// An edit that cannot be cancelled is worse than no edit: the keys change
-/// meaning and Back cannot put the value back. A `Stepper` with no `on_change`
-/// has no way to be set, so Confirm leaves it alone.
+/// An edit that cannot be committed is worse than no edit: the keys change
+/// meaning, the value moves on the panel, and Confirm has no message to send.
+/// A `Stepper` with no `on_change` has no absolute setter, so Confirm leaves it
+/// alone rather than opening a mode with no way out but cancelling.
 #[test]
-fn a_control_with_no_way_back_is_not_editable() {
+fn a_control_that_cannot_be_committed_is_not_editable() {
     testing::install();
     testing::reset();
     testing::set_has_left_right_keys(false);
@@ -770,25 +1484,28 @@ fn a_control_with_no_way_back_is_not_editable() {
     assert_eq!(
         runtime.screen().value,
         10,
-        "Confirm must not open an edit on a control it cannot put back"
+        "Confirm must not open an edit on a control it could never commit"
     );
 }
 
-/// Cancel puts the value back exactly, even when the screen swallowed steps.
+/// Cancel costs nothing on a screen that clamps, and the panel clamps too.
 ///
 /// From 98, four Ups against a maximum of 100: two land and two are refused.
-/// Cancelling used to dispatch the inverse of the four it had counted and leave
-/// the value on **96** — below where the edit began, which is the one thing a
-/// cancel must never do. The restore is computed from what the control reads
-/// now, so the swallowed steps cannot enter into it.
+/// Cancelling used to dispatch the inverse of the four steps it had counted and
+/// leave the value on **96** — below where the edit began, which is the one
+/// thing a cancel must never do. There is no count and no dispatch now; the
+/// clamp lives in the working copy, so the panel stops at 100 as well.
 #[test]
-fn cancelling_an_edit_restores_a_clamped_value_exactly() {
+fn cancelling_an_edit_costs_nothing_when_the_value_clamps() {
     testing::install();
     testing::reset();
     // The mode only exists on a board with no Left/Right pair.
     testing::set_has_left_right_keys(false);
 
-    let mut runtime = Runtime::new(ClampedDial { value: 98 });
+    let mut runtime = Runtime::new(ClampedDial {
+        value: 98,
+        dispatches: 0,
+    });
     runtime.render();
 
     testing::press(Button::Confirm);
@@ -801,9 +1518,14 @@ fn cancelling_an_edit_restores_a_clamped_value_exactly() {
         runtime.render();
     }
     assert_eq!(
-        runtime.screen().value,
+        shown(&mut runtime),
         100,
-        "two of the four Ups should have been swallowed by the clamp"
+        "two of the four Ups run out of track and the panel says so"
+    );
+    assert_eq!(
+        runtime.screen().value,
+        98,
+        "and none of them reached the screen"
     );
 
     testing::press(Button::Back);
@@ -813,12 +1535,17 @@ fn cancelling_an_edit_restores_a_clamped_value_exactly() {
     assert_eq!(
         runtime.screen().value,
         98,
-        "cancel must land on exactly what the edit opened on"
+        "cancel leaves exactly what the edit opened on"
+    );
+    assert_eq!(
+        runtime.screen().dispatches,
+        0,
+        "having dispatched nothing at any point"
     );
     assert_eq!(
         testing::finishes(),
         0,
-        "and it must cost the edit, not the screen"
+        "and it costs the edit, not the screen"
     );
 }
 
@@ -839,14 +1566,19 @@ fn confirm_opens_an_adjustable_control_rather_than_firing_it() {
 
     tap(&mut runtime, Button::Confirm, 10);
     assert_eq!(
-        runtime.screen().value,
-        50,
+        runtime.screen().dispatches,
+        0,
         "opening changes nothing by itself"
     );
 
     // The proof it opened: Up now moves the value, not the focus.
     tap(&mut runtime, Button::Up, 20);
-    assert_eq!(runtime.screen().value, 51);
+    assert_eq!(painted_value(&testing::ops_log()), 51, "the panel moved");
+    assert_eq!(
+        runtime.screen().value,
+        50,
+        "and the screen has not heard about it"
+    );
     assert_eq!(runtime.focused_index(), 0, "and focus stayed put");
 }
 
@@ -858,48 +1590,85 @@ fn while_editing_up_raises_and_down_lowers() {
 
     tap(&mut runtime, Button::Up, 20);
     tap(&mut runtime, Button::Up, 30);
-    assert_eq!(runtime.screen().value, 52, "Up walks the number upwards");
+    assert_eq!(
+        painted_value(&testing::ops_log()),
+        52,
+        "Up walks the number upwards"
+    );
 
     tap(&mut runtime, Button::Down, 40);
-    assert_eq!(runtime.screen().value, 51, "and Down walks it back");
+    assert_eq!(
+        painted_value(&testing::ops_log()),
+        51,
+        "and Down walks it back"
+    );
+    assert_eq!(
+        runtime.screen().dispatches,
+        0,
+        "and none of the three reached the screen"
+    );
 }
 
-/// Confirm leaves, keeping what the value now reads.
+/// Confirm commits the working value, in **one** message.
+///
+/// The reason the value is held at all: a screen that persists on every change
+/// writes once for an edit, not once per press, and what it writes is the
+/// number the panel was showing when the key went down.
 #[test]
-fn confirm_keeps_the_value_and_closes_the_edit() {
+fn confirm_commits_the_value_in_one_message() {
     let mut runtime = dial();
     tap(&mut runtime, Button::Confirm, 10);
     tap(&mut runtime, Button::Up, 20);
     tap(&mut runtime, Button::Up, 30);
-    assert_eq!(runtime.screen().value, 52);
+    assert_eq!(painted_value(&testing::ops_log()), 52);
+    assert_eq!(runtime.screen().value, 50, "still untold");
 
     tap(&mut runtime, Button::Confirm, 40);
-    assert_eq!(runtime.screen().value, 52, "the value is kept");
+    assert_eq!(
+        runtime.screen().value,
+        52,
+        "the value the panel was showing"
+    );
+    assert_eq!(
+        runtime.screen().dispatches,
+        1,
+        "one message for the whole edit, not one per press"
+    );
 
     // The proof it closed: Down walks the list again instead of the value.
     tap(&mut runtime, Button::Down, 50);
     assert_eq!(runtime.focused_index(), 1, "focus moves once more");
     assert_eq!(runtime.screen().value, 52, "and the value is left alone");
+    assert_eq!(runtime.screen().dispatches, 1, "and nothing else was sent");
 }
 
-/// Back puts the value back, and does **not** leave the screen.
+/// Back drops the edit and does **not** leave the screen.
 ///
 /// Back is the first key on the boards this mode exists for, so a stray press
 /// has to cost the edit and nothing else.
 #[test]
-fn back_restores_the_value_and_stays_on_the_screen() {
+fn back_drops_the_edit_and_stays_on_the_screen() {
     let mut runtime = dial();
     tap(&mut runtime, Button::Confirm, 10);
     tap(&mut runtime, Button::Up, 20);
     tap(&mut runtime, Button::Up, 30);
     tap(&mut runtime, Button::Up, 40);
-    assert_eq!(runtime.screen().value, 53, "moved by more than one step");
+    assert_eq!(
+        painted_value(&testing::ops_log()),
+        53,
+        "moved by more than one step"
+    );
 
     tap(&mut runtime, Button::Back, 50);
     assert_eq!(
-        runtime.screen().value,
+        painted_value(&testing::ops_log()),
         50,
-        "cancel undoes the whole run, not just the last step"
+        "the panel goes back to what the screen holds, all three steps at once"
+    );
+    assert_eq!(
+        runtime.screen().dispatches,
+        0,
+        "cancel dispatches nothing at all"
     );
     assert_eq!(
         testing::finishes(),
@@ -927,14 +1696,18 @@ fn editing_across_a_panel_refresh_moves_by_one_step() {
     testing::hold(Button::Up);
     runtime.loop_();
     runtime.render();
-    assert_eq!(runtime.screen().value, 51, "the press itself moves one");
+    assert_eq!(
+        painted_value(&testing::ops_log()),
+        51,
+        "the press itself moves one"
+    );
 
     // The refresh, and the first frame the loop gets to look again.
     testing::set_millis(850);
     runtime.loop_();
     runtime.render();
     assert_eq!(
-        runtime.screen().value,
+        painted_value(&testing::ops_log()),
         51,
         "a gap the loop could not see through must not walk the value"
     );

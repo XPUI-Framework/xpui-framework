@@ -139,7 +139,9 @@ pub fn drawn_sliders() -> Vec<(Rect, i32, i32)> {
     ops_log()
         .into_iter()
         .filter_map(|op| match op {
-            DrawOp::Slider { rect, value, max } => Some((rect, value, max)),
+            DrawOp::Slider {
+                rect, value, max, ..
+            } => Some((rect, value, max)),
             _ => None,
         })
         .collect()

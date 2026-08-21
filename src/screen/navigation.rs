@@ -4,6 +4,7 @@ use alloc::boxed::Box;
 use alloc::string::String;
 
 use crate::geometry::{Point, Size};
+use crate::host::ValueMode;
 use crate::host::{Hint, ScreenChrome, Theme};
 use crate::view::{Interactions, View};
 
@@ -114,12 +115,15 @@ impl<M> View<M> for NavigationScreen<M> {
         let content = Theme::content_area();
         self.content.render(origin.offset(content.x(), content.y()));
 
-        ScreenChrome::draw_button_hints(
-            &self.hints[0],
-            &self.hints[1],
-            &self.hints[2],
-            &self.hints[3],
-        );
+        // The screen said what these four keys do. While a value control has
+        // the focus, two of them do something else, and the screen has no way
+        // to know — so the runtime says so here rather than being asked.
+        let (back, confirm) = match crate::host::value_mode() {
+            ValueMode::None => (&self.hints[0], &self.hints[1]),
+            ValueMode::Openable => (&self.hints[0], &Hint::Edit),
+            ValueMode::Open => (&Hint::Cancel, &Hint::Done),
+        };
+        ScreenChrome::draw_button_hints(back, confirm, &self.hints[2], &self.hints[3]);
 
         // Last, so it covers the content and the hints alike.
         if let Some(overlay) = &self.overlay {

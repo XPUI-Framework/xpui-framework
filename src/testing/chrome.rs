@@ -13,7 +13,7 @@ use super::metrics::{
 use super::ops::DrawOp;
 use super::state::{UPDATES, push};
 use crate::geometry::Rect;
-use crate::host::{Chrome, Hint, RowField, ThemeMetric};
+use crate::host::{Chrome, ControlState, Hint, HintWord, RowField, ThemeMetric};
 
 impl Chrome for TestHost {
     fn metric(&self, metric: ThemeMetric) -> i32 {
@@ -54,7 +54,15 @@ impl Chrome for TestHost {
     }
 
     fn draw_button_hints(&self, back: &Hint, confirm: &Hint, prev: &Hint, next: &Hint) {
-        let label = |hint: &Hint| hint.label().map(String::from);
+        // A word the host owns is recorded by *which* word, not as a bare
+        // dash: `Standard` and `Edit` both leave the label to the host, and a
+        // golden that showed them the same could not prove the bar changed.
+        let label = |hint: &Hint| match hint.word() {
+            HintWord::Standard => hint.label().map(String::from),
+            HintWord::Edit => Some(String::from("<edit>")),
+            HintWord::Done => Some(String::from("<done>")),
+            HintWord::Cancel => Some(String::from("<cancel>")),
+        };
         push(DrawOp::Hints([
             label(back),
             label(confirm),
@@ -80,8 +88,13 @@ impl Chrome for TestHost {
         });
     }
 
-    fn draw_slider(&self, rect: Rect, value: i32, max: i32) {
-        push(DrawOp::Slider { rect, value, max });
+    fn draw_slider(&self, rect: Rect, value: i32, max: i32, state: ControlState) {
+        push(DrawOp::Slider {
+            rect,
+            value,
+            max,
+            state,
+        });
     }
 
     fn draw_list<'a>(

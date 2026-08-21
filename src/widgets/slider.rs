@@ -1,7 +1,7 @@
 //! A value slider.
 
 use crate::geometry::{Point, Size};
-use crate::host::{Theme, ThemeMetric};
+use crate::host::{ControlState, Theme, ThemeMetric};
 use crate::view::{InputMask, Interactions, Trigger, View};
 
 /// A horizontal slider showing `value` out of `max`.
@@ -38,6 +38,11 @@ pub struct Slider<M> {
     /// Set when this slider is the track of a larger control, which then owns
     /// the focus stop. See [`Slider::without_focus`].
     embedded: bool,
+    /// What the keys will do to it next, learned during the interactions walk
+    /// and read back by `render` — the same way a `List` learns which of its
+    /// rows holds focus. A view is rebuilt every frame, so this is never stale
+    /// by more than the frame it was measured in.
+    state: ControlState,
     measured: Size,
 }
 
@@ -50,6 +55,7 @@ impl<M> Slider<M> {
             max,
             make: None,
             embedded: false,
+            state: ControlState::Idle,
             measured: Size::ZERO,
         }
     }
@@ -124,7 +130,7 @@ impl<M> View<M> for Slider<M> {
             mask = mask.union(InputMask::FOCUS).union(InputMask::ADJUST);
         }
 
-        out.declare(
+        let focused = out.declare(
             self.bounds(origin),
             mask,
             Trigger::Value {
@@ -133,6 +139,30 @@ impl<M> View<M> for Slider<M> {
                 value: self.value,
             },
         );
+
+        // An embedded track declares no focus of its own, so it asks the
+        // control that owns the stop instead.
+        let holds_focus = if self.embedded {
+            out.parent_focused()
+        } else {
+            focused
+        };
+        // An open edit holds the value; the screen's has not moved and will
+        // not until Confirm. Painting `self.value` here would leave the knob
+        // still while the keys that opened the mode do nothing visible, which
+        // is the whole complaint this mode exists to answer.
+        //
+        // Safe to read after declaring: there is one focus, so a control that
+        // holds it while an edit is open is the control the edit is open on.
+        if holds_focus && let Some(value) = out.editing_value() {
+            self.value = value;
+        }
+
+        self.state = match (holds_focus, out.is_editing()) {
+            (true, true) => ControlState::Editing,
+            (true, false) => ControlState::Focused,
+            (false, _) => ControlState::Idle,
+        };
     }
 
     fn render(&self, origin: Point) {
@@ -143,6 +173,6 @@ impl<M> View<M> for Slider<M> {
         // The host draws the track, the fill and the knob. It already owns that
         // geometry for its own screens, and deriving it again here is how the
         // two drift apart.
-        Theme::draw_slider(self.bounds(origin), self.value, self.max);
+        Theme::draw_slider(self.bounds(origin), self.value, self.max, self.state);
     }
 }

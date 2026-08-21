@@ -26,13 +26,18 @@ mod clock;
 mod input;
 mod metrics;
 mod navigator;
+mod value_mode;
 
 pub use canvas::{Canvas, IconRef, Renderer};
-pub use chrome::{Chrome, Hint, RowField, ScreenChrome, Theme, ThemeMetric, request_update};
+pub use chrome::{
+    Chrome, ControlState, Hint, HintWord, RowField, ScreenChrome, Theme, ThemeMetric,
+    request_update,
+};
 pub use clock::{Clock, millis};
 pub use input::{Button, Input, InputSource, SwipeDir};
 pub use metrics::{Font, FontId, FontRole, FontStyle, TextMetrics};
 pub use navigator::{Navigator, finish_screen, present};
+pub(crate) use value_mode::{ValueMode, set_value_mode, value_mode};
 
 /// Everything a backend must provide. One object implements all five, so a
 /// host installs a single value and the framework keeps one pointer.

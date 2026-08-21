@@ -86,10 +86,9 @@ impl<S: Screen> Runtime<S> {
     /// upwards. Reading the two side by side looks like a sign error and is
     /// not.
     fn edit_key(&mut self, key: Button) {
-        let Some(editing) = self.editing.as_ref() else {
+        let Some(&Editing { focus, value }) = self.editing.as_ref() else {
             return;
         };
-        let focus = editing.focus;
 
         match key {
             Button::Up | Button::Down | Button::PageBack | Button::PageForward => {
@@ -98,45 +97,63 @@ impl<S: Screen> Runtime<S> {
                 } else {
                     -1
                 };
-                let interactions = self.collect_settled();
-                if let Some(message) = focused_step(&interactions, focus, delta) {
-                    self.dispatch(message);
-                }
+                self.step_open(focus, value, delta);
             }
             // A board that has this pair never opens an edit, so these arrive
             // only from a host that sends them while answering that it has no
-            // pair — the simulator's keyboard does exactly that. Routed to the
-            // same `focused_step` as everything else so the value moves the way
-            // it would anywhere, rather than being silently dropped.
+            // pair — the simulator's keyboard does exactly that. Moved the same
+            // way as everything else so the value tracks the keys, rather than
+            // being silently dropped.
             Button::Left | Button::Right => {
                 let delta = if key == Button::Left { -1 } else { 1 };
-                let interactions = self.collect_settled();
-                if let Some(message) = focused_step(&interactions, focus, delta) {
-                    self.dispatch(message);
-                }
+                self.step_open(focus, value, delta);
             }
-            // Keep what it now reads.
+            // **Commit: the screen's one and only sight of this edit.** Every
+            // key up to here moved the framework's copy and told the screen
+            // nothing, so a screen that writes to flash on every change writes
+            // once, and what it writes is the number the panel was showing.
             Button::Confirm => {
                 self.editing = None;
+                let interactions = self.collect_settled();
+                if let Some(item) = focused(&interactions, focus)
+                    && let Some(message) = item.trigger.set_to(value)
+                {
+                    self.dispatch(message);
+                }
                 request_update();
             }
-            // Put it back, and **do not leave the screen**. Back is the first
-            // key on the boards this mode exists for, so a stray press must
-            // cost the edit and nothing more.
+            // **Cancel dispatches nothing at all.** The screen's value never
+            // moved, so dropping the copy is already the value it opened on —
+            // exact for a screen that clamps and one that scales alike, which
+            // no sum of undo steps could be.
+            //
+            // And **do not leave the screen**: Back is the first key on the
+            // boards this mode exists for, so a stray press costs the edit and
+            // nothing more.
             Button::Back => {
-                let start = self.editing.take().map(|editing| editing.start);
-                if let Some(start) = start {
-                    let interactions = self.collect_settled();
-                    if let Some(item) = focused(&interactions, focus)
-                        && let Some(message) = item.trigger.restore(start)
-                    {
-                        self.dispatch(message);
-                    }
-                }
+                self.editing = None;
                 request_update();
             }
             _ => {}
         }
+    }
+
+    /// Moves the open edit's own copy by one step, telling the screen nothing.
+    fn step_open(&mut self, focus: usize, from: i32, delta: i32) {
+        let interactions = self.collect_settled();
+        let Some(item) = focused(&interactions, focus) else {
+            return;
+        };
+        let Some(value) = item.trigger.stepped(from, delta) else {
+            return;
+        };
+        if value == from {
+            // Already against the end of the track. Repainting an identical
+            // frame is a second of a slow panel's life for nothing.
+            return;
+        }
+        self.editing = Some(Editing { focus, value });
+        request_update();
     }
 
     /// One frame of input, in priority order. See the module docs.
@@ -252,7 +269,7 @@ impl<S: Screen> Runtime<S> {
                 {
                     self.editing = Some(Editing {
                         focus: self.focus,
-                        start,
+                        value: start,
                     });
                     request_update();
                     return;

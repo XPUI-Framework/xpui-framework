@@ -32,8 +32,8 @@ use super::ops::{DrawOp, RectKind, RowCells};
 use super::state::push;
 use crate::geometry::{Point, Rect, Size};
 use crate::host::{
-    Button, Canvas, Chrome, Clock, FontId, FontRole, FontStyle, Hint, Host, IconRef, InputSource,
-    RowField, SwipeDir, TextMetrics, ThemeMetric,
+    Button, Canvas, Chrome, Clock, ControlState, FontId, FontRole, FontStyle, Hint, HintWord, Host,
+    IconRef, InputSource, RowField, SwipeDir, TextMetrics, ThemeMetric,
 };
 
 /// Wraps a host, recording every draw call before passing it on.
@@ -185,7 +185,14 @@ impl<H: Host + 'static> Chrome for Recorder<H> {
     }
 
     fn draw_button_hints(&self, back: &Hint, confirm: &Hint, previous: &Hint, next: &Hint) {
-        let label = |hint: &Hint| hint.label().map(String::from);
+        // Recorded by which word the slot asked for, so a golden can tell the
+        // host's usual label from the one a mode wants.
+        let label = |hint: &Hint| match hint.word() {
+            HintWord::Standard => hint.label().map(String::from),
+            HintWord::Edit => Some(String::from("<edit>")),
+            HintWord::Done => Some(String::from("<done>")),
+            HintWord::Cancel => Some(String::from("<cancel>")),
+        };
         push(DrawOp::Hints([
             label(back),
             label(confirm),
@@ -204,9 +211,14 @@ impl<H: Host + 'static> Chrome for Recorder<H> {
         self.inner.draw_progress_bar(rect, current, total);
     }
 
-    fn draw_slider(&self, rect: Rect, value: i32, max: i32) {
-        push(DrawOp::Slider { rect, value, max });
-        self.inner.draw_slider(rect, value, max);
+    fn draw_slider(&self, rect: Rect, value: i32, max: i32, state: ControlState) {
+        push(DrawOp::Slider {
+            rect,
+            value,
+            max,
+            state,
+        });
+        self.inner.draw_slider(rect, value, max, state);
     }
 
     fn draw_scroll_indicator(&self, rect: Rect, content: i32, visible: i32, offset: i32) {
