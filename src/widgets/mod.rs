@@ -10,6 +10,7 @@ mod image;
 mod list;
 mod modal;
 mod progress;
+mod readout;
 mod section;
 mod slider;
 mod stepper;

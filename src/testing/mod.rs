@@ -25,6 +25,8 @@
 //! ```
 
 mod accessors;
+#[cfg(test)]
+pub(crate) mod allocations;
 mod chrome;
 mod host;
 mod metrics;

@@ -30,7 +30,8 @@
 //!
 //! `unsafe` is confined to three places and stays there: the installed-host
 //! globals in [`host`], the single-threaded cells in [`app::AppShell`], and the
-//! testing doubles.
+//! `testing` module — its doubles, and the counting allocator one of its own
+//! tests installs.
 //!
 //! # Portability
 //!

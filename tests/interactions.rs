@@ -739,6 +739,317 @@ fn the_three_states_of_a_value_row_look_different() {
     );
 }
 
+/// A control's own number follows the keys while an edit is open.
+///
+/// The whole reason the readout is the control's rather than the screen's. A
+/// screen builds its labels in `update`, and `update` is not called while an
+/// edit is open — deliberately, since the framework is holding the value — so a
+/// number the screen painted stands still while the track moves. Read here from
+/// what was actually painted, because the screen's own field is exactly the
+/// thing that must *not* have moved.
+#[test]
+fn a_readout_shows_the_value_the_keys_are_moving() {
+    use xpui::testing::DrawOp;
+
+    /// Every string the frame painted, newest frame last.
+    fn texts(ops: &[DrawOp]) -> Vec<String> {
+        ops.iter()
+            .filter_map(|op| match op {
+                DrawOp::Text { text, .. } => Some(text.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    struct Dialled {
+        value: i32,
+        dispatches: usize,
+    }
+    impl xpui::Screen for Dialled {
+        type Message = DialMsg;
+        fn body(&self) -> impl View<DialMsg> {
+            vstack![10;
+                Slider::new(self.value, 100)
+                    .on_change(DialMsg::Set)
+                    .title("Warmth")
+                    .readout("%"),
+            ]
+        }
+        fn update(&mut self, message: DialMsg) {
+            self.dispatches += 1;
+            if let DialMsg::Set(value) = message {
+                self.value = value;
+            }
+        }
+    }
+
+    let mut runtime = Runtime::new(Dialled {
+        value: 25,
+        dispatches: 0,
+    });
+    runtime.render();
+    assert!(
+        texts(&testing::ops_log()).contains(&"25%".to_string()),
+        "the control draws its own number before anything is opened"
+    );
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    for _ in 0..3 {
+        testing::press(Button::Up);
+        runtime.loop_();
+    }
+    testing::reset();
+    runtime.render();
+
+    let painted = texts(&testing::ops_log());
+    assert!(
+        painted.contains(&"28%".to_string()),
+        "three Ups have to reach the number, not only the knob: {painted:?}"
+    );
+    assert_eq!(
+        runtime.screen().value,
+        25,
+        "and the screen is still holding what it started with"
+    );
+    assert_eq!(runtime.screen().dispatches, 0);
+
+    // Cancel: the panel goes back to the screen's value, in one step.
+    testing::press(Button::Back);
+    runtime.loop_();
+    testing::reset();
+    runtime.render();
+    assert!(
+        texts(&testing::ops_log()).contains(&"25%".to_string()),
+        "cancelling puts the number back with the knob"
+    );
+}
+
+/// A control with nothing to choose between still says what it is.
+///
+/// `Slider::new`'s own doc calls a zero `max` an anticipated input — a screen
+/// whose range comes from data has one the day the data holds a single item.
+/// `measure` reserves the header line either way, so a `render` that gave up
+/// before drawing it left an unexplained gap where the name and the reading
+/// should be.
+#[test]
+fn an_empty_range_keeps_its_name_and_its_number() {
+    use xpui::testing::DrawOp;
+
+    for max in [0, -1] {
+        testing::install();
+        testing::reset();
+
+        let mut view: Slider<DialMsg> = Slider::new(0, max).title("Volume").readout("%");
+        view.measure(screen());
+        view.render(Point::ORIGIN);
+
+        let painted: Vec<String> = testing::ops_log()
+            .iter()
+            .filter_map(|op| match op {
+                DrawOp::Text { text, .. } => Some(text.clone()),
+                _ => None,
+            })
+            .collect();
+        assert!(
+            painted.contains(&"Volume".to_string()),
+            "max={max}: the name is drawn whatever the range: {painted:?}"
+        );
+        assert!(
+            painted.contains(&"0%".to_string()),
+            "max={max}: and so is the reading: {painted:?}"
+        );
+        assert!(
+            !testing::ops_log()
+                .iter()
+                .any(|op| matches!(op, DrawOp::Slider { .. })),
+            "max={max}: but there is no track to draw"
+        );
+    }
+}
+
+/// A name with no number, and a number with no name, each draw only their own.
+///
+/// Every other test here passes both, so a header that drew the wrong one — or
+/// reserved a line for a control that asked for neither — would go unseen.
+#[test]
+fn a_header_draws_only_what_it_was_given() {
+    use xpui::testing::DrawOp;
+
+    fn painted(build: impl FnOnce() -> Slider<DialMsg>) -> (Vec<String>, i32) {
+        testing::install();
+        testing::reset();
+        let mut view = build();
+        view.measure(screen());
+        view.render(Point::ORIGIN);
+        let texts = testing::ops_log()
+            .iter()
+            .filter_map(|op| match op {
+                DrawOp::Text { text, .. } => Some(text.clone()),
+                _ => None,
+            })
+            .collect();
+        (texts, View::<DialMsg>::size(&view).height)
+    }
+
+    let (bare, bare_height) = painted(|| Slider::new(30, 100).on_change(DialMsg::Set));
+    assert!(
+        bare.is_empty(),
+        "no name and no number means no line: {bare:?}"
+    );
+
+    let (named, named_height) =
+        painted(|| Slider::new(30, 100).on_change(DialMsg::Set).title("Volume"));
+    assert_eq!(named, vec!["Volume".to_string()], "a name and no number");
+
+    let (numbered, _) = painted(|| Slider::new(30, 100).on_change(DialMsg::Set).readout("%"));
+    assert_eq!(numbered, vec!["30%".to_string()], "a number and no name");
+
+    assert!(
+        named_height > bare_height,
+        "and a control that asked for neither is not made taller for a line it \
+         does not draw"
+    );
+}
+
+/// A stepper's glyphs take a finger where they are drawn.
+///
+/// The row is painted at one origin and declared at another, and nothing but
+/// this ties the two together. They are now offset by a header line, so a drift
+/// is a whole line high rather than a few pixels: `-` stops responding and the
+/// name above it starts nudging the value down. This repository has shipped
+/// that fault once at 6px, with a test too loose to see it — so what is pinned
+/// here is the *relationship*, each glyph's declared rect against the rect it
+/// painted into, rather than either number alone.
+#[test]
+fn a_steppers_glyphs_are_touchable_where_they_are_drawn() {
+    use xpui::testing::DrawOp;
+
+    testing::install();
+    testing::reset();
+
+    let mut view: Stepper<DialMsg> = Stepper::new(50)
+        .on_change(DialMsg::Set)
+        .on_step(DialMsg::Step)
+        .title("Brightness")
+        .readout("%");
+    view.measure(screen());
+
+    let mut out = Interactions::new(0);
+    view.interactions(Point::ORIGIN, &mut out);
+    view.render(Point::ORIGIN);
+
+    // Where the two glyphs were painted.
+    let glyphs: Vec<(i32, i32)> = testing::ops_log()
+        .iter()
+        .filter_map(|op| match op {
+            DrawOp::Text { origin, text, .. } if text == "-" || text == "+" => {
+                Some((origin.x, origin.y))
+            }
+            _ => None,
+        })
+        .collect();
+    assert_eq!(glyphs.len(), 2, "a stepper draws both glyphs");
+
+    // Every painted glyph has to sit inside a region that takes a tap.
+    for (x, y) in glyphs {
+        let hit = out
+            .items()
+            .iter()
+            .any(|item| item.mask.contains(InputMask::TAP) && item.rect.contains(Point::new(x, y)));
+        assert!(
+            hit,
+            "a glyph painted at ({x},{y}) is outside every touch region — the row \
+             was declared somewhere other than where it drew"
+        );
+    }
+
+    // And the name above them is not one of those regions, or tapping the
+    // label would nudge the value.
+    let title = testing::ops_log()
+        .iter()
+        .find_map(|op| match op {
+            DrawOp::Text { origin, text, .. } if text == "Brightness" => Some(*origin),
+            _ => None,
+        })
+        .expect("the stepper draws its own name");
+    assert!(
+        !out.items()
+            .iter()
+            .any(|item| item.mask.contains(InputMask::TAP) && item.rect.contains(title)),
+        "the header line must take no tap"
+    );
+}
+
+/// A stepper's number and its own track never disagree.
+///
+/// A `Stepper` is a composite: the header carrying the number is drawn by the
+/// stepper, and the track under it by an embedded `Slider` that learns the open
+/// edit for itself. So there are **two** places that have to follow the working
+/// copy, and only one of them is the one a slider test would cover. If the
+/// header kept the screen's value, a person would watch the knob move under a
+/// number that did not — which is the exact fault this readout exists to fix,
+/// reintroduced one widget along.
+#[test]
+fn a_steppers_number_agrees_with_its_track() {
+    use xpui::testing::DrawOp;
+
+    testing::install();
+    testing::reset();
+    testing::set_has_left_right_keys(false);
+
+    struct Stepped {
+        value: i32,
+    }
+    impl xpui::Screen for Stepped {
+        type Message = DialMsg;
+        fn body(&self) -> impl View<DialMsg> {
+            vstack![10;
+                Stepper::new(self.value)
+                    .on_change(DialMsg::Set)
+                    .on_step(DialMsg::Step)
+                    .title("Brightness")
+                    .readout("%"),
+            ]
+        }
+        fn update(&mut self, _message: DialMsg) {}
+    }
+
+    let mut runtime = Runtime::new(Stepped { value: 60 });
+    runtime.render();
+
+    testing::press(Button::Confirm);
+    runtime.loop_();
+    for _ in 0..4 {
+        testing::press(Button::Up);
+        runtime.loop_();
+    }
+    testing::reset();
+    runtime.render();
+
+    let ops = testing::ops_log();
+    let track = painted_value(&ops);
+    let number = ops
+        .iter()
+        .rev()
+        .find_map(|op| match op {
+            DrawOp::Text { text, .. } if text.ends_with('%') => Some(text.clone()),
+            _ => None,
+        })
+        .expect("the stepper draws its own number");
+
+    assert_eq!(track, 64, "four Ups move the track");
+    assert_eq!(
+        number,
+        format!("{track}%"),
+        "and the number over it has to say the same thing"
+    );
+}
+
 /// The hint bar names the mode, and names it with the board's own words.
 ///
 /// The runtime owns the edit and the screen paints the bar, so this is the one

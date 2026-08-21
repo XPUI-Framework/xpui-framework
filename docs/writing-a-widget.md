@@ -81,6 +81,15 @@ The mask is the important choice:
 | `ADJUST` | Moved one step at a time by Left/Right rather than fired by Confirm. What a value control declares. |
 | `DEFAULT` | `TAP` plus `FOCUS`: what most controls want. |
 
+**The rect you declare with `FOCUS` is also what gets scrolled into view.** The
+runtime scrolls the least that brings it there, so a control that declares only
+its *moving part* — a track, without the line above it naming the value —
+settles with that part at the top of the viewport and everything above it
+clipped off the panel. On a short screen the name and the reading disappear
+exactly when the keys arrive on them. Declare the whole control for `FOCUS`, and
+a second, smaller rect for `TAP`/`DRAG` if a finger should only land on part of
+it. `Slider` does both; it did not always, which is how this is known.
+
 If your control is small, you do not need to grow it for fingers — `Tappable`
 already widens an undersized hit area to the theme's minimum. Wrap it rather
 than duplicating that logic.

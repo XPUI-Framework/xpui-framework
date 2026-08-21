@@ -1,10 +1,12 @@
 //! A slider flanked by `-` and `+` steps.
 
-use crate::geometry::{Point, Size};
+use crate::geometry::{Point, Rect, Size};
 use crate::host::{Theme, ThemeMetric};
 use crate::layout::{Alignment, HStack, Modifiers};
 use crate::view::{InputMask, Interactions, Trigger, View};
+use crate::widgets::readout::Header;
 use crate::widgets::{Slider, Text};
+use alloc::string::String;
 
 /// The row every adjustable setting uses: fine steps at each end, a draggable
 /// track between them.
@@ -28,7 +30,12 @@ pub struct Stepper<M> {
     max: i32,
     change: Option<fn(i32) -> M>,
     step: Option<fn(i32) -> M>,
+    /// The unit shown after the number, when this stepper draws one at all.
+    readout: Option<&'static str>,
+    /// The name on the header line, when this stepper carries its own.
+    title: Option<String>,
     row: Option<HStack<M>>,
+    measured: Size,
 }
 
 impl<M: Clone + 'static> Stepper<M> {
@@ -43,8 +50,30 @@ impl<M: Clone + 'static> Stepper<M> {
             max,
             change: None,
             step: None,
+            readout: None,
+            title: None,
             row: None,
+            measured: Size::ZERO,
         }
+    }
+
+    /// Draws the value as a number on the line above the row, at its trailing
+    /// edge — beside [`title`](Stepper::title) when there is one.
+    ///
+    /// **This is the only thing that shows the value while an edit is open.**
+    /// The framework holds the value then and the screen is not told it, so a
+    /// number a screen painted beside the control stands still while the track
+    /// moves. See [`Slider::readout`](crate::Slider::readout).
+    pub fn readout(mut self, suffix: &'static str) -> Self {
+        self.readout = Some(suffix);
+        self
+    }
+
+    /// Names the control on the same line as its number.
+    /// See [`Slider::title`](crate::Slider::title).
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
     }
 
     /// Sends `make(new_value)` when the track is dragged or tapped.
@@ -95,21 +124,53 @@ impl<M: Clone + 'static> Stepper<M> {
     }
 }
 
-impl<M: Clone + 'static> View<M> for Stepper<M> {
-    fn measure(&mut self, available: Size) {
-        self.build();
-        if let Some(row) = &mut self.row {
-            row.measure(available);
+impl<M: Clone + 'static> Stepper<M> {
+    fn header(&self) -> Header<'_> {
+        Header {
+            title: self.title.as_deref(),
+            value: self.readout.map(|suffix| (self.value, suffix)),
         }
     }
 
+    /// The glyph row, below whatever the header took.
+    fn row_bounds(&self, origin: Point) -> Rect {
+        let top = self.header().height();
+        Rect::new(
+            origin.x,
+            origin.y + top,
+            self.measured.width,
+            (self.measured.height - top).max(0),
+        )
+    }
+}
+
+impl<M: Clone + 'static> View<M> for Stepper<M> {
+    fn measure(&mut self, available: Size) {
+        self.build();
+        let row = match &mut self.row {
+            Some(row) => {
+                row.measure(available);
+                row.size()
+            }
+            None => Size::ZERO,
+        };
+        // Kept rather than recomputed on every `size()`, which `row_bounds`
+        // and `render` both call: the header's height is fixed once the control
+        // is built, and the two must not be able to answer differently.
+        self.measured = Size::new(row.width, row.height + self.header().height());
+    }
+
     fn size(&self) -> Size {
-        self.row.as_ref().map_or(Size::ZERO, |row| row.size())
+        self.measured
     }
 
     fn render(&self, origin: Point) {
+        if self.measured.is_empty() {
+            return;
+        }
+        self.header().render(self.bounds(origin));
         if let Some(row) = &self.row {
-            row.render(origin);
+            row.render(self.row_bounds(origin).origin);
         }
     }
 
@@ -137,10 +198,20 @@ impl<M: Clone + 'static> View<M> for Stepper<M> {
             )
         });
 
+        // **The working value, before the row is walked.** The embedded track
+        // reads it for itself, but the header's number is drawn by this control
+        // and would otherwise show what the screen holds while the track shows
+        // what the keys have moved it to — the two halves of one control
+        // disagreeing, which is the whole fault this readout exists to fix.
+        if focused && let Some(value) = out.editing_value() {
+            self.value = value;
+        }
+
+        let row_origin = self.row_bounds(origin).origin;
         if let Some(row) = &mut self.row {
             let outer = out.parent_focused();
             out.set_parent_focused(focused);
-            row.interactions(origin, out);
+            row.interactions(row_origin, out);
             out.set_parent_focused(outer);
         }
     }

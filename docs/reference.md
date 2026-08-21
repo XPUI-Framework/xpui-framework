@@ -290,8 +290,8 @@ second scroll view would share the first one's position.
 | `List` / `ListRow` | A themed, selectable list. `ListRow::new(t).subtitle(s).value(v).on_tap(msg)`. |
 | `ListRow::toggle(t, on, on_label, off_label)` | A boolean setting as a row. |
 | `ProgressBar::new(current, total)` | Or `ProgressBar::percent(72)`. `.height(px)` overrides the theme. |
-| `Slider::new(value, max)` | A track. `.on_change(Msg::V)` reports drags, taps and key nudges. A focus stop unless `.without_focus()` hands the stop — and with it all key access — to a control that wraps it. Also `Slider::percent(72)`. |
-| `Stepper::new(value)` | `−` / track / `+` as one control, over `0..=100`; `Stepper::ranged(v, max)` for anything else. `.on_change`, `.on_step`. |
+| `Slider::new(value, max)` | A track. `.on_change(Msg::V)` reports drags, taps and key nudges. `.title("Warmth")` and `.readout("%")` draw a name and the live value on a line above it — [use these rather than painting the line yourself](#the-value-a-control-shows). A focus stop unless `.without_focus()` hands the stop — and with it all key access — to a control that wraps it. Also `Slider::percent(72)`. |
+| `Stepper::new(value)` | `−` / track / `+` as one control, over `0..=100`; `Stepper::ranged(v, max)` for anything else. `.on_change`, `.on_step`, and the same `.title` / `.readout`. |
 | `Toggle::new(label, on, on_label, off_label)` | A boolean row. `.on_change(Msg::V)` receives the **next** state. |
 | `Modal::picker(title, options)` | A centred option dialog. `.selected(i)`, `.on_select(Msg::V)`, `.scrim(Scrim::Dim)`. Also `Modal::confirm` and `Modal::new`. |
 | `Image::new(data, w, h)` | A 1-bpp bitmap you supply, borrowed rather than copied. |
@@ -526,6 +526,35 @@ are on it and differently again when it is open — what that looks like is the
 backend's choice — and the hint bar takes the board's words for Edit, Done and
 Cancel over whatever the screen asked for. A screen is not told any of this and
 does not need to be.
+
+#### The value a control shows
+
+**A value control carries its own name and number.**
+
+```rust
+use xpui::{Slider, Stepper};
+
+# xpui::testing::install();
+# #[derive(Clone, Copy)]
+# enum Msg { Warmth(i32), Brightness(i32), Step(i32) }
+# let (warmth, brightness) = (25, 60);
+Slider::new(warmth, 100).on_change(Msg::Warmth).title("Warmth").readout("%");
+
+Stepper::new(brightness)
+    .on_change(Msg::Brightness)
+    .on_step(Msg::Step)
+    .title("Brightness")
+    .readout("%");
+```
+
+Both draw on one line above the track: the name at the leading edge, the number
+at the trailing one. **Do not paint that line yourself.** A number a screen
+builds in `update` cannot move while an edit is open, because the framework is
+holding the value and does not tell the screen — so the track would slide under
+a number that did not. The control's own is formatted into a stack buffer rather than
+with `format!`, for the reason [`Text`](../src/widgets/text.rs) gives: what a
+screen builds in `update` it keeps, and what `body()` builds it pays for on
+every frame.
 
 **A composite is one focus stop.** A `Stepper` offers three touch targets — `−`,
 the track, `+` — but a single stop for buttons, so Up/Down move between settings

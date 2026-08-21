@@ -1,8 +1,10 @@
 //! A value slider.
 
-use crate::geometry::{Point, Size};
+use crate::geometry::{Point, Rect, Size};
 use crate::host::{ControlState, Theme, ThemeMetric};
 use crate::view::{InputMask, Interactions, Trigger, View};
+use crate::widgets::readout::Header;
+use alloc::string::String;
 
 /// A horizontal slider showing `value` out of `max`.
 ///
@@ -43,6 +45,11 @@ pub struct Slider<M> {
     /// rows holds focus. A view is rebuilt every frame, so this is never stale
     /// by more than the frame it was measured in.
     state: ControlState,
+    /// The unit shown after the number, when this slider draws one at all.
+    /// `Some("")` is a bare number; `None` is no readout.
+    readout: Option<&'static str>,
+    /// The name on the header line, when this slider carries its own.
+    title: Option<String>,
     measured: Size,
 }
 
@@ -56,6 +63,8 @@ impl<M> Slider<M> {
             make: None,
             embedded: false,
             state: ControlState::Idle,
+            readout: None,
+            title: None,
             measured: Size::ZERO,
         }
     }
@@ -83,6 +92,43 @@ impl<M> Slider<M> {
         self
     }
 
+    /// Draws the value as a number on a line above the track, at its trailing
+    /// edge — beside [`title`](Slider::title) when there is one.
+    ///
+    /// **This is the only thing that shows the value while an edit is open.**
+    /// The framework holds the value then — the screen is not told it, and must
+    /// not be — so a number a screen painted beside the control stands still
+    /// while the knob moves. One drawn here is the working copy, because it is
+    /// the copy the control is drawn from.
+    ///
+    /// `suffix` is appended as given: `"%"`, `"px"`, or `""` for a bare number.
+    /// A `&'static str` because a unit is a constant, and because it is copied
+    /// into a fixed buffer beside the digits rather than formatted.
+    ///
+    /// ```rust
+    /// # use xpui::Slider;
+    /// # #[derive(Clone, Copy)]
+    /// # enum Msg { Warmth(i32) }
+    /// # xpui::testing::install();
+    /// # let warmth = 25;
+    /// Slider::new(warmth, 100).on_change(Msg::Warmth).readout("%");
+    /// ```
+    pub fn readout(mut self, suffix: &'static str) -> Self {
+        self.readout = Some(suffix);
+        self
+    }
+
+    /// Names the control on the same line as its number.
+    ///
+    /// A settings screen is a column of these, and every screen used to write
+    /// the line by hand above the control: a name, a spacer and a value. The
+    /// value on that line has to be the control's, or it stands still while an
+    /// edit moves the track — so the line is the control's too.
+    pub fn title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
     /// Drops this slider's focus stop, for a track inside a larger control that
     /// owns the stop itself.
     ///
@@ -103,13 +149,38 @@ impl<M> Slider<M> {
     }
 }
 
+impl<M> Slider<M> {
+    fn header(&self) -> Header<'_> {
+        Header {
+            title: self.title.as_deref(),
+            value: self.readout.map(|suffix| (self.value, suffix)),
+        }
+    }
+
+    /// The track alone: the control's rect less whatever the header took.
+    ///
+    /// **Used for the touch region as well as the paint.** A drag is converted
+    /// to a value against this rect, so a track laid out anywhere but here
+    /// would put the knob where the finger was not.
+    fn track_bounds(&self, origin: Point) -> Rect {
+        let rect = self.bounds(origin);
+        let top = self.header().height();
+        Rect::new(
+            rect.x(),
+            rect.y() + top,
+            rect.width(),
+            (rect.height() - top).max(0),
+        )
+    }
+}
+
 impl<M> View<M> for Slider<M> {
     fn measure(&mut self, available: Size) {
         // One themed row tall, so a slider lines up with list rows beside it —
         // but never shorter than the knob the host will draw.
         let row = Theme::metric(ThemeMetric::ListRowHeight)
             .max(Theme::metric(ThemeMetric::SliderKnobHeight));
-        self.measured = Size::new(available.width, row);
+        self.measured = Size::new(available.width, row + self.header().height());
     }
 
     fn size(&self) -> Size {
@@ -125,19 +196,31 @@ impl<M> View<M> for Slider<M> {
         // FOCUS and ADJUST unless something larger owns the stop. Without them
         // a slider is unreachable by any key, which on a device with no
         // touchscreen leaves it visible and impossible to move.
-        let mut mask = InputMask::TAP.union(InputMask::DRAG);
-        if !self.embedded {
-            mask = mask.union(InputMask::FOCUS).union(InputMask::ADJUST);
-        }
-
-        let focused = out.declare(
-            self.bounds(origin),
-            mask,
-            Trigger::Value {
-                make,
-                max: self.max,
-                value: self.value,
-            },
+        // **Two rects, because a focus stop is not a touch target.** The rect
+        // handed to `declare` is also what `Runtime` scrolls into view, so a
+        // stop covering only the track scrolls until the track's top edge meets
+        // the viewport and leaves the name and the number clipped above it — on
+        // a short panel, the number vanishes exactly while the keys are moving
+        // it. The stop is therefore the whole control.
+        //
+        // Touch stays on the track: a finger landing on the name would
+        // otherwise set the value to wherever along the line it happened to
+        // fall, which is a value nobody asked for.
+        let trigger = || Trigger::Value {
+            make,
+            max: self.max,
+            value: self.value,
+        };
+        let focused = !self.embedded
+            && out.declare(
+                self.bounds(origin),
+                InputMask::FOCUS.union(InputMask::ADJUST),
+                trigger(),
+            );
+        out.declare(
+            self.track_bounds(origin),
+            InputMask::TAP.union(InputMask::DRAG),
+            trigger(),
         );
 
         // An embedded track declares no focus of its own, so it asks the
@@ -166,13 +249,23 @@ impl<M> View<M> for Slider<M> {
     }
 
     fn render(&self, origin: Point) {
-        if self.measured.is_empty() || self.max <= 0 {
+        if self.measured.is_empty() {
+            return;
+        }
+
+        // **Drawn before the range is checked.** A control with nothing to
+        // choose between still has a name and a reading, and `measure` reserved
+        // the line for them either way — a screen whose range comes from data
+        // would otherwise show an unexplained gap the day the data held one
+        // item.
+        self.header().render(self.bounds(origin));
+        if self.max <= 0 {
             return;
         }
 
         // The host draws the track, the fill and the knob. It already owns that
         // geometry for its own screens, and deriving it again here is how the
         // two drift apart.
-        Theme::draw_slider(self.bounds(origin), self.value, self.max, self.state);
+        Theme::draw_slider(self.track_bounds(origin), self.value, self.max, self.state);
     }
 }
