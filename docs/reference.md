@@ -548,6 +548,15 @@ inherit a guess. Which device answers what is
 **Auto-repeat is free.** A key fires on press, then repeats after 500ms at 500ms
 intervals, whether the runtime claimed it or a screen did.
 
+**On a slow panel it is slower than that, deliberately.** A refresh leaves the
+loop blind, and a button released during one still reads as down on the frame
+after — so crediting that gap to the hold turned one tap of Down into a walk of
+several rows on real hardware. A gap of a whole interval or more now *re-arms*
+the hold instead of firing it, which means the next repeat cannot arrive sooner
+than the refresh plus the 500ms delay: with `Board::BADGER_2040.refresh_ms` at
+900, that is about **1.4s**, by arithmetic rather than measurement. A display that draws straight through never reaches
+the threshold and repeats at 500ms as above.
+
 A screen that wants a key or a gesture for itself claims it, and is asked first:
 
 ```rust
