@@ -108,8 +108,7 @@ xpui::testing::reset();
 
 ## 4. Pixels
 
-The `embedded_graphics` backend's `framebuffer` feature renders to memory, and
-`assert_screenshot` compares the panel against a committed PNG, pixel for
+`xpui-screenshot` renders to memory, and `assert_screenshot` compares the panel against a committed PNG, pixel for
 pixel. One flipped pixel fails.
 
 ```bash
