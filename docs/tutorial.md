@@ -70,11 +70,13 @@ not write.
 
 ## 2. Run it
 
-Five lines. `Board::X4` is a 480×800 reader; `Panel::of` takes its size, and
+Six lines. `xteink::X4` is a 480×800 reader; `Panel::of` takes its size, and
 `Simulator` opens a window and drives the frame loop. There is no default
 board — the simulator knows no devices, so you name the one you are building
-for, and `Board` comes through `xpui-simulator` so that is one dependency
-rather than two.
+for, out of the crate for that vendor. There are three, and you depend on the
+one you target: `xpui-boards-xteink`, `xpui-boards-pimoroni`,
+`xpui-boards-seeed`. For a panel none of them describes, `Board::custom` takes
+a size.
 
 ```rust,no_run
 # use xpui::screen::Screen;
@@ -87,9 +89,10 @@ rather than two.
 #     }
 #     fn update(&mut self, _message: Self::Message) {}
 # }
-use xpui_simulator::{Board, Panel, Simulator};
+use xpui_boards_xteink as xteink;
+use xpui_simulator::{Panel, Simulator};
 
-Simulator::new(Panel::of(Board::X4))
+Simulator::new(Panel::of(xteink::X4))
     .title("sleep timer")
     .run(SleepTimer);
 ```

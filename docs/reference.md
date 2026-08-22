@@ -581,7 +581,7 @@ answers whether there is a pair to nudge a value with. No rule of thumb about
 the shape of a device gets it right — two devices of the same family differ —
 and the host has no default to fall back on, precisely so a backend cannot
 inherit a guess. Which device answers what is
-[`xpui-boards`](../../boards/README.md)' to say, not this page's.
+the vendor crates under [`crates/boards`](../../boards/)' to say, not this page's.
 
 **Auto-repeat is free.** A key fires on press, then repeats after 500ms at 500ms
 intervals, whether the runtime claimed it or a screen did.
@@ -591,7 +591,7 @@ loop blind, and a button released during one still reads as down on the frame
 after — so crediting that gap to the hold turned one tap of Down into a walk of
 several rows on real hardware. A gap of a whole interval or more now *re-arms*
 the hold instead of firing it, which means the next repeat cannot arrive sooner
-than the refresh plus the 500ms delay: with `Board::BADGER_2040.refresh_ms` at
+than the refresh plus the 500ms delay: with `xpui_boards_pimoroni::BADGER_2040.refresh_ms` at
 900, that is about **1.4s**, by arithmetic rather than measurement. A display that draws straight through never reaches
 the threshold and repeats at 500ms as above.
 
