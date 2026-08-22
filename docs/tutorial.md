@@ -70,8 +70,11 @@ not write.
 
 ## 2. Run it
 
-Six lines. `Panel::DEFAULT` is a 480×800 panel; `Simulator` opens a window and
-drives the frame loop.
+Five lines. `Board::X4` is a 480×800 reader; `Panel::of` takes its size, and
+`Simulator` opens a window and drives the frame loop. There is no default
+board — the simulator knows no devices, so you name the one you are building
+for, and `Board` comes through `xpui-simulator` so that is one dependency
+rather than two.
 
 ```rust,no_run
 # use xpui::screen::Screen;
@@ -84,9 +87,9 @@ drives the frame loop.
 #     }
 #     fn update(&mut self, _message: Self::Message) {}
 # }
-use xpui_simulator::{Panel, Simulator};
+use xpui_simulator::{Board, Panel, Simulator};
 
-Simulator::new(Panel::DEFAULT)
+Simulator::new(Panel::of(Board::X4))
     .title("sleep timer")
     .run(SleepTimer);
 ```
