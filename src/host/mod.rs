@@ -34,7 +34,7 @@ pub use chrome::{
     request_update,
 };
 pub use clock::{Clock, millis};
-pub use input::{Button, Input, InputSource, SwipeDir};
+pub use input::{Button, Input, InputSource, KeyRow, RowKey, SwipeDir};
 pub use metrics::{Font, FontId, FontRole, FontStyle, TextMetrics};
 pub use navigator::{Navigator, finish_screen, present};
 pub(crate) use value_mode::{ValueMode, set_value_mode, value_mode};

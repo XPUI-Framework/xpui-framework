@@ -156,3 +156,78 @@ impl Input {
         super::current().swipe_moves_selection()
     }
 }
+
+/// What one key along the bottom edge of a device does.
+///
+/// The vocabulary a [`KeyRow`] is written in. Which *word* each of these
+/// paints is not here: only a product knows what language its user reads, so
+/// the words are supplied alongside the row.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum RowKey {
+    /// Leaves the screen, or the value being edited.
+    Back,
+    /// Acts on whatever has focus.
+    Confirm,
+    /// Walks a list backwards. `Up` on a device with a reader's four keys.
+    Previous,
+    /// Walks a list forwards. `Down` on the same.
+    Next,
+    /// A key with no word in the hint vocabulary — either nothing is mapped to
+    /// it, or what is has no label, as a power key does. Drawn blank.
+    Unassigned,
+}
+
+/// What the keys along the bottom edge mean, left to right.
+///
+/// A hint bar asks two questions — how many slots to divide its band into, and
+/// which word goes in each — and a device answers both with its row. They were
+/// one question once, inferred from the key count: three keys was taken to
+/// mean no key to spare for Back. That held until a device arrived with three
+/// keys along the bottom *and* an up/down pair elsewhere, which has a key for
+/// Back and gives it the first slot. Under the old reading every label on
+/// those devices sat one key to the left of what it named.
+///
+/// Naming a key the device does not have is worse than naming none — it sends
+/// a person looking for it — so a slot with nothing behind it is
+/// [`RowKey::Unassigned`] and stays blank.
+///
+/// Here rather than beside the components that paint it because it is a fact
+/// about hardware, and the crate describing a device should not have to depend
+/// on the one drawing it to state it.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct KeyRow(&'static [RowKey]);
+
+impl KeyRow {
+    /// The row every device had before any of them said otherwise: a reader's
+    /// four keys, Back leftmost.
+    pub const READER: KeyRow = KeyRow(&[
+        RowKey::Back,
+        RowKey::Confirm,
+        RowKey::Previous,
+        RowKey::Next,
+    ]);
+
+    /// A row of a device's own. `const`, so a board table can hold one.
+    pub const fn new(keys: &'static [RowKey]) -> KeyRow {
+        KeyRow(keys)
+    }
+
+    /// How many slots the hint band divides into.
+    pub const fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Whether the device has a bottom row at all. One that does not reserves
+    /// no band, and there is nothing to label.
+    pub const fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn contains(&self, key: RowKey) -> bool {
+        self.0.contains(&key)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = RowKey> + use<> {
+        self.0.iter().copied()
+    }
+}
