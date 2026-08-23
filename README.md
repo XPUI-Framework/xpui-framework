@@ -200,3 +200,7 @@ drop-down that leaves the screen beneath it intact, and can dim it with
 - [docs/testing.md](docs/testing.md) — the four layers, and driving a screen the way a person does
 - [docs/host.md](docs/host.md) — the contract a backend implements
 - [`crates/backend/`](https://github.com/XPUI-Framework/xpui-backends) — how a backend fits, and which ones exist
+
+## License
+
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Thiago Holanda.
