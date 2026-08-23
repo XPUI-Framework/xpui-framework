@@ -125,7 +125,29 @@ a picture they never looked at.
 one must not run concurrently. Every test file here takes the same
 `static SERIAL: Mutex<()>` first. `Ui` holds that lock for you.
 
-**A test that cannot fail is worse than none**, because it is counted. Before
-keeping a test, break the thing it covers and watch it go red. Several tests in
-this repository were written, passed, and were later found to assert their own
-arithmetic — the habit that finds those is mutation, not review.
+**A test that cannot fail is worse than none**, because it is counted — and
+believed. Before keeping a test, break the thing it covers and watch it go red.
+The habit that finds these is mutation, not review.
+
+Eight that were shipped here, all written in good faith and all passing:
+
+- **A test that never installed the backend**, so it exercised a different host
+  and asserted `0 == 0`.
+- **A window-geometry test that asserted its own arithmetic** — it recomputed
+  the number it was checking.
+- **A scaling test that still passed with half its assertion deleted.**
+- **A menu test that let two rows open the wrong screen.**
+- **`scrolling_sections`, whose content fitted on one screen**, so it asserted
+  a scroll that never happened.
+- **A dialog paint-versus-hit-test check too loose to notice a six-pixel
+  drift** — a row is 40px, so "the text is somewhere inside the rect" tolerated
+  a fault that makes tapping row 3 select row 2.
+- **A headless `--frames N` run treated as an input test.** It proves the loop
+  starts, ticks and exits; it drives no input and asserts no pixels. The arrow
+  keys doing nothing survived 249 tests that way.
+- **A test driving `Runtime` directly and asserting `focused_index()`**, which
+  moves correctly even when nothing is ever drawn.
+
+The last is the general lesson: **prefer an assertion that pins a relationship
+over one that pins a number.** "The label sits at the same offset within every
+row" catches drift that "the label is inside its row" cannot.
