@@ -78,13 +78,9 @@ mod guides {
     pub mod testing_guide {}
     #[doc = include_str!("../README.md")]
     pub mod readme {}
-    #[doc = include_str!("../../../README.md")]
-    pub mod workspace_readme {}
+    #[doc = include_str!("../docs/tutorial.md")]
+    pub mod tutorial {}
 }
-
-// `docs/tutorial.md` is proven the same way, but from `examples/tutorial`:
-// its snippets open a window, and the dependency only ever points inward, so
-// this crate cannot see the simulator.
 
 pub use app::App;
 pub use geometry::{Insets, Point, Rect, Size};

@@ -3,8 +3,12 @@
 From an empty file to a screen running in a window. No hardware, no C++, and
 no framework knowledge assumed — only ordinary Rust.
 
-Every Rust block below is compiled and run by `cargo test`. If one of them
-stops being true, the build fails rather than the page quietly lying to you.
+Every Rust block below is compiled and run by
+`cargo test -p xpui --doc --features testing` — the feature, because most of
+them install the fake host this crate ships for exactly that. **One block is
+not**, and it says so where it appears. If any of the rest stops being true,
+the build fails rather than the page quietly lying to you.
+
 The finished screen lives in [`examples/tutorial/`](../../../examples/tutorial/)
 and is screenshot-tested; this walks to it one piece at a time.
 
@@ -70,25 +74,9 @@ not write.
 
 ## 2. Run it
 
-Six lines. `xteink::X4` is a 480×800 reader; `Panel::of` takes its size, and
-`Simulator` opens a window and drives the frame loop. There is no default
-board — the simulator knows no devices, so you name the one you are building
-for, out of the crate for that vendor. There are three, and you depend on the
-one you target: `xpui-boards-xteink`, `xpui-boards-pimoroni`,
-`xpui-boards-seeed`. For a panel none of them describes, `Board::custom` takes
-a size.
+Six lines put it in a window:
 
-```rust,no_run
-# use xpui::screen::Screen;
-# use xpui::{NavigationScreen, Text, View, vstack};
-# struct SleepTimer;
-# impl Screen for SleepTimer {
-#     type Message = ();
-#     fn body(&self) -> impl View<Self::Message> {
-#         NavigationScreen::new(vstack![14; Text::new("Sleep after")]).title("Sleep timer")
-#     }
-#     fn update(&mut self, _message: Self::Message) {}
-# }
+```text
 use xpui_boards_xteink as xteink;
 use xpui_simulator::{Panel, Simulator};
 
@@ -97,12 +85,39 @@ Simulator::new(Panel::of(xteink::X4))
     .run(SleepTimer);
 ```
 
+`xteink::X4` is a 480×800 reader, and `Panel::of` takes the whole board —
+size, orientation and the body around it — so the window is the device rather
+than a rectangle. `Simulator` opens it and drives the frame loop.
+
+There is no default board. The simulator knows no devices, so you name the one
+you are building for out of that vendor's crate: `xpui-boards-xteink`,
+`xpui-boards-pimoroni`, `xpui-boards-seeed`. For a panel none of them
+describes, `Board::custom(name, width, height, touch)` needs no vendor crate at
+all — and the `touch` flag is not decoration: it decides whether taps are
+reported and whether the chrome reserves a band to name keys.
+
+> **Why this block is not a doctest.** `xpui` depends on nothing, and the
+> dependency only ever points inward, so the crate that owns this tutorial
+> cannot see a simulator to compile the lines above. Every other snippet here
+> is compiled; this one is checked by eye against
+> `examples/tutorial/src/main.rs`, which the gate does compile. That file makes
+> the same three calls and differs in three ways, none of them about the
+> framework: it keeps the builder in a `let` so a `--frames` flag can add to
+> it, titles the window `"xpui — tutorial"`, and passes `SleepTimer::new()`,
+> because by step 8 the screen has state to initialise.
+
 ```bash
 cargo run -p xpui-tutorial
 ```
 
 Arrows move focus, Enter confirms, Backspace goes back, Q or Escape quits.
 Clicking is a tap and the scroll wheel is a swipe, so touch behaviour works too.
+
+**You will not need the window for most of what follows.** `App` drives the
+same frame loop, and the framework ships a host that draws into memory and
+records every call — so a screen can be run and checked with no backend at all,
+which is how the rest of this tutorial is proven and how you will test your own
+screens. That is step 4.
 
 ## 3. State, and messages that change it
 
