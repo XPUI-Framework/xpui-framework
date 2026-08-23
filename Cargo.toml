@@ -4,11 +4,11 @@ description = "A declarative UI framework for e-ink firmware"
 readme = "README.md"
 keywords = ["ui", "embedded", "no-std", "eink", "gui"]
 categories = ["embedded", "gui", "no-std"]
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-authors.workspace = true
-repository.workspace = true
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Thiago Holanda <unnamedd@gmail.com>"]
+repository = "https://github.com/XPUI-Framework/xpui-framework"
 
 # rlib only. This crate is consumed by a backend and an application, which
 # together produce whatever the target actually links — a staticlib for a C++
@@ -23,3 +23,15 @@ crate-type = ["rlib"]
 testing = []
 
 [dependencies]
+
+# Its own workspace now: this crate is a repository, and the profile every
+# `xpui*` repository shares lives in each of them rather than in one root
+# nobody else can see.
+[workspace]
+
+# Shared across every repository so host, RISC-V and Xtensa builds agree.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
