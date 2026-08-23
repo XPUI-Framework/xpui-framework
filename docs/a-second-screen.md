@@ -108,7 +108,7 @@ fn update(&mut self, message: Message) {
 # }
 ```
 
-That is the same shape `examples/gallery/src/menu.rs` uses for all seven of its
+That is the same shape `xpui-gallery`'s `gallery/src/menu.rs` uses for all seven of its
 examples.
 
 ### `Back` means three things, in order

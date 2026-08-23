@@ -9,7 +9,7 @@ them install the fake host this crate ships for exactly that. **One block is
 not**, and it says so where it appears. If any of the rest stops being true,
 the build fails rather than the page quietly lying to you.
 
-The finished screen lives in [`examples/tutorial/`](https://github.com/XPUI-Framework/xpui-gallery/tree/main/tutorial)
+The finished screen lives in [`tutorial/`](https://github.com/XPUI-Framework/xpui-gallery/tree/main/tutorial)
 and is screenshot-tested; this walks to it one piece at a time.
 
 ## What you'll build
@@ -100,15 +100,24 @@ reported and whether the chrome reserves a band to name keys.
 > dependency only ever points inward, so the crate that owns this tutorial
 > cannot see a simulator to compile the lines above. Every other snippet here
 > is compiled; this one is checked by eye against
-> `examples/tutorial/src/main.rs`, which the gate does compile. That file makes
+> `tutorial/src/main.rs`, which the gate does compile. That file makes
 > the same three calls and differs in three ways, none of them about the
 > framework: it keeps the builder in a `let` so a `--frames` flag can add to
 > it, titles the window `"xpui — tutorial"`, and passes `SleepTimer::new()`,
 > because by step 8 the screen has state to initialise.
 
+**The window lives in another repository.** This one is the framework, and the
+framework has nothing to draw with — that is the dependency rule rather than an
+omission. The finished screen, runnable, is
+[`xpui-gallery`](https://github.com/XPUI-Framework/xpui-gallery)'s `tutorial` crate:
+
 ```bash
-cargo run -p xpui-tutorial
+cd .. && git clone https://github.com/XPUI-Framework/xpui-gallery
+cd xpui-gallery && cargo run -p xpui-tutorial
 ```
+
+Beside this checkout, not inside it — every repository in the organisation
+expects its siblings next to it, and the rest of this page assumes the same.
 
 Arrows move focus, Enter confirms, Backspace goes back, Q or Escape quits.
 Clicking is a tap and the scroll wheel is a swipe, so touch behaviour works too.
@@ -455,15 +464,16 @@ something *other* than Back should close the page — a Save button, say.
 
 ## 8. The finished screen
 
-[`examples/tutorial/src/lib.rs`](https://github.com/XPUI-Framework/xpui-gallery/blob/main/tutorial/src/lib.rs) is all
+[`tutorial/src/lib.rs`](https://github.com/XPUI-Framework/xpui-gallery/blob/main/tutorial/src/lib.rs) is all
 of the above assembled, and
-[`examples/tutorial/tests/screen.rs`](https://github.com/XPUI-Framework/xpui-gallery/blob/main/tutorial/tests/screen.rs)
+[`tutorial/tests/screen.rs`](https://github.com/XPUI-Framework/xpui-gallery/blob/main/tutorial/tests/screen.rs)
 is the test suite for it — behaviour, the runtime driving it, and screenshots.
 
 ```bash
-cargo run -p xpui-tutorial                             # in a window
-cargo test -p xpui-tutorial                            # eleven tests, no window
-open examples/tutorial/tests/screenshots/tutorial.png  # the frame it must paint
+cd ../xpui-gallery
+cargo run -p xpui-tutorial                    # in a window
+cargo test -p xpui-tutorial                   # eleven tests, no window
+open tutorial/tests/screenshots/tutorial.png  # the frame it must paint
 ```
 
 ## Where next
