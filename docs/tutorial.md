@@ -9,7 +9,7 @@ them install the fake host this crate ships for exactly that. **One block is
 not**, and it says so where it appears. If any of the rest stops being true,
 the build fails rather than the page quietly lying to you.
 
-The finished screen lives in [`examples/tutorial/`](../../../examples/tutorial/)
+The finished screen lives in [`examples/tutorial/`](https://github.com/XPUI-Framework/xpui-gallery/tree/main/tutorial)
 and is screenshot-tested; this walks to it one piece at a time.
 
 ## What you'll build
@@ -455,9 +455,9 @@ something *other* than Back should close the page — a Save button, say.
 
 ## 8. The finished screen
 
-[`examples/tutorial/src/lib.rs`](../../../examples/tutorial/src/lib.rs) is all
+[`examples/tutorial/src/lib.rs`](https://github.com/XPUI-Framework/xpui-gallery/blob/main/tutorial/src/lib.rs) is all
 of the above assembled, and
-[`examples/tutorial/tests/screen.rs`](../../../examples/tutorial/tests/screen.rs)
+[`examples/tutorial/tests/screen.rs`](https://github.com/XPUI-Framework/xpui-gallery/blob/main/tutorial/tests/screen.rs)
 is the test suite for it — behaviour, the runtime driving it, and screenshots.
 
 ```bash
@@ -468,8 +468,11 @@ open examples/tutorial/tests/screenshots/tutorial.png  # the frame it must paint
 
 ## Where next
 
+- **[a-second-screen.md](a-second-screen.md)** — the four things after this
+  one: a list, opening a screen and coming back, a page taller than the panel,
+  and a widget of your own
 - [reference.md](reference.md) — every widget, layout and modifier
 - [architecture.md](architecture.md) — how a frame actually runs
 - [host.md](host.md) — the contract a backend implements
-- [`examples/gallery/`](../../../examples/gallery/) — five more screens, each
+- [`examples/gallery/`](https://github.com/XPUI-Framework/xpui-gallery/tree/main/gallery) — five more screens, each
   demonstrating one part of the framework

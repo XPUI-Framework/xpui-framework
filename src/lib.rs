@@ -72,6 +72,8 @@ mod guides {
     pub mod architecture {}
     #[doc = include_str!("../docs/host.md")]
     pub mod host {}
+    #[doc = include_str!("../docs/writing-a-backend.md")]
+    pub mod writing_a_backend {}
     #[doc = include_str!("../docs/writing-a-widget.md")]
     pub mod writing_a_widget {}
     #[doc = include_str!("../docs/testing.md")]
@@ -80,6 +82,8 @@ mod guides {
     pub mod readme {}
     #[doc = include_str!("../docs/tutorial.md")]
     pub mod tutorial {}
+    #[doc = include_str!("../docs/a-second-screen.md")]
+    pub mod a_second_screen {}
 }
 
 pub use app::App;

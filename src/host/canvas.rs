@@ -35,6 +35,18 @@ pub trait Canvas {
     /// an overlay — must not call this.
     fn clear(&self);
 
+    /// Draws `text` with its **top-left** corner at `origin`.
+    ///
+    /// Not a baseline. Most drawing libraries take one — u8g2 does, and
+    /// `embedded-graphics` will if you ask — so this is the single obligation
+    /// a new backend is most likely to get backwards, and getting it backwards
+    /// puts every glyph one line too high while everything still compiles and
+    /// every stack-depth test still passes. Convert on the way in: add the
+    /// face's ascent, so the whole line occupies `[y, y + line_height)` and
+    /// the rectangle the framework reserved is the rectangle you fill.
+    ///
+    /// [`TextMetrics::text_width`](crate::host::TextMetrics::text_width) must agree with what this paints, or a
+    /// label reserved to fit will overrun the space it was given.
     fn draw_text(&self, origin: Point, text: &str, font: FontId, style: FontStyle);
 
     /// Fills `rect`; `black` false means background.

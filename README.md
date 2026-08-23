@@ -12,7 +12,7 @@ GPU and no room for waste. Those constraints shaped every decision in here.
 What it deliberately holds *no* trace of is any one product, or any one way of
 drawing: no screen, no asset name, no setting, no string, and no dependency on
 the thing that paints. It reaches whatever hosts it through a handful of traits
-that a [backend](../backend/) implements. That is what keeps product detail out
+that a [backend](https://github.com/XPUI-Framework/xpui-backends) implements. That is what keeps product detail out
 of layout code, what lets the same screen run on FreeInkUI and on
 `embedded_graphics`, and what lets the whole test suite run on a laptop instead
 of a device.
@@ -85,7 +85,7 @@ flowchart LR
 ```
 
 It cannot reach a screen yet, though: `xpui` has no idea one exists. A
-[backend](../backend/) is what connects it to something that can paint —
+[backend](https://github.com/XPUI-Framework/xpui-backends) is what connects it to something that can paint —
 FreeInkUI, `embedded_graphics`, or a desktop window.
 
 ## How the pieces talk to each other
@@ -141,7 +141,7 @@ unsafe { xpui::host::install(&MY_BACKEND) };
 The traits live in [`src/host/`](src/host/) and are deliberately small. Nothing
 else in `xpui` knows a backend exists, which is why a fake host makes the whole
 framework testable. See [docs/host.md](docs/host.md) for what each trait must
-do, and [`crates/backend/`](../backend/) for the real ones.
+do, and [`crates/backend/`](https://github.com/XPUI-Framework/xpui-backends) for the real ones.
 
 ## What you get
 
@@ -192,8 +192,11 @@ drop-down that leaves the screen beneath it intact, and can dim it with
 
 ## Where next
 
+- [docs/tutorial.md](docs/tutorial.md) — from an empty file to a screen
+- [docs/a-second-screen.md](docs/a-second-screen.md) — lists, navigation,
+  scrolling, and where to go for a widget of your own
 - [docs/architecture.md](docs/architecture.md) — how a frame actually runs
 - [docs/writing-a-widget.md](docs/writing-a-widget.md) — adding to the framework
 - [docs/testing.md](docs/testing.md) — the four layers, and driving a screen the way a person does
 - [docs/host.md](docs/host.md) — the contract a backend implements
-- [`crates/backend/`](../backend/) — how a backend fits, and which ones exist
+- [`crates/backend/`](https://github.com/XPUI-Framework/xpui-backends) — how a backend fits, and which ones exist

@@ -48,6 +48,14 @@ pub enum FontRole {
 pub trait TextMetrics {
     /// The font for a role, or [`FontId::UNAVAILABLE`] when this build does not
     /// ship one — the `slim` build compiles most fonts out.
+    ///
+    /// **The id must be derived from the face's own bytes**, not from the role
+    /// and not from a counter. A consumer keys a glyph cache on it, so handing
+    /// out a stable id over changed bytes leaves every such cache serving the
+    /// old face with nothing anywhere to notice — the failure is a screen that
+    /// paints yesterday's type and a test suite that is entirely green. Hash
+    /// the face; two faces that draw the same string differently must not
+    /// claim the same id.
     fn font(&self, role: FontRole) -> FontId;
 
     fn text_width(&self, font: FontId, text: &str, style: FontStyle) -> i32;

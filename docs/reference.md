@@ -581,7 +581,7 @@ answers whether there is a pair to nudge a value with. No rule of thumb about
 the shape of a device gets it right — two devices of the same family differ —
 and the host has no default to fall back on, precisely so a backend cannot
 inherit a guess. Which device answers what is
-the vendor crates under [`crates/boards`](../../boards/)' to say, not this page's.
+the vendor crates under [`crates/boards`](https://github.com/XPUI-Framework/xpui-boards)' to say, not this page's.
 
 **Auto-repeat is free.** A key fires on press, then repeats after 500ms at 500ms
 intervals, whether the runtime claimed it or a screen did.

@@ -3,7 +3,7 @@
 `xpui` draws nothing by itself. It describes what it needs through five traits in
 [`src/host/`](../src/host/); you implement them and install the result once.
 
-The crates under [`crates/backend/`](../../backend/) implement these against
+The crates under [`crates/backend/`](https://github.com/XPUI-Framework/xpui-backends) implement these against
 real drawing substrates. This page describes what each trait owes `xpui` —
 worth reading if you are changing one of those, or writing a new one.
 
@@ -192,7 +192,7 @@ framework's own tests use nothing else.
 
 ## Worked examples
 
-The crates under [`crates/backend/`](../../backend/) are the real ones, and
+The crates under [`crates/backend/`](https://github.com/XPUI-Framework/xpui-backends) are the real ones, and
 they are deliberately different shapes:
 
 | Backend | Satisfies | How |

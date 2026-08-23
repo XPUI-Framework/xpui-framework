@@ -60,6 +60,12 @@ static mut HOST: Option<&'static dyn Host> = None;
 /// host it replaces is a `&'static` and stays valid, so nothing that read the
 /// old one is left dangling.
 ///
+/// **The host is process-wide.** There is one, it is written here and read
+/// everywhere, and a test that installs a second corrupts whatever the first
+/// was serving — which shows up as flakiness rather than as a failure. Every
+/// test in this repository that installs one takes the same mutex first, and
+/// [`testing::Ui`](crate::testing::Ui) holds it for you.
+///
 /// # Safety
 /// One thread, and no frame in flight — no `measure`, `render` or
 /// `interactions` running, here or on any other task. **The write has no
