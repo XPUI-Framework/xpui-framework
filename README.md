@@ -227,6 +227,10 @@ add a backend, and [`xpui-backends`](https://github.com/XPUI-Framework/xpui-back
 ./build-and-test.sh
 ```
 
+The checks themselves are in [`xtask/`](xtask/) — this repository's own list,
+in Rust, holding nothing it does not run. `./build-and-test.sh fix` formats
+in place first.
+
 Format, clippy on the host and two bare-metal architectures, the test suite,
 every documented snippet compiled, and every link and command in the prose
 resolved.
