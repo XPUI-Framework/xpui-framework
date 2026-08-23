@@ -7,7 +7,7 @@ use crate::view::{Interactions, View};
 ///
 /// A "−" glyph is a few pixels wide, but the control it stands for is a
 /// row-height square. Framing it keeps the glyph where the eye expects it, and
-/// gives [`Tappable`] a sensible rect to grow from.
+/// gives [`Tappable`](crate::Tappable) a sensible rect to grow from.
 ///
 /// ```rust
 /// # use xpui::{Icon, IconRef, Modifiers, Text};

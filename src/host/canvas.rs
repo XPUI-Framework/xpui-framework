@@ -98,12 +98,12 @@ impl Renderer {
         super::current().draw_text(origin, text, font, style)
     }
 
-    /// Confines drawing to `rect`. Pair every call with [`clear_clip`].
+    /// Confines drawing to `rect`. Pair every call with [`Renderer::clear_clip`].
     pub fn clip(rect: Rect) {
         super::current().set_clip(Some(rect))
     }
 
-    /// Lifts the clip set by [`clip`].
+    /// Lifts the clip set by [`Renderer::clip`].
     pub fn clear_clip() {
         super::current().set_clip(None)
     }

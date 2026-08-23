@@ -36,7 +36,7 @@ impl<M> ListRow<M> {
     ///
     /// This is what a toggle *is* in this firmware — there is no switch
     /// graphic anywhere in the C++ settings screens, and drawing one here
-    /// would look foreign beside them. Put it in the screen's [`List`] like any
+    /// would look foreign beside them. Put it in the screen's [`List`](crate::List) like any
     /// other row, so the theme marks the focused one.
     ///
     /// Both words are supplied by the caller because they vary by setting
