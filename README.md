@@ -1,5 +1,8 @@
 # `xpui`
 
+> ⚠️ **Under heavy development.** Not production-ready. The API can break
+> without notice. Use at your own risk.
+
 A small declarative UI framework for e-ink firmware: you describe what the
 screen should look like, and `xpui` works out the rest.
 
@@ -178,9 +181,6 @@ drop-down that leaves the screen beneath it intact, and can dim it with
 
 ## Worth knowing before you start
 
-- **This is pre-1.0 and the API will move.** A change to the `Host` traits is a
-  change every backend has to follow, so they move together in one workspace
-  until the contract settles.
 - **`body()` runs often** — on every repaint and while a finger is dragging. It
   allocates, so keep heavy work out of it. This is a real cost, not a hypothetical.
 - **Text is a single line.** There is no wrapping widget yet, and list rows that
