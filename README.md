@@ -201,6 +201,81 @@ drop-down that leaves the screen beneath it intact, and can dim it with
 - [docs/host.md](docs/host.md) — the contract a backend implements
 - [`crates/backend/`](https://github.com/XPUI-Framework/xpui-backends) — how a backend fits, and which ones exist
 
+## Using it
+
+```toml
+[dependencies]
+xpui = { git = "https://github.com/XPUI-Framework/xpui-framework", branch = "main" }
+
+[dev-dependencies]
+# The fake host: a backend that records every draw call instead of painting,
+# so a screen can be tested with no window and no device.
+xpui = { git = "https://github.com/XPUI-Framework/xpui-framework", branch = "main", features = ["testing"] }
+```
+
+Nothing is on crates.io yet, which is what the banner above is about. `xpui`
+itself has **no dependencies at all** — not one — so adding it costs you a
+compile of this crate and nothing else. What it cannot do is draw: for that you
+add a backend, and [`xpui-backends`](https://github.com/XPUI-Framework/xpui-backends) has two.
+
+`no_std` on device. `alloc` is required; `std` is host-only and gated behind
+`testing`.
+
+## Checking it
+
+```bash
+./build-and-test.sh
+```
+
+Format, clippy on the host and two bare-metal architectures, the test suite,
+every documented snippet compiled, and every link and command in the prose
+resolved.
+
+## Where it sits
+
+Every arrow is a dependency in a `Cargo.toml`, and they all point inward
+toward `xpui`, which depends on nothing at all. That is the rule the
+organisation is arranged around: a backend can be written without the framework
+knowing it exists, and a firmware reaches whatever it needs directly rather
+than through whoever happens to sit above it.
+
+```mermaid
+flowchart BT
+  xpui["xpui<br/>the framework"]
+  chrome["xpui-chrome<br/>components"]
+  boards["xpui-boards<br/>seven devices"]
+  backends["xpui-backends<br/>two backends"]
+  simulator["xpui-simulator<br/>a window"]
+  gallery["xpui-gallery<br/>the app"]
+  rp2040["xpui-rp2040<br/>firmware"]
+  esp32["xpui-esp32<br/>firmware"]
+  cpp["xpui-cpp<br/>a C++ host"]
+  chrome --> xpui
+  boards --> xpui
+  backends --> xpui
+  backends --> chrome
+  simulator --> xpui
+  simulator --> chrome
+  simulator --> boards
+  simulator --> backends
+  gallery --> xpui
+  gallery --> chrome
+  gallery --> boards
+  gallery --> backends
+  gallery --> simulator
+  rp2040 --> xpui
+  rp2040 --> boards
+  rp2040 --> backends
+  rp2040 --> gallery
+  esp32 --> xpui
+  esp32 --> boards
+  esp32 --> backends
+  esp32 --> gallery
+  cpp --> xpui
+  cpp --> backends
+  style xpui stroke-width:3px
+```
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Thiago Holanda.
