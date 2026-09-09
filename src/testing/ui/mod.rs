@@ -19,10 +19,9 @@
 //! }
 //! ```
 //!
-//! Everything goes through [`App`] and the installed host, because that is
-//! where the interesting failures are. A harness that drove the runtime
-//! directly would have reported the arrow keys working for as long as they were
-//! broken: the focus index moves correctly even when nothing reaches the panel.
+//! Everything goes through [`App`] and the installed host: a harness that
+//! drove the runtime directly reports the arrow keys working when nothing
+//! reaches the panel, because the focus index moves either way.
 
 mod inspect;
 
@@ -52,9 +51,8 @@ pub trait Drive {
 }
 
 /// Held for as long as a `Ui` exists, because it installs the process-wide
-/// host. Two at once would race on the backend's `RefCell` and one of them
-/// would panic "already borrowed" — which is a confusing way to learn about a
-/// rule, so the type enforces it instead of documenting it.
+/// host. Two at once would race on the backend's state, which is a confusing
+/// way to learn about a rule, so the type enforces it.
 static SERIAL: Mutex<()> = Mutex::new(());
 
 /// A screen under test, with the app and host that drive it.
@@ -64,8 +62,8 @@ pub struct Ui<H: Host + Drive + 'static> {
     millis: u32,
     frame: Vec<DrawOp>,
     previous: Vec<DrawOp>,
-    /// Whether the *last* action repainted. Without this, an action that drew
-    /// nothing kept reporting the previous action's answer.
+    /// Whether the *last* action repainted, so an action that drew nothing
+    /// does not report the previous action's answer.
     repainted: bool,
     /// Dropped last, releasing the lock when the test ends.
     _guard: MutexGuard<'static, ()>,

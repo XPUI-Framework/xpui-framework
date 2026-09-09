@@ -9,16 +9,9 @@
 //! | a C++ firmware with its own activity stack | a call across the FFI |
 //! | [`App`](crate::App) | the stack it holds |
 //!
-//! Keeping them off [`Chrome`](super::Chrome) is what lets a backend crate
-//! ship a ready-made drawing implementation without also having an opinion
-//! about navigation. `request_update` deliberately stayed on `Chrome`: a
-//! repaint is a *display* concern, every backend that can paint can ask for
-//! one, and the framework calls it on every dispatch — a host that forgot to
-//! install a navigator should not end up with a screen that never refreshes.
-//!
-//! The name is `Navigator` rather than `Shell` on purpose. In UI vocabulary
-//! "shell" and "chrome" mean the same thing — the frame around the content —
-//! so a reader would have no way to guess which trait a method lived on.
+//! Keeping them off [`Chrome`](super::Chrome) lets a backend crate ship a
+//! drawing implementation without an opinion about navigation. Named
+//! `Navigator` rather than `Shell`: in UI vocabulary a shell *is* the chrome.
 
 use alloc::boxed::Box;
 
@@ -28,13 +21,10 @@ use crate::screen::Driver;
 pub trait Navigator: Sync {
     /// This screen's own title, already translated.
     ///
-    /// `'static` is explicit rather than elided, and that is the whole point:
-    /// a navigator that owned the screen stack and returned a title borrowed
-    /// out of the top screen would hand back a dangling reference the moment
-    /// [`finish`](Navigator::finish) dropped it. Requiring `'static` makes
-    /// that unwriteable rather than merely discouraged. Both real
-    /// implementations satisfy it easily — a compiled-in translation table on
-    /// one side, a `&'static str` the app stored on the other.
+    /// `'static` on purpose: a navigator that owns the stack and returned a
+    /// title borrowed out of the top screen would dangle the moment
+    /// [`finish`](Navigator::finish) dropped it. A translation table on one
+    /// side and a stored `&'static str` on the other satisfy it.
     fn screen_title(&self) -> &'static str;
 
     /// Pops this screen.
@@ -47,15 +37,10 @@ pub trait Navigator: Sync {
     /// Pushes a screen on top of this one.
     ///
     /// Returns `None` when the navigator took it, and `Some(screen)` handing
-    /// it back when it cannot. Returning it rather than dropping it means a
-    /// caller can tell the difference; silently swallowing the screen would
-    /// look identical to working.
-    ///
-    /// A navigator whose stack lives outside Rust **can** take one: the screen
-    /// is a trait object, so it crosses as an opaque handle that the host only
-    /// ever hands back. What a refusal means is that this particular navigator
-    /// has nowhere to put it — a single-screen host, or a stack that already
-    /// has a push queued for this frame.
+    /// it back when it cannot, so a caller can tell the difference. A stack
+    /// outside Rust can take one — the screen crosses as an opaque handle the
+    /// host only hands back; a refusal means nowhere to put it: a
+    /// single-screen host, or a push already queued for this frame.
     ///
     /// Same re-entrancy rule as [`finish`](Navigator::finish): record, then
     /// act after the frame.

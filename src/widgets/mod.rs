@@ -1,8 +1,7 @@
 //! Leaf views that draw content.
 //!
-//! A boolean setting is not a widget here: it is [`ListRow::toggle`], because
-//! the firmware renders one as a list row with an On/Off value rather than a
-//! switch graphic.
+//! A boolean setting is [`Toggle`] — a list row whose value reads as one of
+//! two words. The theme draws no switch graphic.
 
 mod divider;
 mod icon_toggle;

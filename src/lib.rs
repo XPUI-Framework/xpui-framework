@@ -56,14 +56,9 @@ pub mod widgets;
 #[cfg(any(test, feature = "testing"))]
 pub mod testing;
 
-/// The guides, compiled.
-///
-/// Every ```rust block in these files is a doctest: `cargo test` builds and
-/// runs it. A snippet that stops matching the API fails CI instead of quietly
-/// teaching the wrong thing to whoever reads it next.
-///
-/// `cfg(doctest)` so this costs nothing in a real build — the markdown is only
-/// pulled in when rustdoc is collecting tests.
+/// The guides, compiled: every ```rust block in these files is a doctest, so
+/// a snippet that stops matching the API fails `cargo test`. `cfg(doctest)`
+/// keeps the markdown out of a real build.
 #[cfg(doctest)]
 mod guides {
     #[doc = include_str!("../docs/reference.md")]

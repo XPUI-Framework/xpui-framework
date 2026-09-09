@@ -47,9 +47,10 @@ pub fn drawn_rects() -> Vec<RectDraw> {
 }
 
 /// The title passed to each `draw_header` since the last
-/// [`reset`](super::reset). `None` is a header asked to draw no title at all,
-/// which on a real host paints an empty band - the failure this records exists
-/// to catch.
+/// [`reset`](super::reset).
+///
+/// `None` is a header asked to draw no title at all, which on a real host
+/// paints an empty band — the failure this records exists to catch.
 pub fn drawn_headers() -> Vec<Option<String>> {
     ops_log()
         .into_iter()
@@ -119,9 +120,10 @@ pub fn drawn_hints() -> Vec<[bool; 4]> {
 }
 
 /// Every sub-header (a `Section` title) drawn since the last
-/// [`reset`](super::reset), with the rect it was given. A section title is not
-/// focusable, so where it lands is the only evidence that scrolling left it on
-/// screen.
+/// [`reset`](super::reset), with the rect it was given.
+///
+/// A section title is not focusable, so where it lands is the only evidence
+/// that scrolling left it on screen.
 pub fn drawn_sub_headers() -> Vec<(Rect, String)> {
     ops_log()
         .into_iter()

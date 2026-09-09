@@ -121,7 +121,8 @@ impl<M: Clone> View<M> for OverlayPanel<M> {
         self.padding = Theme::metric(ThemeMetric::VerticalSpacing);
 
         self.content_origin = Point::new(side, header + self.padding);
-        // Height is unbounded: a drop-down grows to fit rather than scrolling.
+        // Offered everything below the header: a drop-down grows to fit rather
+        // than scrolling, and is clamped to the panel below.
         self.content
             .measure(Size::new(screen.width - side * 2, screen.height - header));
 

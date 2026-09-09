@@ -57,8 +57,7 @@ pub fn press(button: Button) {
 /// Reports the edge *and* leaves the button down, as a finger does.
 ///
 /// [`press`] alone is a key tapped so briefly that no frame ever saw it held,
-/// which is not what hardware sends and is why auto-repeat went untested long
-/// enough to reach a board. Ended with [`release`].
+/// which is not what hardware sends. Ended with [`release`].
 pub fn hold(button: Button) {
     press(button);
     HELD.with(|held| held.set(Some(button)));
@@ -76,8 +75,9 @@ pub fn set_swipe_moves_selection(enabled: bool) {
 }
 
 /// Says whether the device the fake stands for has a Left/Right pair, so a
-/// control that branches on it can be tested both ways. `false` until set, and
-/// reset to `false` by [`reset`].
+/// control that branches on it can be tested both ways.
+///
+/// `false` until set, and reset to `false` by [`reset`].
 /// See [`InputSource::has_left_right_keys`](crate::host::InputSource::has_left_right_keys).
 pub fn set_has_left_right_keys(present: bool) {
     HAS_LEFT_RIGHT_KEYS.with(|flag| flag.set(present));

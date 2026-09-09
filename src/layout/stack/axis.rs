@@ -1,7 +1,4 @@
 //! Which way a stack lays out, and where children sit across it.
-//!
-//! `VStack` and `HStack` are one algorithm with the axes swapped, so the axis
-//! is a value rather than two copies of the code.
 
 use crate::geometry::{Point, Size};
 
@@ -9,8 +6,7 @@ use crate::geometry::{Point, Size};
 ///
 /// An `HStack` mixing a 32px icon with a line of text looks wrong left-aligned:
 /// the text hangs off the top. `Center` is what a row of mismatched controls
-/// almost always wants; `Start` stays the default so existing left-aligned
-/// column layouts are unaffected.
+/// almost always wants; `Start` is the default.
 ///
 /// ```rust
 /// # use xpui::{Alignment, HStack, Icon, IconRef, Spacer, Text, hstack};
@@ -19,8 +15,6 @@ use crate::geometry::{Point, Size};
 /// # let label = Text::new("Frontlight");
 /// # let icon = Icon::new(IconRef::new(0)).size(32);
 /// # let _: HStack<()> =
-/// // a 32px icon beside a line of text needs centring, or the text
-/// // hangs off the top of the row
 /// hstack![gap; label, Spacer::new(), icon].align(Alignment::Center)
 /// # ;
 /// ```

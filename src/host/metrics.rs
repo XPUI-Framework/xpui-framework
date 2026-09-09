@@ -31,9 +31,9 @@ pub enum FontStyle {
 
 /// What a piece of text is *for*, rather than which typeface it uses.
 ///
-/// The host decides what each role means. Naming families here — NotoSerif,
-/// NotoSans — would tie the framework to one product's assets, and a role
-/// survives those assets being changed.
+/// The host decides what each role means. Naming families here would tie the
+/// framework to one product's assets, and a role survives those assets being
+/// changed.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum FontRole {
     /// Interface text: labels, list rows, values.
@@ -47,7 +47,7 @@ pub enum FontRole {
 /// Font lookup and measurement.
 pub trait TextMetrics {
     /// The font for a role, or [`FontId::UNAVAILABLE`] when this build does not
-    /// ship one — the `slim` build compiles most fonts out.
+    /// ship one.
     ///
     /// **The id must be derived from the face's own bytes**, not from the role
     /// and not from a counter. A consumer keys a glyph cache on it, so handing

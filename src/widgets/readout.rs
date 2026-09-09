@@ -98,15 +98,11 @@ pub(crate) fn font() -> Font {
 
 /// Draws `value` right-aligned against `rect`'s trailing edge.
 ///
-/// Right-aligned because the number's own width changes with the value — `9%`
-/// is narrower than `10%` — and a left-aligned one would move its last digit
-/// every time it crossed a power of ten.
-///
-/// **Nothing has to be reserved for it.** The number sits on a line of its own
-/// against the trailing edge, so its width is not taken out of anything. A
-/// readout beside the track would have to be measured at the widest value in
-/// the range instead, or the track would change length as the value crossed a
-/// power of ten and an e-ink panel would repaint it.
+/// Right-aligned because the number's width changes with the value — `9%` is
+/// narrower than `10%` — and a left-aligned one would move its last digit at
+/// every power of ten. On a line of its own, so nothing reserves its width:
+/// beside the track it would have to be measured at the widest value, or the
+/// track would change length as the value crossed a power of ten.
 pub(crate) fn draw(rect: Rect, value: i32, suffix: &str) {
     let font = font();
     let text = Readout::new(value, suffix);
@@ -117,14 +113,10 @@ pub(crate) fn draw(rect: Rect, value: i32, suffix: &str) {
 
 /// The line above a value control carrying its name and its number.
 ///
-/// **Above the track rather than beside it.** A number at the trailing end
-/// takes width from the track: around 40 columns, against the 288 a control
-/// gets on a 296-wide panel and the 232 left between a stepper's two glyphs —
-/// a seventh to a sixth of the room a value has to express itself in. It also
-/// separates the number from the name, leaving a list of settings reading as a
-/// column of anonymous tracks. This is the arrangement a settings screen writes
-/// by hand. Putting it *in* the control is what makes the number live while an
-/// edit is open, which a screen cannot do: it is not told the working value.
+/// Above the track rather than beside it: a number at the trailing end takes
+/// about a sixth of the track on a 296-wide panel, and separates the number
+/// from the name. In the control rather than the screen because only the
+/// control knows the working value while an edit is open.
 pub(crate) struct Header<'a> {
     pub(crate) title: Option<&'a str>,
     /// The value and its unit, when the control shows one.
@@ -222,9 +214,9 @@ mod tests {
     /// A suffix that would not fit loses its own tail, never the number.
     ///
     /// `-2147483648` is eleven characters, leaving five of the sixteen bytes,
-    /// so `percent` arrives as `perce`. What matters is which end is cut: a number truncated to
-    /// `-214748364` reads as a different number, and nothing on the panel would
-    /// say so.
+    /// so `percent` arrives as `perce`. What matters is which end is cut: a
+    /// number truncated to `-214748364` reads as a different number, and
+    /// nothing on the panel would say so.
     #[test]
     fn a_number_keeps_its_digits_when_the_suffix_is_too_long() {
         let readout = Readout::new(i32::MIN, "percent");
@@ -234,9 +226,10 @@ mod tests {
     /// And a multi-byte suffix is cut between characters, not through one.
     ///
     /// `°` is two bytes, and the widest number leaves five, so two whole
-    /// degrees fit and the third does not — cut by byte instead and the buffer ends with half a
-    /// character, `as_str` refuses the lot, and the control draws **nothing**:
-    /// the number disappears because its unit did not fit.
+    /// degrees fit and the third does not — cut by byte instead and the
+    /// buffer ends with half a character, `as_str` refuses the lot, and the
+    /// control draws **nothing**: the number disappears because its unit did
+    /// not fit.
     #[test]
     fn a_suffix_is_cut_between_characters() {
         assert_eq!(Readout::new(i32::MIN, "°°°").as_str(), "-2147483648°°");

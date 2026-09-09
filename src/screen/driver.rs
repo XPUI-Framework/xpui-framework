@@ -2,7 +2,7 @@
 //!
 //! [`Screen`](super::Screen) returns `impl View`, so it is deliberately never a
 //! trait object. `Runtime<S>` erases the screen type behind this instead, which
-//! is what a host dispatches through — see `backend_rs::lifecycle`.
+//! is what a host's lifecycle entry points dispatch through.
 
 use super::{Runtime, Screen};
 

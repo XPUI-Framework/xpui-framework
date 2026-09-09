@@ -23,14 +23,9 @@ pub enum Trigger<M> {
     Value {
         make: fn(i32) -> M,
         max: i32,
-        /// What the control reads right now.
-        ///
-        /// Carried because an absolute control cannot be *nudged* without it:
-        /// Left and Right ask for one step, and one step of an absolute value
-        /// is `value + delta`.
-        ///
-        /// Rebuilt with the tree every frame, so it is the screen's own
-        /// reading and never a stale copy the framework kept.
+        /// What the control reads right now: one step of an absolute value is
+        /// `value + delta`, so a nudge needs it. Rebuilt with the tree every
+        /// frame, so it is the screen's own reading.
         value: i32,
     },
     /// A relative nudge: `-1` or `+1` from Left/Right, or from a `-`/`+` glyph.
@@ -38,23 +33,16 @@ pub enum Trigger<M> {
     /// whatever it currently holds, rather than being handed an absolute.
     Step {
         make: fn(i32) -> M,
-        /// The top of the control's own range, so a held edit can clamp.
-        ///
-        /// A relative control does not need it to nudge — the screen adds the
-        /// delta to whatever it holds and clamps however it likes. An open edit
-        /// does: the framework owns the value while it is open, and a working
-        /// copy nothing bounds marches past the end of the track and commits a
-        /// number the screen never showed.
+        /// The top of the control's own range. A nudge does not need it — the
+        /// screen clamps — but an open edit does: the framework owns the value
+        /// then, and an unbounded copy commits a number the screen never showed.
         max: i32,
         /// The message that sets this control outright, when it has one.
         ///
-        /// **What makes a relative control editable.** `make` takes a *nudge*,
-        /// and a nudge is worth whatever the screen decides — a frontlight row
-        /// reads one as five units. So a nudge cannot express "the value is
-        /// this now", which is the one message an open edit sends: it holds the
-        /// value while the keys move it and commits an absolute at Confirm.
-        /// Without a setter a control can still be nudged; it just cannot be
-        /// edited, because there would be no way to commit what was shown.
+        /// **What makes a relative control editable.** A nudge is worth
+        /// whatever the screen decides, so it cannot express "the value is
+        /// this now" — the one message an open edit commits. Without a setter
+        /// a control can be nudged but not edited.
         set: Option<fn(i32) -> M>,
         /// What the control reads right now — see [`Trigger::Value::value`].
         ///
@@ -64,11 +52,9 @@ pub enum Trigger<M> {
     },
     /// A value control seen through [`ViewExt::map`](crate::view::ViewExt::map).
     ///
-    /// Composing two function pointers is not itself a function pointer, so a
-    /// mapped value control is the one case that needs a closure. It costs one
-    /// small allocation per touch frame, and only for components that actually
-    /// wrap a slider — the alternative was dropping the interaction, which
-    /// would silently make the control dead.
+    /// Composing two function pointers is not a function pointer, so a mapped
+    /// value control is the one case that needs a closure: one small
+    /// allocation per touch frame, only for components that wrap a slider.
     MappedValue {
         make: Box<dyn Fn(i32) -> M>,
         max: i32,
@@ -178,24 +164,16 @@ impl<M: Clone> Trigger<M> {
 
     /// One step from `from`, held inside the control's own range.
     ///
-    /// **For a value the framework is holding, not one the screen owns.** An
-    /// open edit keeps its own copy and paints from it, so the arithmetic has
-    /// to happen here rather than in the screen's `update`; `resolve_step` is
-    /// the other half, for the boards that nudge a value in place.
+    /// For a value the framework is holding, not one the screen owns: an open
+    /// edit keeps its own copy and paints from it, so the arithmetic happens
+    /// here rather than in the screen's `update`. A step is one unit of the
+    /// control's range, including for [`Trigger::Step`], whose `make` a
+    /// screen is free to scale — that scale is what a *nudge* is worth to a
+    /// screen holding its own value; inside an edit the framework holds it.
     ///
-    /// A step is one unit of the control's range, including for
-    /// [`Trigger::Step`], whose `make` a screen is free to scale. That scale is
-    /// what a *nudge* is worth to a screen holding its own value; inside an
-    /// open edit the framework holds it, and a unit is a unit of the track the
-    /// knob is moving along.
-    ///
-    /// `None` for a control with no value at all — a row, a button.
-    ///
-    /// A control whose `max` is not positive has a value and no room to move
-    /// it, and answers `0`: the rest of the framework treats such a control as
-    /// empty rather than as an error — `Slider::render` and the chrome's
-    /// `draw_slider` both decline to paint one — and `i32::clamp` **panics**
-    /// when its low bound exceeds its high, which on a device is an abort.
+    /// `None` for a control with no value at all. A `max` that is not
+    /// positive answers `0`: the rest of the framework treats such a control
+    /// as empty, and `i32::clamp` panics when its low bound exceeds its high.
     pub fn stepped(&self, from: i32, delta: i32) -> Option<i32> {
         let max = match self {
             Trigger::Value { max, .. }
@@ -208,10 +186,7 @@ impl<M: Clone> Trigger<M> {
     }
 }
 
-/// The value a touch at `x` represents within `track`.
-///
-/// Rounds to nearest, matching the `(permille * range + 500) / 1000` the C++
-/// slider screens use, so dragging feels identical in both.
+/// The value a touch at `x` represents within `track`, rounded to nearest.
 ///
 /// The inset and knob width come from the theme rather than from constants
 /// here: the host draws the knob, and a copy of its dimensions would keep

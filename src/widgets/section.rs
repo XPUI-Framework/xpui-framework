@@ -10,8 +10,7 @@ use crate::view::{Interactions, View};
 /// A heading with content beneath it, for splitting a screen into groups.
 ///
 /// The heading is drawn by the theme's own sub-header, so it matches the
-/// section headings elsewhere in the firmware rather than being a bold `Text`
-/// that merely looks similar.
+/// host's headings rather than being a bold `Text` that looks similar.
 ///
 /// ```rust
 /// # use xpui::{List, ListRow, Section};
@@ -58,9 +57,8 @@ impl<M> Section<M> {
 
 impl<M> View<M> for Section<M> {
     fn measure(&mut self, available: Size) {
-        // A heading's own line, not a list row: the theme draws the label
-        // top-aligned and ignores the rest of the band, so a row's worth of
-        // height leaves a hole between the heading and its content.
+        // A heading's own line, not a list row — see
+        // `ThemeMetric::SubHeaderHeight`.
         self.header_height = Theme::metric(ThemeMetric::SubHeaderHeight);
         let gap = Section::<M>::gap();
 

@@ -1,18 +1,12 @@
-//! Golden-file comparison, in about a hundred lines and no dependencies.
+//! Golden-file comparison, with no dependencies.
 //!
-//! A snapshot is the ordered list of everything the frame drew, as text. It is
+//! A snapshot is the ordered list of everything the frame drew, as text,
 //! committed beside the test, so a change to layout shows up as a diff a
-//! reviewer can read rather than a number that moved.
+//! reviewer can read. It asserts call order, clip lifecycle and the state a
+//! widget was drawn in — none of which is visible in a picture; pixels belong
+//! to whichever backend put them there.
 //!
-//! Text, and only text. It asserts *call order*, clip lifecycle and the state
-//! a widget was drawn in — that the clip went on before the content and came
-//! off after it, that a dialog forced `selected=-1` on the list behind it,
-//! that an overlay did not call `clear`. None of that is visible in a picture.
-//! Pixels are the other half of the story and belong to whichever backend put
-//! them there; a lossy rendering of a framebuffer does not belong here.
-//!
-//! `no_run` because this writes the golden when one does not exist yet, which
-//! a documentation build has no business doing:
+//! `no_run`: this writes the golden when one does not exist yet.
 //!
 //! ```rust,no_run
 //! # use xpui::{App, NavigationScreen, Screen, Text, View, testing, vstack};
@@ -31,15 +25,9 @@
 //! testing::assert_snapshot("settings_screen");
 //! ```
 //!
-//! When the change is intended:
-//!
-//! ```bash
-//! UPDATE_SNAPSHOTS=1 cargo test --features testing
-//! ```
-//!
-//! which rewrites every golden the run touched. Read the diff before
-//! committing it — an accepted snapshot is an assertion you have made, and
-//! blessing a regression is the one failure mode this technique has.
+//! `UPDATE_SNAPSHOTS=1 cargo test --features testing` rewrites every golden
+//! the run touched. Read the diff before committing it: an accepted snapshot
+//! is an assertion you have made.
 
 use std::path::PathBuf;
 use std::{env, fs};
@@ -68,11 +56,8 @@ pub fn assert_snapshot(name: &str) {
     assert_text_snapshot(name, &ops::render(&super::ops_log()));
 }
 
-/// The comparison itself, against any text.
-///
-/// Private: the only text worth committing under `tests/snapshots` is a draw
-/// log, and this used to be the door through which lossy pictures of a
-/// framebuffer came in as text goldens.
+/// The comparison itself, against any text. Private: the only text worth
+/// committing under `tests/snapshots` is a draw log.
 fn assert_text_snapshot(name: &str, actual: &str) {
     let path = path_for(name);
 

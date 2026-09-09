@@ -128,26 +128,17 @@ impl<H: Host + Drive + 'static> Ui<H> {
 
     /// Every place `label` is painted, as something tappable.
     ///
-    /// A glyph run is the truth: `Canvas::draw_text` takes a **top-left**
-    /// origin, so the run's box starts there and is as tall as the font that
-    /// drew it. Both matter — an earlier version subtracted a line height on
-    /// the belief that the origin was a baseline, which put every rectangle in
-    /// the blank space *above* the text it described.
-    ///
-    /// A list is also recorded as one op covering all its rows. That is used
-    /// only when no run matched, because a theme that paints rows through the
-    /// framework's own renderer re-enters this recorder and its runs are
-    /// exact, while a row synthesised from the list rectangle is not: the
-    /// widget strides by row height *plus* a gap, so dividing the rectangle
-    /// evenly drifts further with every row.
+    /// A glyph run is the truth: `Canvas::draw_text` takes a top-left origin,
+    /// so the run's box starts there and is as tall as the font that drew it.
+    /// A list's rows are used only when no run matched — a theme that paints
+    /// rows through the framework's renderer re-enters this recorder and its
+    /// runs are exact, while a row synthesised from the list rectangle drifts
+    /// with every row's gap.
     ///
     /// Anything clipped away is left out, and a partly visible row reports only
-    /// the part you can see — a test must not tap what has been scrolled out of
-    /// sight, because a person cannot.
-    ///
-    /// When a popup is up it takes the whole search. It captures input, so
-    /// resolving to a row behind it would tap the scrim and dismiss the dialog
-    /// while the test believed it had chosen something.
+    /// the part you can see: a person cannot tap what scrolled out of sight.
+    /// When a popup is up it takes the whole search — it captures input, so a
+    /// row behind it would tap the scrim and dismiss the dialog.
     pub fn rects_of_text(&self, label: &str) -> Vec<Rect> {
         // Too thin to hit: a sliver left by clipping is not something a person
         // can tap, and its centre is as likely to land in the row next door.

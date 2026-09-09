@@ -1,9 +1,6 @@
-//! Counting what reaches the heap.
-//!
-//! The rule is in `CLAUDE.md` and the reason is on
-//! [`Text`](crate::Text): what a screen builds in `update` it keeps, and what
-//! `body()` builds it pays for on every frame. This is the part a test can
-//! hold.
+//! Counting what reaches the heap: what a screen builds in `update` it keeps,
+//! and what `body()` builds it pays for on every frame — see
+//! [`Text`](crate::Text). This is the part a test can hold.
 //!
 //! **`cfg(test)`, not the `testing` feature.** A `#[global_allocator]` belongs
 //! to a whole binary, and this crate's `testing` feature is a dev-dependency of
@@ -28,24 +25,22 @@ thread_local! {
     static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };
 }
 
+// Safety: every call is forwarded to `System` with its layout untouched, so
+// the contract `System` keeps is the one this keeps.
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         // `try_with`, because a `Cell` touched during TLS teardown panics — and
         // unwinding out of an allocator is **undefined behaviour**, not a
         // failed test.
         let _ = ALLOCATIONS.try_with(|count| count.set(count.get() + 1));
-        // Safety: `layout` is forwarded untouched to the allocator this one
-        // wraps, under the contract the call arrived with. Handing on a layout
-        // this function had altered would be undefined behaviour rather than a
-        // wrong answer.
+        // Safety: `layout` is forwarded untouched, under the contract the call
+        // arrived with; an altered one would be undefined behaviour.
         unsafe { std::alloc::System.alloc(layout) }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         // Safety: `ptr` and `layout` are the pair `alloc` returned, forwarded
-        // unchanged. Passing a pointer this allocator did not hand out, or a
-        // layout other than the one it was allocated with, is undefined
-        // behaviour.
+        // unchanged; any other pair is undefined behaviour.
         unsafe { std::alloc::System.dealloc(ptr, layout) }
     }
 }

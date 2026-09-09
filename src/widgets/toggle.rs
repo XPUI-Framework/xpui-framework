@@ -6,12 +6,9 @@ use crate::geometry::{Point, Size};
 use crate::view::{Interactions, View};
 use crate::widgets::{List, ListRow};
 
-/// A row whose value reads as one of two words.
-///
-/// This is what a toggle *is* in this firmware — no C++ screen draws a switch
-/// graphic, and one here would look foreign beside them. It renders through the
-/// theme's list, so it is identical whether it stands alone or sits in a
-/// [`List`].
+/// A row whose value reads as one of two words. The theme draws no switch
+/// graphic. It renders through the theme's list, so it is identical whether
+/// it stands alone or sits in a [`List`].
 ///
 /// ```rust
 /// # use xpui::Toggle;

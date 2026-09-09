@@ -210,16 +210,10 @@ impl<M> Interactions<M> {
     /// Whether the control at `focus` is open for editing.
     ///
     /// The runtime owns the edit; a widget cannot know from its own declaration
-    /// that the keys have changed meaning.
-    ///
-    /// **A widget's question, not a screen's.** It is here rather than on
-    /// `Screen` or in `update` because a value widget genuinely needs it — a
-    /// third-party slider cannot paint the working copy without
-    /// [`editing_value`](Interactions::editing_value) — and off the screen's
-    /// own path because a screen that branched on the mode would make it the
-    /// screen's rather than the framework's. Nothing prevents a screen from
-    /// writing a `View` to read it; the design makes that the awkward way round
-    /// rather than the obvious one.
+    /// that the keys have changed meaning. **A widget's question, not a
+    /// screen's**: here rather than on `Screen` so a value widget can paint
+    /// the working copy, and off the screen's path so the mode stays the
+    /// framework's.
     pub fn is_editing(&self) -> bool {
         self.editing.is_some()
     }
@@ -314,10 +308,8 @@ impl<M> Interactions<M> {
     /// **Everything a widget can ask crosses with it.** A sub-component is a
     /// tree like any other: a `Slider` inside one has to learn that it holds
     /// focus, that the control wrapping it does, and that an edit is open on
-    /// it, exactly as it would unmapped. A child built without them makes a
-    /// mapped value control paint the screen's value while the keys move a copy
-    /// it cannot see — the invisible mode this framework has already removed
-    /// once.
+    /// it, or it paints the screen's value while the keys move a copy it
+    /// cannot see.
     pub(crate) fn child<N>(&self) -> Interactions<N> {
         // `saturating_sub` would answer `0` when the focus is *behind* this
         // subtree, telling the first thing inside it that it holds a focus that

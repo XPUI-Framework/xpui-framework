@@ -40,9 +40,7 @@ impl<M> View<M> for Spacer {
         self.measured
     }
 
-    fn render(&self, _origin: Point) {
-        // Nothing to draw: a spacer only occupies space.
-    }
+    fn render(&self, _origin: Point) {}
 
     fn is_flexible(&self) -> bool {
         true

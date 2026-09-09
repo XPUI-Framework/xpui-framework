@@ -35,10 +35,8 @@ pub(crate) fn value_mode() -> ValueMode {
     }
 }
 
-/// A plain static on a device, which has one thread and one panel.
-///
-/// Load and store only, never a read-modify-write: Cortex-M0+ has no atomic
-/// compare-and-swap, so `swap` and `fetch_or` do not compile for `thumbv6m`.
+/// A plain static on a device, which has one thread and one panel. Load and
+/// store only — see `NEEDS_PAINT` in `host::chrome`.
 #[cfg(not(all(any(test, feature = "testing"), not(target_os = "none"))))]
 mod storage {
     use core::sync::atomic::{AtomicU8, Ordering};
@@ -54,16 +52,11 @@ mod storage {
     }
 }
 
-/// **Thread-local under test**, because a test binary runs its cases in
-/// parallel threads that share every static.
-///
-/// A mode one case set while another case painted is a failure that passes on
-/// its own and fails in a suite, which is the hardest kind to read: it looks
-/// like the frame is wrong rather than like the harness is.
-///
-/// Nothing about the device path changes: the `not(target_os = "none")` keeps
-/// this off bare metal by construction rather than by nobody having enabled the
-/// feature there, and `thread_local!` is `std` in any case.
+/// **Thread-local under test**: a test binary runs its cases in parallel
+/// threads that share every static, and a mode one case set while another
+/// painted fails only in a suite, looking like a wrong frame. The
+/// `not(target_os = "none")` keeps this off bare metal, where `thread_local!`
+/// is `std` anyway.
 #[cfg(all(any(test, feature = "testing"), not(target_os = "none")))]
 mod storage {
     use core::cell::Cell;

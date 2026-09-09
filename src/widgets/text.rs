@@ -23,7 +23,7 @@ use crate::view::View;
 /// # xpui::testing::install();
 /// # let (percent, label) = (72, "Battery");
 /// Text::new("Battery");
-/// Text::new(format!("{percent}%")).bold();
+/// Text::new(format!("{percent}%")).bold(); // formatted once, in `update`
 /// Text::new(label).font(Font::ui_small());
 /// ```
 pub struct Text {
@@ -35,8 +35,8 @@ pub struct Text {
 impl Text {
     /// Text in the default interface font.
     ///
-    /// A string containing an interior NUL renders as empty, since it cannot
-    /// be passed to the C++ renderer.
+    /// A string containing an interior NUL may render as empty: a host with a
+    /// C boundary cannot pass it.
     pub fn new(content: impl Into<String>) -> Self {
         Text {
             content: content.into(),

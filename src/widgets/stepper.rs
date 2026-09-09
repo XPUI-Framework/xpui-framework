@@ -154,9 +154,9 @@ impl<M: Clone + 'static> View<M> for Stepper<M> {
             }
             None => Size::ZERO,
         };
-        // Kept rather than recomputed on every `size()`, which `row_bounds`
-        // and `render` both call: the header's height is fixed once the control
-        // is built, and the two must not be able to answer differently.
+        // Kept rather than recomputed on every `size()`: the header's height
+        // is fixed once the control is built, and `row_bounds` reads the same
+        // number `render` does.
         self.measured = Size::new(row.width, row.height + self.header().height());
     }
 

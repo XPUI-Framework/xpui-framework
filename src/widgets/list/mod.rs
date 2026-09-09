@@ -13,7 +13,7 @@ use crate::view::{InputMask, Interactions, Trigger, View};
 /// A themed, selectable list filling the space it is given.
 ///
 /// The theme owns row height, the selection highlight and pagination, so this
-/// looks and behaves exactly like the C++ list screens.
+/// looks and behaves like the host's own lists.
 ///
 /// ```rust
 /// # use xpui::{List, ListRow};

@@ -38,8 +38,7 @@ pub struct ScrollView<M> {
     content: Box<dyn View<M>>,
     /// The band this view occupies, from `measure`.
     measured: Size,
-    /// How tall the content wants to be, which is what makes scrolling
-    /// necessary and bounds how far it can go.
+    /// The content's natural height; bounds how far it can scroll.
     content_height: i32,
     /// Handed down by the runtime through `interactions`, and remembered for
     /// `render` — which is walked immediately afterwards, the same way `List`
@@ -57,9 +56,8 @@ impl<M: Clone + 'static> ScrollView<M> {
         }
     }
 
-    /// The furthest the content can be scrolled: everything below the fold, and
-    /// no further, so the last item lands at the bottom rather than scrolling
-    /// off into blank space.
+    /// The furthest the content can scroll: the last item lands at the bottom
+    /// rather than scrolling off into blank space.
     fn max_offset(&self) -> i32 {
         (self.content_height - self.measured.height).max(0)
     }
@@ -89,15 +87,12 @@ pub const UNBOUNDED: i32 = 1 << 24;
 
 impl<M: Clone + 'static> View<M> for ScrollView<M> {
     fn measure(&mut self, available: Size) {
-        // The content is measured against its natural height rather than the
-        // band: asking it to fit is what squeezed rows out before there was a
-        // scroll view to hold them.
-        //
-        // `UNBOUNDED` rather than `i32::MAX` because several views echo the
-        // height they were offered straight back — `Spacer`, `Modal`, a nested
-        // `ScrollView` — and a stack then adds that to its siblings. With
-        // `i32::MAX` that overflows: a panic in debug, and in release a
-        // *negative* height, or a scroll offset of two billion.
+        // Measured against its natural height, not the band, or rows are
+        // squeezed to fit. `UNBOUNDED` rather than `i32::MAX`: several views
+        // echo the height they were offered — `Spacer`, `Modal`, a nested
+        // `ScrollView` — and a stack adds that to its siblings, which with
+        // `i32::MAX` overflows into a negative height or a scroll offset of
+        // two billion.
         self.content.measure(Size::new(available.width, UNBOUNDED));
         self.content_height = self.content.size().height;
         self.measured = available;

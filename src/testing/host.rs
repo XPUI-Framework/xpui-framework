@@ -57,6 +57,7 @@ pub unsafe fn install_forced() {
     // Safety: forwarded to the caller.
     unsafe { crate::host::install(&TEST_HOST) };
     if !crate::host::is_navigator_installed() {
+        // Safety: as above.
         unsafe { crate::host::install_navigator(&TEST_HOST) };
     }
 }

@@ -1,4 +1,5 @@
-//! One frame of input, in the order a screen is offered it.
+//! One frame of input, in the order a screen is offered it: touch, then a
+//! swipe, then the buttons — and the screen gets first refusal of each.
 
 use super::{Editing, Repeat, Runtime};
 use crate::host::{Button, Input, SwipeDir, finish_screen, millis, request_update};
@@ -6,9 +7,9 @@ use crate::screen::Screen;
 use crate::screen::routing::{adjustable, focused, focused_message, focused_step, resolve};
 use crate::view::InputMask;
 
-/// Fire once on press, then repeat after this hold, at this interval.
-/// Mirrors `ButtonNavigator` (continuousStartMs / continuousIntervalMs).
+/// How long a press is held before it starts repeating.
 const REPEAT_DELAY_MS: u32 = 500;
+/// The gap between one repeat and the next.
 const REPEAT_INTERVAL_MS: u32 = 500;
 
 /// Buttons the runtime offers a screen before claiming them itself.
@@ -50,20 +51,13 @@ impl<S: Screen> Runtime<S> {
             self.repeat.button = None;
             return None;
         }
-        // A hold is something the loop watches, not something it works out
-        // afterwards from a clock. A panel that blocks for most of a second
-        // while it refreshes leaves the loop blind for that whole time, and a
-        // button released during it still reads as down on the frame after —
-        // input is sampled at the top of a frame, and the frame that presented
-        // sampled it before the press had done anything. Crediting that gap to
-        // the hold turns one press into a run of them: on hardware with a
-        // slow panel, a single tap of Down walked the selection several rows.
-        //
-        // So a gap longer than a whole repeat period re-arms the hold instead
-        // of firing it. What is lost is a repeat the person had genuinely
-        // earned by holding through a refresh; what is kept is that a tap
-        // moves by one. Below the threshold nothing changes, and a display
-        // that draws straight through never reaches it.
+        // A gap longer than a repeat period re-arms the hold rather than
+        // firing it. A panel that blocks for most of a second while it
+        // refreshes leaves the loop blind, and a button released during the
+        // refresh still reads as down on the frame after — input is sampled
+        // at the top of a frame. Crediting that gap to the hold turns one tap
+        // into a run; what is lost is a repeat earned by holding through a
+        // refresh, what is kept is that a tap moves by one.
         if now.wrapping_sub(seen_at) >= REPEAT_INTERVAL_MS {
             self.repeat.pressed_at = now;
             self.repeat.fired_at = now;
@@ -99,11 +93,9 @@ impl<S: Screen> Runtime<S> {
                 };
                 self.step_open(focus, value, delta);
             }
-            // A board that has this pair never opens an edit, so these arrive
-            // only from a host that sends them while answering that it has no
-            // pair — the simulator's keyboard does exactly that. Moved the same
-            // way as everything else so the value tracks the keys, rather than
-            // being silently dropped.
+            // A board with this pair never opens an edit, so these arrive only
+            // from a host that sends them while answering that it has no pair.
+            // Moved like everything else, so the value tracks the keys.
             Button::Left | Button::Right => {
                 let delta = if key == Button::Left { -1 } else { 1 };
                 self.step_open(focus, value, delta);
@@ -200,11 +192,9 @@ impl<S: Screen> Runtime<S> {
         }
 
         // -- swipe ----------------------------------------------------------
-        // A vertical swipe anywhere moves focus, which is what the C++ screens
-        // do (HomeActivity). Declined during an edit, as touch is. Which way is a preference, because both readings
-        // are defensible: by default the swipe drags the *content*, so swiping
-        // up walks down the list; with `swipe_moves_selection` it drags the
-        // *selection*, so swiping up moves focus up like Button::Up.
+        // A vertical swipe anywhere moves focus. Declined during an edit, as
+        // touch is. Which way is the host's preference: see
+        // `InputSource::swipe_moves_selection`.
         if self.editing.is_none() && self.painted {
             let direction = Input::swipe();
             if direction != SwipeDir::None {
@@ -297,12 +287,9 @@ impl<S: Screen> Runtime<S> {
             Button::Left | Button::Right => {
                 // Nudge whatever holds focus, so one pair of keys drives every
                 // adjustable control instead of the screen wiring them to one.
-                //
-                // When nothing under the focus adjusts, they walk the list
-                // instead. These are the third and fourth keys of a reader's
-                // bottom row, and the firmware labels them Up and Down for
-                // exactly that reason — a screen with no slider on it would
-                // otherwise have two dead keys.
+                // When nothing under the focus adjusts, they walk the list: a
+                // screen with no slider on it would otherwise have two dead
+                // keys.
                 let interactions = self.collect_settled();
                 let delta = if key == Button::Left { -1 } else { 1 };
 

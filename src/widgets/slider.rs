@@ -10,8 +10,7 @@ use alloc::string::String;
 ///
 /// Stateless by design: it draws the value it is given and never changes it.
 /// The screen owns the value and adjusts it in
-/// [`update`](crate::Screen::update), which is how the firmware's own interval
-/// and frontlight screens work.
+/// [`update`](crate::Screen::update).
 ///
 /// ```rust
 /// # use xpui::Slider;
@@ -25,7 +24,7 @@ use alloc::string::String;
 /// ```
 ///
 /// Give it [`on_change`](Slider::on_change) and the framework converts a touch
-/// into a value for you, applying the same rounding the C++ screens use.
+/// into a value for you.
 ///
 /// **It is also a focus stop**: Up and Down reach it, and Left and Right move
 /// it one step against its own bounds, so a board with no touchscreen can still
@@ -96,14 +95,12 @@ impl<M> Slider<M> {
     /// edge — beside [`title`](Slider::title) when there is one.
     ///
     /// **This is the only thing that shows the value while an edit is open.**
-    /// The framework holds the value then — the screen is not told it, and must
-    /// not be — so a number a screen painted beside the control stands still
-    /// while the knob moves. One drawn here is the working copy, because it is
-    /// the copy the control is drawn from.
+    /// The framework holds the value then and the screen is not told it, so a
+    /// number a screen painted beside the control stands still while the knob
+    /// moves; this one is drawn from the working copy.
     ///
     /// `suffix` is appended as given: `"%"`, `"px"`, or `""` for a bare number.
-    /// A `&'static str` because a unit is a constant, and because it is copied
-    /// into a fixed buffer beside the digits rather than formatted.
+    /// `&'static` because it is copied into a fixed buffer beside the digits.
     ///
     /// ```rust
     /// # use xpui::Slider;
@@ -120,29 +117,20 @@ impl<M> Slider<M> {
 
     /// Names the control on the same line as its number.
     ///
-    /// A settings screen is a column of these, and every screen used to write
-    /// the line by hand above the control: a name, a spacer and a value. The
-    /// value on that line has to be the control's, or it stands still while an
-    /// edit moves the track — so the line is the control's too.
+    /// The value on that line has to be the control's, or it stands still
+    /// while an edit moves the track — so the line is the control's too.
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self
     }
 
     /// Drops this slider's focus stop, for a track inside a larger control that
-    /// owns the stop itself.
+    /// owns the stop itself — and with it, being nudged by key.
     ///
-    /// Keys are what a focus stop is for, so this drops the ability to be
-    /// nudged with it.
-    ///
-    /// A [`Stepper`](crate::Stepper) is deliberately **one** focus stop and
-    /// three touch targets: its two glyphs and the track it wraps. Without this
-    /// the track would be a second stop inside it and Up/Down would stop twice
-    /// on one row — which is the thing that made a stepper a single stop in the
-    /// first place.
-    ///
-    /// Touch is unaffected: an embedded track still drags and still takes a
-    /// tap, because it is still a place a finger can land.
+    /// A [`Stepper`](crate::Stepper) is **one** focus stop and three touch
+    /// targets: its two glyphs and the track it wraps. Without this the track
+    /// would be a second stop and Up/Down would stop twice on one row. Touch
+    /// is unaffected: an embedded track still drags and takes a tap.
     pub fn without_focus(mut self) -> Self {
         self.embedded = true;
         self
@@ -190,22 +178,15 @@ impl<M> View<M> for Slider<M> {
     fn interactions(&mut self, origin: Point, out: &mut Interactions<M>) {
         let Some(make) = self.make else { return };
 
-        // DRAG so the framework feeds held frames here and nowhere else, TAP so
-        // a jab on the track jumps to that value.
+        // DRAG so held frames come here and nowhere else, TAP so a jab on the
+        // track jumps to that value; FOCUS and ADJUST unless something larger
+        // owns the stop, or no key can reach it.
         //
-        // FOCUS and ADJUST unless something larger owns the stop. Without them
-        // a slider is unreachable by any key, which on a device with no
-        // touchscreen leaves it visible and impossible to move.
-        // **Two rects, because a focus stop is not a touch target.** The rect
-        // handed to `declare` is also what `Runtime` scrolls into view, so a
-        // stop covering only the track scrolls until the track's top edge meets
-        // the viewport and leaves the name and the number clipped above it — on
-        // a short panel, the number vanishes exactly while the keys are moving
-        // it. The stop is therefore the whole control.
-        //
-        // Touch stays on the track: a finger landing on the name would
-        // otherwise set the value to wherever along the line it happened to
-        // fall, which is a value nobody asked for.
+        // **Two rects, because a focus stop is not a touch target.** The
+        // declared rect is what `Runtime` scrolls into view, so a stop covering
+        // only the track would leave the name and number clipped above it
+        // while the keys move the value. Touch stays on the track: a finger on
+        // the name would set a value nobody asked for.
         let trigger = || Trigger::Value {
             make,
             max: self.max,
@@ -231,12 +212,9 @@ impl<M> View<M> for Slider<M> {
             focused
         };
         // An open edit holds the value; the screen's has not moved and will
-        // not until Confirm. Painting `self.value` here would leave the knob
-        // still while the keys that opened the mode do nothing visible, which
-        // is the whole complaint this mode exists to answer.
-        //
-        // Safe to read after declaring: there is one focus, so a control that
-        // holds it while an edit is open is the control the edit is open on.
+        // not until Confirm, so the knob paints from the edit's copy. Safe
+        // after declaring: there is one focus, so a control that holds it
+        // while an edit is open is the one the edit is on.
         if holds_focus && let Some(value) = out.editing_value() {
             self.value = value;
         }
@@ -253,11 +231,9 @@ impl<M> View<M> for Slider<M> {
             return;
         }
 
-        // **Drawn before the range is checked.** A control with nothing to
-        // choose between still has a name and a reading, and `measure` reserved
-        // the line for them either way — a screen whose range comes from data
-        // would otherwise show an unexplained gap the day the data held one
-        // item.
+        // Drawn before the range is checked: a control with nothing to choose
+        // between still has a name and a reading, and `measure` reserved the
+        // line for them either way.
         self.header().render(self.bounds(origin));
         if self.max <= 0 {
             return;

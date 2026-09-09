@@ -12,20 +12,17 @@ use crate::view::{Interactions, View};
 
 /// An adjustable control being changed in place.
 ///
-/// A board with four directions and no pair to spare cannot nudge a value with
-/// Left/Right, because nothing produces them — so Confirm opens the control and
-/// the keys that were walking the list start moving the value instead.
-///
-/// **Only on such a board.** A device with the pair nudges the value where it
-/// stands and never opens this, which is what
+/// A board with four directions and no pair to spare cannot nudge a value
+/// with Left/Right, so Confirm opens the control and the keys that were
+/// walking the list move the value instead. **Only on such a board**: a
+/// device with the pair nudges the value where it stands and never opens
+/// this, which is what
 /// [`InputSource::has_left_right_keys`](crate::host::InputSource::has_left_right_keys)
-/// is asked. Opening it everywhere is what quietly took over a reader's two
-/// page-turn keys.
+/// is asked.
 ///
-/// **The panel says so while it is open.** The focused control is drawn in
+/// While it is open the focused control is drawn in
 /// [`ControlState::Editing`](crate::host::ControlState) rather than
-/// `Focused` — what that looks like is the backend's to decide — and the hint
-/// bar takes the board's words for Cancel and Done over Back and Confirm.
+/// `Focused`, and the hint bar takes the board's words for Cancel and Done.
 struct Editing {
     /// Which focusable is being edited.
     ///
@@ -52,7 +49,7 @@ struct Editing {
     value: i32,
 }
 
-/// Per-screen state the runtime owns so screens never see it.
+/// Auto-repeat timing for the button being held.
 struct Repeat {
     button: Option<Button>,
     /// When the current press started, and when it last fired.
@@ -69,9 +66,8 @@ pub struct Runtime<S: Screen> {
     pub(super) screen: S,
     /// Index into the focusable interactions, in tree order.
     focus: usize,
-    /// No touch is routed before the first paint — the tree a touch would be
-    /// tested against has not been shown yet. The C++ panel guards the same
-    /// way with its `uiReady` flag.
+    /// No touch is routed before the first paint: the tree a touch would be
+    /// tested against has not been shown yet.
     painted: bool,
     /// Swallows the release that ends a drag, so it cannot also read as a tap.
     dragging: bool,
@@ -106,8 +102,8 @@ impl<S: Screen> Runtime<S> {
         }
     }
 
-    /// The screen itself, for a test that needs to read what it now holds.
-    /// Exposed only for tests that drive the runtime directly.
+    /// The screen itself. Exposed only for tests that drive the runtime
+    /// directly.
     #[cfg(any(test, feature = "testing"))]
     pub fn screen(&self) -> &S {
         &self.screen

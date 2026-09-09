@@ -26,20 +26,11 @@
 //! }
 //! ```
 //!
-//! # Why the state is split in two
-//!
-//! [`Navigator`] is installed as a `&'static`, and `App` needs `&mut self` to
-//! pump frames. One object cannot be both: leaking the `App` to get the
-//! `&'static` leaves a shared borrow alive for the rest of the program, and
-//! there is no `&mut` left to tick with. So the parts the navigator writes
-//! live in a separate, leaked [`AppShell`], and `App` drains it between
-//! frames.
-//!
-//! That split is also what makes the re-entrancy safe. `finish()` is called
-//! from inside `Runtime::loop_`, while `App` holds `&mut` on the top of the
-//! stack. Popping there would free the screen currently running. Recording the
-//! request in a different allocation and acting on it after the frame is what
-//! keeps the two apart.
+//! [`Navigator`] is installed as a `&'static` and `App` needs `&mut self` to
+//! pump frames, so what the navigator writes lives in a leaked [`AppShell`]
+//! that `App` drains between frames. The same split keeps `finish()` — called
+//! from inside a frame, while `App` holds `&mut` on the running screen — from
+//! popping the screen that is running.
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -52,22 +43,17 @@ use crate::screen::{Driver, Runtime, Screen};
 /// What the navigator writes and [`App`] reads, in its own allocation.
 pub struct AppShell {
     finish: AtomicBool,
-    /// Only ever `store`d and `load`ed, never swapped: RISC-V without the `A`
-    /// extension — the ESP32-C3 — has atomic loads and stores but no
-    /// read-modify-write, so `swap` does not compile for that target.
+    /// Only ever `store`d and `load`ed, never swapped — see `NEEDS_PAINT` in
+    /// `host::chrome`.
     pending: UnsafeCell<Option<Box<dyn Driver>>>,
     title: UnsafeCell<&'static str>,
 }
 
-// Safety: **`App` must be driven from one thread.** Not a style note — two
-// threads inside `present` would both hold `&mut *self.pending.get()`, and
-// aliasing `&mut` is undefined behaviour, not a clean error.
-//
-// `App` pumps frames from one thread, and the navigator is only ever touched
-// from inside a frame — so the `UnsafeCell` fields have exactly one accessor at
-// a time. A host that renders on a second task must not use `App`; it should
-// implement `Navigator` itself over whatever synchronisation it already has,
-// which is what the C++ firmware does.
+// Safety: `App` pumps frames from one thread and the navigator is only touched
+// from inside a frame, so each `UnsafeCell` has one accessor at a time. Two
+// threads inside `present` would alias `&mut` — undefined behaviour, not a
+// clean error. A host that renders on a second task must not use `App`; it
+// implements `Navigator` over its own synchronisation.
 unsafe impl Sync for AppShell {}
 
 impl AppShell {
@@ -88,11 +74,9 @@ impl AppShell {
         false
     }
 
-    /// Takes the queued screen out before any of it runs.
-    ///
-    /// Moved to a local deliberately: `on_enter` on the new screen may call
-    /// `present` again, and finding the slot still occupied would either lose
-    /// that screen or re-enter a borrow.
+    /// Takes the queued screen out before any of it runs: `on_enter` on the
+    /// new screen may call `present` again, and a still-occupied slot would
+    /// lose that screen or re-enter a borrow.
     fn take_pending(&self) -> Option<Box<dyn Driver>> {
         // Safety: see the `Sync` impl — one accessor at a time.
         unsafe { (*self.pending.get()).take() }
@@ -162,22 +146,12 @@ impl App {
 
     /// Refuses to finish the root screen, for a host with nothing underneath it.
     ///
-    /// A window and a C++ host both have somewhere to return to, so by default
-    /// the last screen finishing ends the app — that is what closes the
-    /// simulator. **A device does not.** There the stack emptying stops the
-    /// frame loop, and a board that stops answering is indistinguishable from
-    /// one that crashed, because every other key goes quiet with it.
-    ///
-    /// **This is why the decision belongs here and not in a host.**
-    /// `Button::Back` means three things, tried in order: a screen may claim it
-    /// through `on_key`, an open edit cancels with it, and only then does it
-    /// finish the screen. A host that withholds the key instead suppresses all
-    /// three to prevent the third, so a screen cannot dismiss its own picker
-    /// and a value opened on a root screen can be committed but never
-    /// cancelled. Declining the *pop* leaves the first two meanings alone.
-    ///
-    /// Every host that owns no stack underneath its root wants this, and one
-    /// solving it for itself reaches for the key rather than the pop.
+    /// A window and a C++ host have somewhere to return to, so by default the
+    /// last screen finishing ends the app. A device does not: the stack
+    /// emptying stops the frame loop, and a board that stops answering is
+    /// indistinguishable from one that crashed. Declining the pop, rather than
+    /// withholding `Button::Back`, leaves the key's other two meanings — a
+    /// screen claiming it, an open edit cancelling with it — alone.
     pub fn keep_root(mut self) -> Self {
         self.keep_root = true;
         self

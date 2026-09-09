@@ -8,8 +8,7 @@ use crate::view::{InputMask, Interactions, Trigger, View};
 ///
 /// The visible size is unchanged; only the *hit* area grows, to at least the
 /// theme's minimum touch target. A 6px "−" glyph is a legitimate control but an
-/// impossible thing to hit with a finger, so the target is widened around it —
-/// the same reasoning as `ensureMinTouchRect` in the C++ SDK.
+/// impossible thing to hit with a finger, so the target is widened around it.
 ///
 /// ```rust
 /// # use xpui::{Icon, IconRef, Modifiers, Text};

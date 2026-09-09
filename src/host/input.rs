@@ -60,17 +60,13 @@ pub trait InputSource {
 
     /// Whether the device has a Left/Right pair to nudge a value with.
     ///
-    /// A control that changes a value needs to know. With the pair, Left and
-    /// Right move the value where it stands. Without one, the keys that would
-    /// do the nudging are already busy walking between rows, so the value has
-    /// to be entered and left again instead.
+    /// With the pair, Left and Right move a value where it stands. Without
+    /// one, those keys are busy walking between rows, so the value has to be
+    /// entered and left again. A control reads this and branches; nothing in
+    /// the framework does so on its behalf.
     ///
     /// **Deliberately not defaulted.** A backend that forgot to answer would
-    /// inherit whichever behaviour the default picked, on every device it
-    /// drives, with nothing to notice.
-    ///
-    /// Answering it is not the same as acting on it: a control has to read this
-    /// and branch. Nothing in the framework does so on the caller's behalf.
+    /// inherit whichever behaviour the default picked, with nothing to notice.
     fn has_left_right_keys(&self) -> bool;
 
     /// A completed tap, at the position the finger went down.
@@ -89,14 +85,10 @@ pub trait InputSource {
 
     /// Which way a vertical swipe moves focus.
     ///
-    /// `false` — the default, and what the C++ screens do today — means the
-    /// swipe moves the *content*: swiping up walks **down** the list, as though
-    /// dragging the page upwards. `true` reverses it, so a swipe up moves focus
-    /// up, which is what someone expects if they read the gesture as moving the
-    /// selection rather than the page.
-    ///
-    /// Defaulted so a host need not implement it until there is a setting
-    /// behind it.
+    /// `false` means the swipe moves the *content*: swiping up walks **down**
+    /// the list, as though dragging the page. `true` moves the focus with the
+    /// swipe. Defaulted so a host need not implement it until there is a
+    /// setting behind it.
     fn swipe_moves_selection(&self) -> bool {
         false
     }
@@ -180,16 +172,9 @@ pub enum RowKey {
 /// What the keys along the bottom edge mean, left to right.
 ///
 /// A hint bar asks two questions — how many slots to divide its band into, and
-/// which word goes in each — and a device answers both with its row. They were
-/// one question once, inferred from the key count: three keys was taken to
-/// mean no key to spare for Back. That held until a device arrived with three
-/// keys along the bottom *and* an up/down pair elsewhere, which has a key for
-/// Back and gives it the first slot. Under the old reading every label on
-/// those devices sat one key to the left of what it named.
-///
-/// Naming a key the device does not have is worse than naming none — it sends
-/// a person looking for it — so a slot with nothing behind it is
-/// [`RowKey::Unassigned`] and stays blank.
+/// which word goes in each — and a device answers both with its row. A slot
+/// with nothing behind it is [`RowKey::Unassigned`] and stays blank: naming a
+/// key the device does not have sends a person looking for it.
 ///
 /// Here rather than beside the components that paint it because it is a fact
 /// about hardware, and the crate describing a device should not have to depend
@@ -198,8 +183,7 @@ pub enum RowKey {
 pub struct KeyRow(&'static [RowKey]);
 
 impl KeyRow {
-    /// The row every device had before any of them said otherwise: a reader's
-    /// four keys, Back leftmost.
+    /// A reader's four keys, Back leftmost.
     pub const READER: KeyRow = KeyRow(&[
         RowKey::Back,
         RowKey::Confirm,

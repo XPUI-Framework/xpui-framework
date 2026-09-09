@@ -48,32 +48,27 @@ impl<T> Host for T where T: Canvas + TextMetrics + Chrome + InputSource + Clock 
 /// The installed host.
 ///
 /// Written between frames and only read inside them. A plain static rather
-/// than a lock: the readers may be separate FreeRTOS tasks, none of them
-/// writes, and taking a lock on every text measurement would cost more than
-/// the whole layout pass.
+/// than a lock: the readers may be separate tasks, none of them writes, and
+/// taking a lock on every text measurement would cost more than the whole
+/// layout pass.
 static mut HOST: Option<&'static dyn Host> = None;
 
 /// Installs the host. Call before any view is measured or drawn.
 ///
-/// Installing again replaces it, which is how a desktop host shows the same
-/// screens on a different panel: another panel size is another backend. The
-/// host it replaces is a `&'static` and stays valid, so nothing that read the
-/// old one is left dangling.
+/// Installing again replaces it — another panel size is another backend —
+/// and the old `&'static` stays valid for anything that read it.
 ///
-/// **The host is process-wide.** There is one, it is written here and read
-/// everywhere, and a test that installs a second corrupts whatever the first
-/// was serving — which shows up as flakiness rather than as a failure. Every
-/// test in this repository that installs one takes the same mutex first, and
-/// [`testing::Ui`](crate::testing::Ui) holds it for you.
+/// **The host is process-wide.** A test that installs a second corrupts what
+/// the first was serving, which shows up as flakiness; every test here takes
+/// the same mutex first, and [`testing::Ui`](crate::testing::Ui) holds it.
 ///
 /// # Safety
 /// One thread, and no frame in flight — no `measure`, `render` or
-/// `interactions` running, here or on any other task. **The write has no
-/// synchronisation, so overlapping it with a read is a data race: undefined
-/// behaviour, not a stale pointer you could notice.** In practice that means
-/// from the activity's entry point before the render task is started, or
-/// between frames on the loop's own thread.
+/// `interactions` running on any task. The write is unsynchronised, so
+/// overlapping it with a read is a data race: undefined behaviour, not a
+/// stale pointer you could notice.
 pub unsafe fn install(host: &'static dyn Host) {
+    // Safety: the caller's, as documented above.
     unsafe {
         HOST = Some(host);
     }
@@ -97,6 +92,7 @@ pub(crate) fn current() -> &'static dyn Host {
     #[cfg(any(test, feature = "testing"))]
     {
         crate::testing::install();
+        // Safety: as above; `testing::install` has just written it.
         if let Some(host) = unsafe { HOST } {
             return host;
         }
@@ -107,6 +103,7 @@ pub(crate) fn current() -> &'static dyn Host {
 
 /// Whether a host has been installed, so tests can assert wiring.
 pub fn is_installed() -> bool {
+    // Safety: a read of a static that is written once, before any reader.
     unsafe { HOST }.is_some()
 }
 
@@ -122,6 +119,7 @@ static mut NAVIGATOR: Option<&'static dyn Navigator> = None;
 /// with one. A host with a separate render task must install from both entry
 /// points, since either may wake first.
 pub unsafe fn install_navigator(navigator: &'static dyn Navigator) {
+    // Safety: the caller's, as documented above.
     unsafe {
         NAVIGATOR = Some(navigator);
     }
@@ -133,13 +131,14 @@ pub unsafe fn install_navigator(navigator: &'static dyn Navigator) {
 /// nowhere to go back to and should not have to say so. The no-op trips a
 /// `debug_assert` if a screen ever actually asks it to navigate.
 pub(crate) fn navigator() -> &'static dyn Navigator {
-    // Safety: written once by `install_navigator` before any reader exists.
     static NONE: navigator::NoNavigator = navigator::NoNavigator;
+    // Safety: written once by `install_navigator` before any reader exists.
     unsafe { NAVIGATOR }.unwrap_or(&NONE)
 }
 
 /// Whether a navigator has been installed, so a host can assert its wiring
 /// and stay idempotent across two entry points.
 pub fn is_navigator_installed() -> bool {
+    // Safety: a read of a static that is written once, before any reader.
     unsafe { NAVIGATOR }.is_some()
 }

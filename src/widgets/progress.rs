@@ -4,8 +4,8 @@ use crate::geometry::{Point, Rect, Size};
 use crate::host::{Theme, ThemeMetric};
 use crate::view::View;
 
-/// Shows `current` out of `total`, drawn by the theme so it matches the reading
-/// progress bar elsewhere in the firmware.
+/// Shows `current` out of `total`, drawn by the theme so it matches the
+/// host's own.
 ///
 /// Spans the width it is given; its height comes from the theme unless
 /// overridden with [`height`](ProgressBar::height).

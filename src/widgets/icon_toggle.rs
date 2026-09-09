@@ -8,10 +8,9 @@ use crate::widgets::Icon;
 
 /// An icon whose fill shows a boolean, and whose tap flips it.
 ///
-/// Solid means on, outline means off — the cue the frontlight panel uses for
-/// "the light is on". The glyph keeps its natural size, but the *control*
-/// reserves the theme's minimum touch target, so two sitting side by side each
-/// own a full finger's worth of space instead of competing for one tap.
+/// Solid means on, outline means off. The glyph keeps its natural size, but
+/// the *control* reserves the theme's minimum touch target, so two sitting
+/// side by side each own a full finger's worth of space.
 ///
 /// Touch only: it deliberately stays out of the button focus order. A panel
 /// meant for a finger should not grow focus stops that Up/Down has to walk

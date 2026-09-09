@@ -17,8 +17,7 @@ use crate::view::{Interactions, View};
 ///
 /// By default the header shows the screen's own title and **all four** hints
 /// are `Hint::Standard` — the host resolves each to its own label for that
-/// slot. Blanking three of them left a five-button device showing only Back,
-/// with no sign that the other buttons did anything.
+/// slot, so every key a device has is named.
 ///
 /// ```rust
 /// # use xpui::{Hint, NavigationScreen, Text, vstack};
@@ -45,10 +44,6 @@ impl<M: 'static> NavigationScreen<M> {
         NavigationScreen {
             content: Box::new(content),
             title: None,
-            // All four by default: the host resolves Standard per slot to its
-            // own translated Back / Select / Up / Down, which is what the C++
-            // screens show. Blanking three of them left the X3 with only Back,
-            // and no sign that the other buttons did anything.
             hints: [
                 Hint::Standard,
                 Hint::Standard,

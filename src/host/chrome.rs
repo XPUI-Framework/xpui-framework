@@ -21,9 +21,9 @@ pub enum ThemeMetric {
     /// Gap above the header band.
     TopPadding = 0,
     HeaderHeight = 1,
-    /// The theme's standard gap between stacked elements.
+    /// The gap between stacked elements.
     VerticalSpacing = 2,
-    /// Height reserved at the bottom for button hints.
+    /// The band reserved at the bottom for the button hints.
     ButtonHintsHeight = 3,
     ContentSidePadding = 4,
     /// First y below the header that content may use.
@@ -37,14 +37,14 @@ pub enum ThemeMetric {
     /// host draws only rows that fully fit — so the last one silently vanishes.
     ListRowGap = 14,
     ProgressBarHeight = 9,
-    /// Smallest comfortably tappable dimension.
+    /// The smallest comfortably tappable dimension.
     MinTouchSize = 10,
-    /// A slider knob's width, and the padding its track is inset by at each
-    /// end. The framework converts a touch to a value with these, so they have
-    /// to be the numbers the host actually draws with — asking keeps the two
-    /// from drifting when the theme changes them.
+    /// A slider knob's width. The framework converts a touch to a value with
+    /// this and [`SliderSideInset`](ThemeMetric::SliderSideInset), so both
+    /// must be the numbers the host actually draws with.
     SliderKnobWidth = 11,
     SliderKnobHeight = 12,
+    /// The padding a slider's track is inset by at each end.
     SliderSideInset = 13,
     /// Height of the band a sub-header needs: the heading's own line, not a
     /// list row. The theme draws the label top-aligned and ignores the rest,
@@ -56,14 +56,11 @@ pub enum ThemeMetric {
     SpacingSmall = 16,
 }
 
-/// What the keys will do to a control next, so a person can see it.
+/// What the keys will do to a control next, so a person can see it: a value
+/// row on a device with no Left/Right pair changes what four keys mean when
+/// it opens, and the panel has to say so.
 ///
-/// A value row on a device with no Left/Right pair changes what four keys mean
-/// when it opens, and until this existed nothing on the panel said so: the
-/// frame that opened the mode was identical to the frame before it. On a slow
-/// panel that is a full refresh spent painting the same pixels.
-///
-/// Crossing the C ABI as an integer, like the row field beside it, so a host
+/// Crosses the C ABI as an integer, like the row field beside it, so a host
 /// written in C++ can switch on it.
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
@@ -148,11 +145,9 @@ pub trait Chrome {
 
     /// Asks for a repaint. E-ink does not refresh on its own.
     ///
-    /// On the painting trait rather than on
-    /// [`Navigator`](super::Navigator) because it is a display concern:
-    /// anything that can paint can ask to paint again, and the framework calls
-    /// it on every dispatch. Putting it behind navigation would mean a host
-    /// that installed no navigator silently stopped refreshing.
+    /// On the painting trait, not [`Navigator`](super::Navigator): a repaint
+    /// is a display concern, and a host that installed no navigator must
+    /// still refresh.
     fn request_update(&self);
 }
 
@@ -268,9 +263,7 @@ impl Theme {
         super::current().draw_scroll_indicator(rect, content, visible, offset)
     }
 
-    /// The themed list. `row` is asked for each field of each visible row;
-    /// `None` omits that field, which is how the host chooses a one- or
-    /// two-line row.
+    /// The themed list — see [`Chrome::draw_list`].
     pub fn draw_list<'a>(
         rect: Rect,
         rows: usize,
@@ -308,11 +301,9 @@ impl ScreenChrome {
         super::current().draw_header(Some(title), None)
     }
 
-    /// Draws the header with the screen's own translated title.
-    ///
-    /// The title is fetched here rather than left for the host to substitute:
-    /// passing `None` through means "no title" to a `Chrome` implementation,
-    /// and a host that took it literally drew an empty header band.
+    /// Draws the header with the screen's own translated title, fetched here
+    /// rather than passed as `None`: to a `Chrome` implementation `None`
+    /// means no title, and the band comes out empty.
     pub fn draw_screen_header() {
         super::current().draw_header(Some(Self::screen_title()), None)
     }
@@ -330,14 +321,10 @@ impl ScreenChrome {
 
 /// Set whenever a repaint is asked for, and cleared when one happens.
 ///
-/// The host has a flag of its own — that is what `Chrome::request_update` sets,
-/// and a firmware that owns its render loop reads it there. This second one
-/// exists for [`App`](crate::App), which owns the loop itself and has no
-/// generic way to read the host's.
-///
-/// Load and store only, never a read-modify-write: Cortex-M0+ has no atomic
-/// compare-and-swap, so `swap` and `fetch_or` do not compile for `thumbv6m`.
-/// The same restriction is documented on `AppShell` for the same reason.
+/// The host has a flag of its own, set by `Chrome::request_update`; this one
+/// is for [`App`](crate::App), which owns the loop and cannot read the
+/// host's. Load and store only: neither bare-metal target has atomic
+/// compare-and-swap, so `swap` and `fetch_or` do not compile there.
 static NEEDS_PAINT: AtomicBool = AtomicBool::new(false);
 
 /// Asks for a repaint. E-ink does not refresh on its own.

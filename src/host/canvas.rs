@@ -37,9 +37,8 @@ pub trait Canvas {
 
     /// Draws `text` with its **top-left** corner at `origin`.
     ///
-    /// Not a baseline. Most drawing libraries take one — u8g2 does, and
-    /// `embedded-graphics` will if you ask — so this is the single obligation
-    /// a new backend is most likely to get backwards, and getting it backwards
+    /// Not a baseline. Most drawing libraries take one, so this is the single
+    /// obligation a new backend is most likely to get backwards, and getting it backwards
     /// puts every glyph one line too high while everything still compiles and
     /// every stack-depth test still passes. Convert on the way in: add the
     /// face's ascent, so the whole line occupies `[y, y + line_height)` and
@@ -56,7 +55,9 @@ pub trait Canvas {
 
     fn draw_line(&self, from: Point, to: Point);
 
-    /// Fills with a 50% dither, which reads as grey on a 1-bit panel.
+    /// Fills with a 50% dither, which reads as grey on a 1-bit panel. `light`
+    /// picks which checkerboard parity takes ink, so two adjacent dithers can
+    /// differ.
     fn fill_rect_dither(&self, rect: Rect, light: bool);
 
     /// Darkens `rect` while leaving what is already drawn there legible.

@@ -40,15 +40,10 @@ pub(crate) fn focused<M>(
 
 /// Whether this is a control the keys move rather than fire.
 ///
-/// **One question, asked in three places**, because a control that was
-/// adjustable to one of them and not the others is how a mode opens that
-/// nothing can drive: spec 26 tested `ADJUST` to enter an edit and `ADJUST`
-/// plus a step trigger to act on it, so a control with the first and not the
-/// second opened a mode where every key did nothing.
-///
-/// Whether an edit may *open* on it is a further question — that needs a way
-/// back as well, and [`Trigger::is_editable`](crate::view::Trigger::is_editable)
-/// is the one that asks it.
+/// **One question, asked in three places**: a control that is adjustable to
+/// one of them and not the others opens a mode that nothing can drive.
+/// Whether an edit may *open* on it needs a way back as well, and
+/// [`Trigger::is_editable`](crate::view::Trigger::is_editable) asks that.
 pub(crate) fn adjustable<M: Clone>(item: &Interaction<M>) -> bool {
     item.mask.contains(InputMask::ADJUST)
 }
@@ -81,9 +76,3 @@ pub(crate) fn focused_message<M: Clone>(interactions: &Interactions<M>, focus: u
     let x = item.rect.x() + item.rect.width() / 2;
     Some(item.trigger.resolve(item.rect, x))
 }
-
-// -- driving a screen -------------------------------------------------------
-//
-// `Screen` uses `impl View` in return position, so it is deliberately never a
-// trait object. `Runtime<S>` erases the screen type behind `Driver` instead,
-// which is what a host dispatches through.

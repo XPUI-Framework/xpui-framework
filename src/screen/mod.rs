@@ -53,8 +53,8 @@ pub trait Screen {
     /// Describes the screen. A pure function of `self` — no device writes.
     ///
     /// Called once per paint and once per frame that carries input. Built
-    /// fresh rather than stored because `loop_` and `render` run on different
-    /// FreeRTOS tasks with no lock between them: a stored tree is one task
+    /// fresh rather than stored because `loop_` and `render` may run on
+    /// different tasks with no lock between them: a stored tree is one task
     /// walking what the other is replacing.
     fn body(&self) -> impl View<Self::Message>;
 
@@ -115,16 +115,10 @@ pub trait Screen {
     /// A frame happened.
     ///
     /// Called once per frame, before any input is considered, and on frames
-    /// where nothing arrived at all — which is the point. A screen with a
-    /// deadline has nowhere else to notice that it passed: a countdown, an
-    /// auto-refresh, an action held back to see whether a second press is
-    /// coming.
-    ///
-    /// It takes no argument on purpose. A screen that wants the time asks the
-    /// clock; passing it in would make every screen that ignores it carry a
-    /// parameter, and would fix the units here rather than at the host.
-    ///
-    /// Ask for a repaint if something changed. Nothing else will.
+    /// where nothing arrived at all — which is the point: a countdown, an
+    /// auto-refresh, an action held back for a second press have nowhere else
+    /// to notice a deadline passed. No argument on purpose; a screen that
+    /// wants the time asks the clock. Ask for a repaint if something changed.
     fn tick(&mut self) {}
 
     fn on_enter(&mut self) {}

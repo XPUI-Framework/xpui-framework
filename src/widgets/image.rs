@@ -13,9 +13,8 @@ use crate::view::View;
 /// bit 1 is white**. That polarity is inverted from the usual convention, so a
 /// buffer produced elsewhere will very likely render as a negative.
 ///
-/// The data must outlive the widget, which is why this borrows rather than
-/// copying: the firmware's own assets are `static const` arrays in flash, and
-/// copying a 1.8 KB logo onto a 200 KB heap to draw it would be absurd.
+/// Borrowed rather than copied: assets are arrays in flash, and copying one
+/// onto a small heap to draw it is waste. The data must outlive the widget.
 ///
 /// ```rust
 /// # use xpui::Image;
@@ -72,7 +71,7 @@ impl<M> View<M> for Image {
     }
 }
 
-/// An icon from the host firmware's registry.
+/// An icon from the host's registry.
 ///
 /// Kept separate from [`Image`] because the two use different asset
 /// conventions and are not interchangeable. Icons are drawn transparently and
@@ -107,8 +106,7 @@ impl Icon {
         }
     }
 
-    /// Solid rather than outline, where the role has both variants — the cue
-    /// the panel uses for "light is on".
+    /// Solid rather than outline, where the role has both variants.
     pub fn filled(mut self, filled: bool) -> Self {
         self.spec.variant = u8::from(filled);
         self

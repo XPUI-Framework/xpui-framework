@@ -7,8 +7,8 @@ use crate::geometry::{Point, Rect, Size};
 use crate::host::{Renderer, Theme};
 use crate::view::{InputMask, Interactions, Scrim, Trigger, View};
 
-/// A centred dialog offering a list of options, drawn by the firmware's own
-/// theme — so it is pixel-identical to the popups the C++ screens show.
+/// A centred dialog offering a list of options, drawn by the host's theme so
+/// it matches the host's own dialogs.
 ///
 /// It **captures input**: while one is in the tree, nothing behind it can be
 /// reached, focus starts on the option already chosen, and the side buttons
@@ -91,8 +91,7 @@ impl<M: Clone> Modal<M> {
         self
     }
 
-    /// Dims what is behind the dialog. Defaults to [`Scrim::None`], matching
-    /// the C++ popups, which leave the screen beneath plainly visible.
+    /// Dims what is behind the dialog. Defaults to [`Scrim::None`].
     pub fn scrim(mut self, scrim: Scrim) -> Self {
         self.scrim = scrim;
         self
