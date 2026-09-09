@@ -13,10 +13,6 @@ use crate::paths::tracked;
 /// If you want to reach for a backend from inside the framework, add a trait
 /// method instead — that is what the seam is for. A review comment does not
 /// run, which is why this does.
-///
-/// The list has drifted before: a copy in CI knew four of these to the gate's
-/// eleven, so a forbidden word could land with a green tick. There is one
-/// list now because there is one gate.
 const FORBIDDEN: [&str; 11] = [
     "crosspoint",
     "xteink",
@@ -27,10 +23,9 @@ const FORBIDDEN: [&str; 11] = [
     "pimoroni",
     "seeed",
     "sticky",
-    // The space is optional, and it is the *closed* spelling that a Rust
-    // identifier would use: `x4pro`, `X4Pro`, `--board x4pro`. A pattern that
-    // required the space caught only the form least likely to appear in
-    // source.
+    // The closed spelling, which is the one a Rust identifier would use:
+    // `x4pro`, `X4Pro`, `--board x4pro`. `forbidden_in` also reads the line
+    // with its spaces removed, so `x4 pro` is the same word.
     "x4pro",
     "gfxrenderer",
 ];
@@ -90,9 +85,7 @@ mod tests {
     #[test]
     fn every_forbidden_word_is_caught_in_the_spelling_code_would_use() {
         // Not a count and not a case check: those pass a mutation that
-        // replaces a real word with a fake one, and that is how `x4 ?pro`
-        // became `x4 pro` and stopped catching `x4pro` — the only spelling a
-        // Rust identifier can have.
+        // replaces a real word with a fake one.
         for word in [
             "CrossPoint",
             "Xteink",

@@ -13,21 +13,23 @@
 //! Each repository in the organisation has its own copy of this shape, holding
 //! its own list. **This file is the part that is meant to differ**; the modules
 //! under it are byte-identical, and `shared_files_agree` in `xpui-dev` hashes
-//! all seven across the nine, so a fix to the fence scanner cannot land in one
+//! all ten across the nine, so a fix to the fence scanner cannot land in one
 //! repository and not the rest.
 //!
 //! A check written and never listed below is a dead function, which clippy
-//! fails the build over. That is what a hand-written "is every check
-//! dispatched?" check used to do, and it does it better.
+//! fails the build over.
 
+mod agents;
 mod cargo;
 mod commands;
+mod comments;
 mod docs;
 mod faults;
 mod fences;
 mod generic;
 mod paths;
 mod prose;
+mod readme;
 mod tree;
 
 use std::process::ExitCode;
@@ -59,8 +61,39 @@ const NOT_COMPILED: [&str; 0] = [];
 /// Pages that are not a repository's front door and carry no banner.
 const NOT_A_FRONT_PAGE: [&str; 0] = [];
 
-/// Bare-metal targets this framework is linted for. `?` in the old shell; here
-/// `false` means "skip if the target is absent, and say so".
+/// The root README's headings, in order. Empty until this repository's front
+/// page is brought to the standard; then the eight.
+const README_ORDER: &[&str] = &[];
+const README_OPTIONAL: &[&str] = &["Which crate you want", "Requirements"];
+const NESTED_ORDER: &[&str] = &[
+    "Using it",
+    "Requirements",
+    "Checking it",
+    "Where next",
+    "License",
+];
+const NESTED_OPTIONAL: &[&str] = &["Requirements", "Where next"];
+
+/// `AGENTS.md` exists and `CLAUDE.md` is a symlink to it.
+const AGENTS_FILE: bool = false;
+
+/// Every publishable crate denies `missing_docs`.
+const DOCUMENTED: bool = false;
+
+/// How long a comment may be. `None` is not adopted.
+const COMMENT_CAPS: Option<comments::Caps> = Some(comments::Caps {
+    doc: 15,
+    header: 15,
+    run: 10,
+});
+/// No comment is about the past.
+const NARRATION_CHECKED: bool = true;
+/// Which files the two comment checks read. `None` is every tracked source,
+/// manifest and C++ file outside `tests/`.
+const COMMENT_SCOPE: Option<&str> = None;
+
+/// Bare-metal targets this framework is linted for. `false` means "skip if
+/// the target is absent, and say so".
 const BARE_METAL: [(&str, bool); 2] = [
     ("riscv32imc-unknown-none-elf", true),
     ("thumbv6m-none-eabi", false),
@@ -80,8 +113,7 @@ fn main() -> ExitCode {
         .expect("xtask/..");
     std::env::set_current_dir(root).expect("the repository root");
 
-    // A typo is not a check. The shell this replaced rejected an unknown
-    // argument, and a gate that silently treats `fx` as `check` is a gate that
+    // A typo is not a check: a gate that silently treats `fx` as `check`
     // reports a pass for a run nobody asked for.
     let fix = match std::env::args().nth(1).as_deref() {
         None | Some("check") => false,
@@ -139,7 +171,43 @@ fn main() -> ExitCode {
             "doctests",
             Box::new(|| cargo::cargo(&["test", "--workspace", TEST_FEATURES, "--doc"])),
         ),
+        (
+            "README sections",
+            Box::new(|| {
+                readme::readme_sections(
+                    README_ORDER,
+                    README_OPTIONAL,
+                    NESTED_ORDER,
+                    NESTED_OPTIONAL,
+                    &NOT_A_FRONT_PAGE,
+                )
+            }),
+        ),
+        (
+            "AGENTS.md",
+            Box::new(|| agents::agents_file_exists(AGENTS_FILE)),
+        ),
+        (
+            "published crates deny missing_docs",
+            Box::new(|| tree::published_crates_deny_missing_docs(DOCUMENTED)),
+        ),
+        (
+            "comment blocks",
+            Box::new(|| comments::comment_blocks(COMMENT_CAPS, COMMENT_SCOPE)),
+        ),
+        (
+            "comment narration",
+            Box::new(|| comments::comment_narration(NARRATION_CHECKED, COMMENT_SCOPE)),
+        ),
     ];
+
+    // Last, after every insert and extend, owning the names: a closure in
+    // the vector cannot borrow the vector.
+    let names: Vec<String> = gate.iter().map(|(n, _)| n.to_string()).collect();
+    gate.push((
+        "the gate is documented",
+        Box::new(move || agents::agents_documents_the_gate(&names)),
+    ));
 
     for (name, check) in gate.drain(..) {
         println!("\n==> {name}");
