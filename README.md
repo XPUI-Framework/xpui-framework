@@ -192,10 +192,14 @@ drop-down that leaves the screen beneath it intact, and can dim it with
 
 ## Where next
 
+- [docs/orientation.md](docs/orientation.md) — the ten repositories, a clean
+  machine, the gate, and the traps: read this first
 - [docs/tutorial.md](docs/tutorial.md) — from an empty file to a screen
 - [docs/a-second-screen.md](docs/a-second-screen.md) — lists, navigation,
   scrolling, and where to go for a widget of your own
 - [docs/architecture.md](docs/architecture.md) — how a frame actually runs
+- [docs/design.md](docs/design.md) — the arguments behind choices the code
+  states in one sentence
 - [docs/writing-a-widget.md](docs/writing-a-widget.md) — adding to the framework
 - [docs/testing.md](docs/testing.md) — the four layers, and driving a screen the way a person does
 - [docs/host.md](docs/host.md) — the contract a backend implements
@@ -254,6 +258,7 @@ flowchart BT
   rp2040["xpui-rp2040<br/>firmware"]
   esp32["xpui-esp32<br/>firmware"]
   cpp["xpui-cpp<br/>a C++ host"]
+  dev["xpui-dev<br/>the umbrella"]
   chrome --> xpui
   boards --> xpui
   backends --> xpui
@@ -277,6 +282,12 @@ flowchart BT
   esp32 --> gallery
   cpp --> xpui
   cpp --> backends
+  dev --> xpui
+  dev --> chrome
+  dev --> boards
+  dev --> backends
+  dev --> simulator
+  dev --> gallery
   style xpui stroke-width:3px
 ```
 
