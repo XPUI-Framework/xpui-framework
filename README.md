@@ -1,9 +1,10 @@
+[![CI](https://github.com/XPUI-Framework/xpui-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/XPUI-Framework/xpui-framework/actions/workflows/ci.yml) [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 # `xpui`
 
-> ⚠️ **Under heavy development.** Not production-ready. The API can break
-> without notice. Use at your own risk.
-
-[![CI](https://github.com/XPUI-Framework/xpui-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/XPUI-Framework/xpui-framework/actions/workflows/ci.yml) [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+> [!WARNING]
+> Under heavy development. Not production-ready. The API can break without
+> notice. Use at your own risk.
 
 A small declarative UI framework for e-ink firmware: you describe what a
 screen looks like and how it changes, and `xpui` measures, routes input and

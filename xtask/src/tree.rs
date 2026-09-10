@@ -64,11 +64,16 @@ pub fn readmes_warn(not_a_front_page: &[&str]) -> Result<String, String> {
         }
         checked += 1;
         let text = fs::read_to_string(&file).unwrap_or_default();
-        // Lines 3 and 4, read as one: the sentence wraps, and where it wraps
-        // is a formatting decision rather than something to assert.
-        let banner: String = text.lines().skip(2).take(2).collect::<Vec<_>>().join(" ");
-        if !(banner.contains("Under heavy development") && banner.contains("API can break")) {
-            missing.push(format!("  {path}: no development banner on lines 3-4"));
+        // The header block, read as one. The badge line, the title and the
+        // warning all sit in it, and both where the sentence wraps and which
+        // line each lands on are formatting decisions rather than something to
+        // assert.
+        let head: String = text.lines().take(8).collect::<Vec<_>>().join(" ");
+        if !(head.contains("[!WARNING]")
+            && head.contains("Under heavy development")
+            && head.contains("API can break"))
+        {
+            missing.push(format!("  {path}: no development warning in the header"));
         }
     }
     // An exemption naming a file that has moved is an exemption nobody will
@@ -280,7 +285,7 @@ mod tests {
 
     #[test]
     fn a_readme_without_the_banner_is_named() {
-        let good = "# x\n\n> **Under heavy development.** Not production-ready. The\n> API can break without notice.\n";
+        let good = "[![CI](x)](y)\n\n# x\n\n> [!WARNING]\n> Under heavy development. Not production-ready. The\n> API can break without notice.\n";
         let tree = Scratch::new(
             "readmes",
             &[("README.md", good), ("docs/README.md", "# no banner\n")],
