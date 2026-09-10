@@ -34,6 +34,7 @@ pub struct Frame<V> {
 }
 
 impl<V> Frame<V> {
+    /// `child` with neither dimension fixed yet.
     pub fn new(child: V) -> Self {
         Frame {
             child,

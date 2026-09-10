@@ -51,6 +51,7 @@ pub struct OverlayPanel<M> {
 }
 
 impl<M: Clone + 'static> OverlayPanel<M> {
+    /// A panel holding `content`, dropping down over the screen beneath.
     pub fn new(content: impl View<M> + 'static) -> Self {
         OverlayPanel {
             content: Box::new(content),

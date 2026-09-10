@@ -23,6 +23,7 @@ pub struct Flexible<V> {
 }
 
 impl<V> Flexible<V> {
+    /// `child`, grown into whatever its stack has left.
     pub fn new(child: V) -> Self {
         Flexible { child }
     }

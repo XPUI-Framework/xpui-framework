@@ -7,6 +7,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  # By hand, so a changed runner or toolchain can be checked without a fake
+  # commit.
+  workflow_dispatch:
+
+# Read the checkout and nothing else; the gate writes nowhere.
+permissions:
+  contents: read
 
 # A second push does not pay for the first.
 concurrency:
@@ -51,14 +58,3 @@ jobs:
       - name: Gate
         run: ./build-and-test.sh check
 
-      # A failed screenshot writes expected | actual | differences side by side,
-      # so a failure here can be looked at rather than guessed at.
-      - name: Keep the screenshots
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots
-          path: |
-            target/diff/
-            target/screenshots/
-          if-no-files-found: ignore

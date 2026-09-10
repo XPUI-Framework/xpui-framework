@@ -145,7 +145,8 @@ A change goes through five steps, in order, and none is skipped:
 
 Both agents are the same two files in every repository, compared by
 `xpui-dev`. Each repository's `AGENTS.md`, loaded into every session, says
-what that repository is, what only it checks, and the style that bites there.
+what that repository is, what only it checks, and the style that bites there;
+this one is [`AGENTS.md`](../AGENTS.md).
 
 ### Git
 

@@ -16,6 +16,7 @@ pub struct ListRow<M> {
 }
 
 impl<M> ListRow<M> {
+    /// A one-line row reading `title`, with no message.
     pub fn new(title: impl Into<String>) -> Self {
         ListRow {
             title: title.into(),

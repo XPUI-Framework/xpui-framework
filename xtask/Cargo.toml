@@ -14,7 +14,7 @@ version = "0.1.0"
 edition = "2024"
 license = "MIT"
 authors = ["Thiago Holanda <unnamedd@gmail.com>"]
-repository = "https://github.com/XPUI-Framework/xpui"
+repository = "https://github.com/XPUI-Framework/xpui-framework"
 publish = false
 
 [lints]

@@ -188,6 +188,7 @@ impl App {
         !self.stack.is_empty()
     }
 
+    /// How many screens are on the stack.
     pub fn depth(&self) -> usize {
         self.stack.len()
     }

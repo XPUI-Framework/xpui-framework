@@ -29,6 +29,7 @@ pub struct Section<M> {
 }
 
 impl<M: 'static> Section<M> {
+    /// `content` under a heading reading `title`.
     pub fn new(title: impl Into<String>, content: impl View<M> + 'static) -> Self {
         Section {
             title: title.into(),

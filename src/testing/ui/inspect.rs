@@ -201,10 +201,12 @@ impl<H: Host + Drive + 'static> Ui<H> {
         self.repainted && !self.previous.is_empty() && self.previous != self.frame
     }
 
+    /// How many screens are on the stack.
     pub fn depth(&self) -> usize {
         self.app.depth()
     }
 
+    /// Whether any screen is left.
     pub fn is_running(&self) -> bool {
         self.app.is_running()
     }

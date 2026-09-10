@@ -60,7 +60,7 @@ static mut HOST: Option<&'static dyn Host> = None;
 ///
 /// **The host is process-wide.** A test that installs a second corrupts what
 /// the first was serving, which shows up as flakiness; every test here takes
-/// the same mutex first, and [`testing::Ui`](crate::testing::Ui) holds it.
+/// the same mutex first, and `testing::Ui` holds it.
 ///
 /// # Safety
 /// One thread, and no frame in flight — no `measure`, `render` or

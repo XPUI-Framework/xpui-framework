@@ -8,13 +8,17 @@
 /// A position on screen.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Point {
+    /// Pixels from the left edge.
     pub x: i32,
+    /// Pixels from the top edge.
     pub y: i32,
 }
 
 impl Point {
+    /// The top-left corner of the screen.
     pub const ORIGIN: Point = Point { x: 0, y: 0 };
 
+    /// A point at `x`, `y`.
     pub const fn new(x: i32, y: i32) -> Self {
         Point { x, y }
     }
@@ -29,16 +33,20 @@ impl Point {
 /// layout that over-subtracts cannot produce inverted rectangles.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Size {
+    /// Pixels across.
     pub width: i32,
+    /// Pixels down.
     pub height: i32,
 }
 
 impl Size {
+    /// Nothing at all.
     pub const ZERO: Size = Size {
         width: 0,
         height: 0,
     };
 
+    /// A size of `width` by `height`, each clamped at zero.
     pub fn new(width: i32, height: i32) -> Self {
         Size {
             width: width.max(0),
@@ -51,6 +59,7 @@ impl Size {
         Size::new(self.width - dw, self.height - dh)
     }
 
+    /// Whether either dimension is zero, so nothing could be drawn in it.
     pub fn is_empty(self) -> bool {
         self.width == 0 || self.height == 0
     }
@@ -59,13 +68,18 @@ impl Size {
 /// Space inset equally or individually on each edge.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Insets {
+    /// Pixels taken from the top edge.
     pub top: i32,
+    /// Pixels taken from the right edge.
     pub right: i32,
+    /// Pixels taken from the bottom edge.
     pub bottom: i32,
+    /// Pixels taken from the left edge.
     pub left: i32,
 }
 
 impl Insets {
+    /// No inset on any edge.
     pub const ZERO: Insets = Insets {
         top: 0,
         right: 0,
@@ -93,10 +107,12 @@ impl Insets {
         }
     }
 
+    /// Left and right together: the width an inset rect loses.
     pub const fn horizontal(&self) -> i32 {
         self.left + self.right
     }
 
+    /// Top and bottom together: the height an inset rect loses.
     pub const fn vertical(&self) -> i32 {
         self.top + self.bottom
     }
@@ -105,11 +121,14 @@ impl Insets {
 /// A positioned, sized region.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Rect {
+    /// The top-left corner.
     pub origin: Point,
+    /// The width and height.
     pub size: Size,
 }
 
 impl Rect {
+    /// A rect with its top-left corner at `x`, `y`.
     pub fn new(x: i32, y: i32, width: i32, height: i32) -> Self {
         Rect {
             origin: Point::new(x, y),
@@ -117,26 +136,32 @@ impl Rect {
         }
     }
 
+    /// The left edge.
     pub const fn x(&self) -> i32 {
         self.origin.x
     }
 
+    /// The top edge.
     pub const fn y(&self) -> i32 {
         self.origin.y
     }
 
+    /// Pixels across.
     pub const fn width(&self) -> i32 {
         self.size.width
     }
 
+    /// Pixels down.
     pub const fn height(&self) -> i32 {
         self.size.height
     }
 
+    /// The first column outside the rect.
     pub const fn right(&self) -> i32 {
         self.origin.x + self.size.width
     }
 
+    /// The first row outside the rect.
     pub const fn bottom(&self) -> i32 {
         self.origin.y + self.size.height
     }
@@ -149,6 +174,7 @@ impl Rect {
         }
     }
 
+    /// Whether `point` is inside; the right and bottom edges are outside.
     pub fn contains(&self, point: Point) -> bool {
         point.x >= self.origin.x
             && point.y >= self.origin.y

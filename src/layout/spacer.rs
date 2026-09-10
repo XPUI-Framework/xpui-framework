@@ -26,6 +26,7 @@ pub struct Spacer {
 }
 
 impl Spacer {
+    /// A spacer that takes whatever its stack has left.
     pub fn new() -> Self {
         Spacer::default()
     }

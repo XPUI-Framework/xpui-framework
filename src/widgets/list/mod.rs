@@ -44,6 +44,7 @@ impl<M> Default for List<M> {
 }
 
 impl<M> List<M> {
+    /// An empty list with nothing selected.
     pub fn new() -> Self {
         List {
             rows: Vec::new(),
@@ -53,11 +54,13 @@ impl<M> List<M> {
         }
     }
 
+    /// Adds a row at the end.
     pub fn push(mut self, row: ListRow<M>) -> Self {
         self.rows.push(row);
         self
     }
 
+    /// Adds every row of `rows`, in order.
     pub fn extend(mut self, rows: impl IntoIterator<Item = ListRow<M>>) -> Self {
         self.rows.extend(rows);
         self
@@ -73,10 +76,12 @@ impl<M> List<M> {
         self
     }
 
+    /// How many rows it holds.
     pub fn len(&self) -> usize {
         self.rows.len()
     }
 
+    /// Whether it holds no rows.
     pub fn is_empty(&self) -> bool {
         self.rows.is_empty()
     }

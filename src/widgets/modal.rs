@@ -46,6 +46,7 @@ pub struct Modal<M> {
 }
 
 impl<M: Clone> Modal<M> {
+    /// A dialog titled `title` offering `options`, the first selected.
     pub fn new<S: Into<String>>(
         title: impl Into<String>,
         options: impl IntoIterator<Item = S>,
@@ -97,10 +98,12 @@ impl<M: Clone> Modal<M> {
         self
     }
 
+    /// How many options it offers.
     pub fn len(&self) -> usize {
         self.options.len()
     }
 
+    /// Whether it offers no options.
     pub fn is_empty(&self) -> bool {
         self.options.is_empty()
     }

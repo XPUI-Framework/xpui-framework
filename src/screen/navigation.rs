@@ -40,6 +40,7 @@ pub struct NavigationScreen<M> {
 }
 
 impl<M: 'static> NavigationScreen<M> {
+    /// A page holding `content` between the header and the button hints.
     pub fn new(content: impl View<M> + 'static) -> Self {
         NavigationScreen {
             content: Box::new(content),

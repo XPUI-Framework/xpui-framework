@@ -121,8 +121,11 @@ pub trait Screen {
     /// wants the time asks the clock. Ask for a repaint if something changed.
     fn tick(&mut self) {}
 
+    /// The screen was pushed, before its first frame. A screen uncovered by
+    /// a pop is not told.
     fn on_enter(&mut self) {}
 
+    /// The screen is being popped. A screen covered by a push is not told.
     fn on_exit(&mut self) {}
 
     /// The system home gesture. Return `true` to consume it; an overlay does,

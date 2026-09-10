@@ -42,6 +42,7 @@ impl<M> Padding<M> {
         Padding::new(child, Insets::symmetric(horizontal, vertical))
     }
 
+    /// `child` inset by `insets`.
     pub fn new(child: impl View<M> + 'static, insets: Insets) -> Self
     where
         M: 'static,

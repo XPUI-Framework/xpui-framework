@@ -18,7 +18,9 @@ use crate::host::{ControlState, FontStyle, IconRef};
 /// How a rectangle was painted.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RectKind {
+    /// Solid ink or background.
     Filled,
+    /// An outline, one pixel wide.
     Stroked,
     /// Dithered, which reads as grey on a 1-bit panel.
     Dither,
@@ -44,74 +46,121 @@ pub type RowCells = [Option<String>; 3];
 /// One call the framework made on the host.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum DrawOp {
+    /// The whole panel cleared to background.
     Clear,
+    /// A line of text.
     Text {
+        /// Its top-left corner, not a baseline.
         origin: Point,
+        /// The string as drawn.
         text: String,
+        /// The host's font id.
         font: i32,
+        /// Weight and slant.
         style: FontStyle,
     },
+    /// A rectangle, painted one of four ways.
     Rect {
+        /// The rectangle.
         rect: Rect,
+        /// How it was painted.
         kind: RectKind,
         /// Ink or background. Only meaningful for [`RectKind::Filled`]; a
         /// dither carries `light` here instead.
         black: bool,
     },
+    /// A one-pixel line.
     Line {
+        /// One end.
         from: Point,
+        /// The other end.
         to: Point,
     },
+    /// A 1-bit bitmap.
     Image {
+        /// Its top-left corner.
         origin: Point,
+        /// Its width and height in pixels.
         size: Size,
         /// Bytes handed over, so a test can tell an empty bitmap from a real
         /// one without the log holding the pixels.
         bytes: usize,
     },
+    /// An icon the host owns.
     Icon {
+        /// Its top-left corner.
         origin: Point,
+        /// Which icon, and at what size.
         icon: IconRef,
     },
     /// `None` lifts the clip.
     Clip(Option<Rect>),
+    /// The header band.
     Header {
+        /// The title, or `None` for an empty band.
         title: Option<String>,
+        /// A second line, when the caller gave one.
         subtitle: Option<String>,
     },
+    /// A section heading.
     SubHeader {
+        /// The band it occupies.
         rect: Rect,
+        /// The heading.
         label: String,
+        /// A right-aligned value, when the screen gave one.
         right: Option<String>,
     },
     /// The four slots in meaning order: back, confirm, previous, next. `None`
     /// is the host's own standard label for that slot.
     Hints([Option<String>; 4]),
+    /// A determinate progress bar.
     ProgressBar {
+        /// The band it occupies.
         rect: Rect,
+        /// Progress so far, out of `total`.
         current: u32,
+        /// The whole.
         total: u32,
     },
+    /// A themed slider.
     Slider {
+        /// The whole control.
         rect: Rect,
+        /// Where the knob sits, out of `max`.
         value: i32,
+        /// The top of the range.
         max: i32,
+        /// Idle, focused or open.
         state: ControlState,
     },
+    /// The scroll indicator beside a scrolling region.
     ScrollIndicator {
+        /// The band it occupies.
         rect: Rect,
+        /// How tall the content is.
         content: i32,
+        /// How much of the content the window shows.
         visible: i32,
+        /// How far down the window sits.
         offset: i32,
     },
+    /// A themed list.
     List {
+        /// The region the list occupies.
         rect: Rect,
+        /// The selected row, or -1 for none.
         selected: i32,
+        /// Every row's cells, in order.
         rows: Vec<RowCells>,
     },
+    /// A themed option dialog.
     OptionPopup {
+        /// The dialog's title.
         title: String,
+        /// The highlighted option.
         selected: i32,
+        /// Every option's label, in order.
         options: Vec<Option<String>>,
     },
 }

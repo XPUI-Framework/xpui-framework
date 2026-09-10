@@ -44,9 +44,13 @@ pub trait Drive {
     /// Starts a frame, clearing the previous frame's edges. Without this a
     /// press stays "just pressed" forever and every frame acts on it again.
     fn begin(&self, millis: u32);
+    /// Reports `button` as pressed this frame.
     fn inject_press(&self, button: Button);
+    /// Reports `button` as released this frame.
     fn inject_release(&self, button: Button);
+    /// Reports a completed tap at `point`.
     fn inject_tap(&self, point: Point);
+    /// Reports a completed swipe.
     fn inject_swipe(&self, direction: SwipeDir);
 }
 
@@ -177,6 +181,7 @@ impl<H: Host + Drive + 'static> Ui<H> {
         self.advance(|host| host.inject_tap(point))
     }
 
+    /// Presses and releases `button` in one frame.
     pub fn press(&mut self, button: Button) -> &mut Self {
         self.advance(|host| {
             host.inject_press(button);
@@ -184,6 +189,7 @@ impl<H: Host + Drive + 'static> Ui<H> {
         })
     }
 
+    /// Swipes in `direction`.
     pub fn swipe(&mut self, direction: SwipeDir) -> &mut Self {
         self.advance(|host| host.inject_swipe(direction))
     }

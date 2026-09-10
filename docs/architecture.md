@@ -1,7 +1,53 @@
 # How a frame runs
 
-The [README](../README.md) describes three conversations. This is what actually
-happens between them, in order. It is short because the design is small.
+Three conversations, each one way; then what actually happens between them,
+in order; then what the crate holds. It is short because the design is small.
+
+## The three conversations
+
+```text
+        your screen                xpui                    the firmware
+   ┌───────────────────┐   ┌──────────────────┐   ┌──────────────────────┐
+   │                   │   │                  │   │                      │
+   │  body()   ────────┼──▶│   view tree      ├──▶│  Canvas       paint  │
+   │                   │   │   measure        │   │  TextMetrics  sizes  │
+   │                   │   │   render         │   │  Chrome       theme  │
+   │  update(msg) ◀────┼───┤   routing        │◀──┤  InputSource  touch  │
+   │                   │   │                  │   │  Clock        time   │
+   └───────────────────┘   └──────────────────┘   └──────────────────────┘
+          messages              the View trait          the Host traits
+```
+
+**1. Your screen and `xpui` talk in messages.** `body()` hands over a description
+of the screen. When something happens, `xpui` hands back a message and calls
+`update()`. Your screen never reads a touch, never asks where anything is on
+screen, and never asks for a repaint — it only ever receives a message and
+changes its own state.
+
+**2. `xpui` and the view tree talk through the `View` trait.** Every widget
+answers four questions: how big are you, where do you sit, what do you draw, and
+what can be touched. Widgets *declare* their touchable regions; nothing polls
+for input.
+
+**3. `xpui` and the backend talk through the `Host` traits.** `xpui` cannot
+draw, measure text or read a button. It says what it needs and a backend
+provides it. This is why the crate has no dependencies, and why nothing inside
+it names a product, a screen, an asset or a drawing library.
+
+The loop a screen sits in is the whole of the contract:
+
+```mermaid
+flowchart LR
+  b["body()<br/>describe what you want"] --> r["framework<br/>measures and paints"]
+  r --> i["tap · swipe · button"]
+  i --> u["update(Message)<br/>the only place state changes"]
+  u --> b
+```
+
+The whole frame is: build the tree, measure it, collect what is touchable, find
+the message for whatever the user did, apply it, paint. The rest of this page
+is that sentence, unfolded.
+
 
 ## The cast
 
@@ -99,13 +145,23 @@ The runtime never calls the backend directly. It goes through the five traits in
 [`src/host/`](../src/host/) — `Canvas`, `TextMetrics`, `Chrome`, `InputSource`,
 `Clock` — reached through small façades like `Renderer::fill_rect(..)`.
 
+A backend implements those five and installs the implementation once:
+
+```rust
+# static MY_BACKEND: xpui::testing::TestHost = xpui::testing::TestHost;
+// Once, before anything is measured or drawn.
+unsafe { xpui::host::install(&MY_BACKEND) };
+```
+
 Two consequences worth stating:
 
 - `xpui` compiles with **no dependencies** and cannot name a backend symbol.
 - Tests install a fake host, so layout, input routing and widget behaviour are
   all testable on a laptop. That is how the suite runs with no simulator at all.
 
-See [host.md](host.md) to implement one.
+See [host.md](host.md) to implement one, and
+[`xpui-backends`](https://github.com/XPUI-Framework/xpui-backends) for the
+real ones.
 
 ## The one piece of global state
 
@@ -116,3 +172,41 @@ threading a context parameter through every `measure`, `render` and
 
 On the device the two callers run on different tasks, so the runtime installs it
 from both entry points rather than assuming which arrives first.
+
+## What the crate holds
+
+Every public item is in [reference.md](reference.md); this is the shape.
+
+**Widgets** — [`src/widgets/`](../src/widgets/)
+
+| | |
+|---|---|
+| [`Text`](../src/widgets/text.rs) | One line, measured with the backend's real font metrics |
+| [`Icon`](../src/widgets/image.rs) | A backend asset chosen by *role*, not filename |
+| [`IconToggle`](../src/widgets/icon_toggle.rs) | An icon that shows a boolean and flips it |
+| [`Image`](../src/widgets/image.rs) | A 1-bit bitmap you supply |
+| [`List` / `ListRow`](../src/widgets/list/) | Rows drawn by the backend's own theme |
+| [`Section`](../src/widgets/section.rs) | A titled group of anything |
+| [`Toggle`](../src/widgets/toggle.rs) | A boolean row reading On / Off |
+| [`Slider`](../src/widgets/slider.rs) | A track, moved by a drag, a tap or a key, over its own name and value |
+| [`Stepper`](../src/widgets/stepper.rs) | `−`, track and `+` as one control, over the same line |
+| [`ProgressBar`](../src/widgets/progress.rs) | Determinate progress |
+| [`Divider`](../src/widgets/divider.rs) | A one-pixel rule |
+| [`Modal`](../src/widgets/modal.rs) | A centred option dialog that captures input while open |
+
+**Layout** — [`src/layout/`](../src/layout/)
+
+`vstack!` and `hstack!` stack things with a gap. `Spacer` eats whatever space is
+left, so a footer sits at the bottom without arithmetic. `Padding`, `Frame`,
+`Flexible` and `Tappable` are chainable modifiers: `Text::new("−").frame(44, 44)`.
+
+`ScrollView` wraps content taller than the screen. It clips what overflows and
+the runtime scrolls to keep the focused control visible — by swipe on a touch
+panel, by Up/Down on a button one — so a screen never tracks a scroll position.
+
+**Screen roots** — [`src/screen/`](../src/screen/)
+
+`NavigationScreen` is an ordinary page with a header and button hints, and takes
+an `.overlay()` drawn above its content for dialogs. `OverlayPanel` is a
+drop-down that leaves the screen beneath it intact, and can dim it with
+`Scrim::Dim`.

@@ -44,6 +44,7 @@ impl<M: Clone + 'static> Stepper<M> {
         Stepper::ranged(value, 100)
     }
 
+    /// A stepper over 0..=`max`.
     pub fn ranged(value: i32, max: i32) -> Self {
         Stepper {
             value,

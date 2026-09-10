@@ -26,6 +26,7 @@ pub struct Toggle<M> {
 }
 
 impl<M: Clone> Toggle<M> {
+    /// A row labelled `label`, reading `on_label` or `off_label` for `on`.
     pub fn new(
         label: impl Into<String>,
         on: bool,

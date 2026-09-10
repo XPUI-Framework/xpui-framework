@@ -41,6 +41,7 @@ impl InputMask {
     /// What an ordinary control wants: tappable, and reachable by button.
     pub const DEFAULT: InputMask = InputMask(Self::TAP.0 | Self::FOCUS.0);
 
+    /// This mask with `other`'s bits added.
     pub const fn union(self, other: InputMask) -> InputMask {
         InputMask(self.0 | other.0)
     }
@@ -50,6 +51,7 @@ impl InputMask {
         InputMask(self.0 & !other.0)
     }
 
+    /// Whether every bit of `other` is set here.
     pub const fn contains(self, other: InputMask) -> bool {
         self.0 & other.0 == other.0
     }
@@ -65,8 +67,11 @@ impl core::ops::BitOr for InputMask {
 
 /// One interactive region, as declared by the widget that owns it.
 pub struct Interaction<M> {
+    /// The region, in screen pixels.
     pub rect: Rect,
+    /// Which kinds of input it accepts.
     pub mask: InputMask,
+    /// What it produces when it fires.
     pub trigger: Trigger<M>,
 }
 
@@ -250,6 +255,8 @@ impl<M> Interactions<M> {
         self.viewport = Some((viewport, content_height));
     }
 
+    /// The scrolling viewport and its content height, if a scroll view
+    /// published one.
     pub fn viewport(&self) -> Option<(Rect, i32)> {
         self.viewport
     }
@@ -293,10 +300,12 @@ impl<M> Interactions<M> {
         self.focusable
     }
 
+    /// Everything declared so far, in tree order.
     pub fn items(&self) -> &[Interaction<M>] {
         &self.items
     }
 
+    /// Whether nothing has been declared.
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
     }

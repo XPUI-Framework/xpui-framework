@@ -47,6 +47,7 @@ pub struct ScrollView<M> {
 }
 
 impl<M: Clone + 'static> ScrollView<M> {
+    /// A scrolling window over `content`.
     pub fn new(content: impl View<M> + 'static) -> Self {
         ScrollView {
             content: Box::new(content),

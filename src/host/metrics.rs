@@ -7,12 +7,16 @@
 /// A font the host has registered. Opaque: only the host knows what it means,
 /// and `0` means "this build does not ship that font".
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
-pub struct FontId(pub i32);
+pub struct FontId(
+    /// The host's own number for the font; `0` is none.
+    pub i32,
+);
 
 impl FontId {
     /// The font a build compiled out. Measures zero and draws nothing.
     pub const UNAVAILABLE: FontId = FontId(0);
 
+    /// Whether this build ships the font.
     pub fn is_available(self) -> bool {
         self.0 != 0
     }
@@ -22,10 +26,14 @@ impl FontId {
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 #[repr(u8)]
 pub enum FontStyle {
+    /// Upright, regular weight.
     #[default]
     Regular = 0,
+    /// Heavier weight.
     Bold = 1,
+    /// Slanted.
     Italic = 2,
+    /// Both.
     BoldItalic = 3,
 }
 
@@ -58,8 +66,10 @@ pub trait TextMetrics {
     /// claim the same id.
     fn font(&self, role: FontRole) -> FontId;
 
+    /// The width `text` paints at in `font` and `style`, in pixels.
     fn text_width(&self, font: FontId, text: &str, style: FontStyle) -> i32;
 
+    /// The height one line of `font` occupies, ascent and descent included.
     fn line_height(&self, font: FontId) -> i32;
 }
 
@@ -86,6 +96,7 @@ impl Font {
         style: FontStyle::Regular,
     };
 
+    /// The host's font for `role`, in regular style.
     pub fn role(role: FontRole) -> Self {
         Font {
             id: super::current().font(role),
@@ -108,31 +119,38 @@ impl Font {
         Self::role(FontRole::Reader)
     }
 
+    /// The same font in bold, replacing any style set before.
     pub fn bold(self) -> Self {
         self.with_style(FontStyle::Bold)
     }
 
+    /// The same font in italic, replacing any style set before.
     pub fn italic(self) -> Self {
         self.with_style(FontStyle::Italic)
     }
 
+    /// The same font in `style`.
     pub fn with_style(mut self, style: FontStyle) -> Self {
         self.style = style;
         self
     }
 
+    /// The host's id for the face.
     pub fn id(self) -> FontId {
         self.id
     }
 
+    /// The weight and slant it is drawn in.
     pub fn style(self) -> FontStyle {
         self.style
     }
 
+    /// Whether this build ships the face.
     pub fn is_available(self) -> bool {
         self.id.is_available()
     }
 
+    /// The height one line occupies, or 0 for a face this build lacks.
     pub fn line_height(self) -> i32 {
         if !self.is_available() {
             return 0;
@@ -140,6 +158,7 @@ impl Font {
         super::current().line_height(self.id)
     }
 
+    /// The width `text` paints at, or 0 for a face this build lacks.
     pub fn text_width(self, text: &str) -> i32 {
         if !self.is_available() {
             return 0;

@@ -20,22 +20,27 @@ use crate::geometry::Rect;
 pub enum ThemeMetric {
     /// Gap above the header band.
     TopPadding = 0,
+    /// Height of the header band.
     HeaderHeight = 1,
     /// The gap between stacked elements.
     VerticalSpacing = 2,
     /// The band reserved at the bottom for the button hints.
     ButtonHintsHeight = 3,
+    /// Space between the panel's side edges and the content.
     ContentSidePadding = 4,
     /// First y below the header that content may use.
     ContentTop = 5,
     /// First y occupied by the button hints; content must stay above.
     ContentBottom = 6,
+    /// Height of a one-line list row.
     ListRowHeight = 7,
+    /// Height of a list row carrying a subtitle.
     ListRowHeightWithSubtitle = 8,
     /// Space the theme leaves between one row and the next. A list that
     /// measured without it asks for less height than the host needs, and the
     /// host draws only rows that fully fit — so the last one silently vanishes.
     ListRowGap = 14,
+    /// Height of the themed progress bar.
     ProgressBarHeight = 9,
     /// The smallest comfortably tappable dimension.
     MinTouchSize = 10,
@@ -43,6 +48,7 @@ pub enum ThemeMetric {
     /// this and [`SliderSideInset`](ThemeMetric::SliderSideInset), so both
     /// must be the numbers the host actually draws with.
     SliderKnobWidth = 11,
+    /// A slider knob's height, and so the least height its track needs.
     SliderKnobHeight = 12,
     /// The padding a slider's track is inset by at each end.
     SliderSideInset = 13,
@@ -82,25 +88,31 @@ pub enum ControlState {
 /// Which piece of a list row is being asked for.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum RowField {
+    /// The row's main text.
     Title,
+    /// The second line, when the row has one.
     Subtitle,
+    /// A right-aligned value, when the row has one.
     Value,
 }
 
 /// Chrome the host draws on the framework's behalf.
 pub trait Chrome {
+    /// One geometry value from the active theme, in pixels.
     fn metric(&self, metric: ThemeMetric) -> i32;
 
     /// The header band, including whatever the host puts in it (a battery
     /// indicator, say). `None` uses the screen's own title.
     fn draw_header(&self, title: Option<&str>, subtitle: Option<&str>);
 
+    /// A section heading in `rect`, with an optional right-aligned value.
     fn draw_sub_header(&self, rect: Rect, label: &str, right_label: Option<&str>);
 
     /// The four hints, given by meaning. The host reorders them to match the
     /// user's button layout; `None` means "your standard label for this slot".
     fn draw_button_hints(&self, back: &Hint, confirm: &Hint, previous: &Hint, next: &Hint);
 
+    /// The themed progress bar, `current` of `total` along.
     fn draw_progress_bar(&self, rect: Rect, current: u32, total: u32);
 
     /// The themed slider: a track, a fill up to `value`, and a knob over both.
@@ -177,6 +189,7 @@ pub enum Hint {
 }
 
 impl Hint {
+    /// A label this screen supplies.
     pub fn text(label: impl Into<String>) -> Self {
         Hint::Text(label.into())
     }
@@ -232,6 +245,7 @@ pub enum HintWord {
 pub struct Theme;
 
 impl Theme {
+    /// See [`Chrome::metric`].
     pub fn metric(metric: ThemeMetric) -> i32 {
         super::current().metric(metric)
     }
@@ -247,18 +261,22 @@ impl Theme {
         Rect::new(side, top, width - side * 2, bottom - top)
     }
 
+    /// See [`Chrome::draw_sub_header`].
     pub fn draw_sub_header(rect: Rect, label: &str, right_label: Option<&str>) {
         super::current().draw_sub_header(rect, label, right_label)
     }
 
+    /// See [`Chrome::draw_progress_bar`].
     pub fn draw_progress_bar(rect: Rect, current: u32, total: u32) {
         super::current().draw_progress_bar(rect, current, total)
     }
 
+    /// See [`Chrome::draw_slider`].
     pub fn draw_slider(rect: Rect, value: i32, max: i32, state: ControlState) {
         super::current().draw_slider(rect, value, max, state)
     }
 
+    /// See [`Chrome::draw_scroll_indicator`].
     pub fn draw_scroll_indicator(rect: Rect, content: i32, visible: i32, offset: i32) {
         super::current().draw_scroll_indicator(rect, content, visible, offset)
     }
@@ -273,6 +291,7 @@ impl Theme {
         super::current().draw_list(rect, rows, selected, row)
     }
 
+    /// See [`Chrome::draw_option_popup`].
     pub fn draw_option_popup<'a>(
         title: &str,
         options: &dyn Fn(usize) -> Option<&'a str>,
@@ -282,6 +301,7 @@ impl Theme {
         super::current().draw_option_popup(title, options, count, selected)
     }
 
+    /// See [`Chrome::option_popup_row_rect`].
     pub fn option_popup_row_rect<'a>(
         title: &str,
         options: &dyn Fn(usize) -> Option<&'a str>,
@@ -308,6 +328,7 @@ impl ScreenChrome {
         super::current().draw_header(Some(Self::screen_title()), None)
     }
 
+    /// See [`Chrome::draw_button_hints`].
     pub fn draw_button_hints(back: &Hint, confirm: &Hint, previous: &Hint, next: &Hint) {
         super::current().draw_button_hints(back, confirm, previous, next)
     }

@@ -66,3 +66,10 @@ an up/down pair elsewhere has a key for Back and gives it the first slot, and
 an inference from the count puts every label on it one key to the left of what
 it names. So a device states its row, and a slot with nothing behind it is
 `RowKey::Unassigned`.
+
+## `Text` is one line
+
+There is no wrapping widget yet, and list rows that carry a subtitle are
+single-line by the theme's own rule. A label wider than its space is cut by
+the panel's edge, not wrapped; `ListRow` is the widget that measures and
+ellipses.

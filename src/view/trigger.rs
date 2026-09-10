@@ -19,9 +19,13 @@ use crate::host::{Theme, ThemeMetric};
 /// framework converts the position and calls the constructor, so no screen
 /// re-derives slider geometry.
 pub enum Trigger<M> {
+    /// A message the widget built when the tree was built.
     Message(M),
+    /// An absolute value, converted from where the touch landed.
     Value {
+        /// Builds the message from the resolved value.
         make: fn(i32) -> M,
+        /// The top of the control's range; the left end is 0.
         max: i32,
         /// What the control reads right now: one step of an absolute value is
         /// `value + delta`, so a nudge needs it. Rebuilt with the tree every
@@ -32,6 +36,7 @@ pub enum Trigger<M> {
     /// Distinct from [`Trigger::Value`] because the screen adds the delta to
     /// whatever it currently holds, rather than being handed an absolute.
     Step {
+        /// Builds the message from the delta.
         make: fn(i32) -> M,
         /// The top of the control's own range. A nudge does not need it — the
         /// screen clamps — but an open edit does: the framework owns the value
@@ -56,15 +61,22 @@ pub enum Trigger<M> {
     /// value control is the one case that needs a closure: one small
     /// allocation per touch frame, only for components that wrap a slider.
     MappedValue {
+        /// Builds the message from the resolved value.
         make: Box<dyn Fn(i32) -> M>,
+        /// The top of the control's range.
         max: i32,
+        /// What the control reads right now.
         value: i32,
     },
     /// A step control seen through [`ViewExt::map`](crate::view::ViewExt::map); see [`Trigger::MappedValue`].
     MappedStep {
+        /// Builds the message from the delta.
         make: Box<dyn Fn(i32) -> M>,
+        /// The message that sets the control outright, when it has one.
         set: Option<Box<dyn Fn(i32) -> M>>,
+        /// The top of the control's range.
         max: i32,
+        /// What the control reads right now.
         value: i32,
     },
 }

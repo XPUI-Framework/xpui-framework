@@ -84,6 +84,7 @@ pub struct Runtime<S: Screen> {
 }
 
 impl<S: Screen> Runtime<S> {
+    /// A runtime driving `screen`, focus on its first control.
     pub fn new(screen: S) -> Self {
         Runtime {
             screen,

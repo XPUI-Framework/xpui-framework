@@ -28,6 +28,7 @@ pub struct Tappable<V, M> {
 }
 
 impl<V, M> Tappable<V, M> {
+    /// `child`, sending `message` when tapped or activated.
     pub fn new(child: V, message: M) -> Self {
         Tappable {
             child,

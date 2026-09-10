@@ -16,8 +16,8 @@
 //! # ;
 //! ```
 //!
-//! See this crate's `README.md` for a walkthrough, and `docs/architecture.md`
-//! for how a frame runs.
+//! See `docs/tutorial.md` for a walkthrough, and `docs/architecture.md` for
+//! how a frame runs.
 //!
 //! # Layers
 //!
@@ -42,6 +42,7 @@
 //! screens belong in the application.
 
 #![cfg_attr(target_os = "none", no_std)]
+#![deny(missing_docs)]
 
 extern crate alloc;
 
@@ -65,6 +66,8 @@ mod guides {
     pub mod reference {}
     #[doc = include_str!("../docs/architecture.md")]
     pub mod architecture {}
+    #[doc = include_str!("../docs/design.md")]
+    pub mod design {}
     #[doc = include_str!("../docs/host.md")]
     pub mod host {}
     #[doc = include_str!("../docs/writing-a-backend.md")]

@@ -18,6 +18,7 @@ pub struct IconRef {
 }
 
 impl IconRef {
+    /// Icon `kind` in its first variant, asking for a 32-pixel edge.
     pub fn new(kind: u16) -> Self {
         IconRef {
             kind,
@@ -29,6 +30,7 @@ impl IconRef {
 
 /// The framebuffer, as the framework sees it.
 pub trait Canvas {
+    /// The panel's size in logical pixels, in the current orientation.
     fn screen_size(&self) -> Size;
 
     /// Clears to background. A screen painting over what is already there —
@@ -51,8 +53,10 @@ pub trait Canvas {
     /// Fills `rect`; `black` false means background.
     fn fill_rect(&self, rect: Rect, black: bool);
 
+    /// Outlines `rect` in ink, one pixel wide, inside its bounds.
     fn stroke_rect(&self, rect: Rect);
 
+    /// A one-pixel line in ink from `from` to `to`, both ends included.
     fn draw_line(&self, from: Point, to: Point);
 
     /// Fills with a 50% dither, which reads as grey on a 1-bit panel. `light`
@@ -77,6 +81,8 @@ pub trait Canvas {
     /// and **bit 0 is ink** — inverted from the usual convention.
     fn draw_image(&self, origin: Point, data: &[u8], size: Size);
 
+    /// Draws `icon` with its top-left corner at `origin`, at the size
+    /// [`icon_size`](Canvas::icon_size) answers.
     fn draw_icon(&self, origin: Point, icon: IconRef);
 
     /// Edge length the host would actually draw, or 0 if it ships nothing for
@@ -92,10 +98,12 @@ pub trait Canvas {
 pub struct Renderer;
 
 impl Renderer {
+    /// See [`Canvas::screen_size`].
     pub fn screen_size() -> Size {
         super::current().screen_size()
     }
 
+    /// The whole panel, as a rect at the origin.
     pub fn screen_bounds() -> Rect {
         Rect {
             origin: Point::ORIGIN,
@@ -103,10 +111,12 @@ impl Renderer {
         }
     }
 
+    /// See [`Canvas::clear`].
     pub fn clear() {
         super::current().clear()
     }
 
+    /// See [`Canvas::draw_text`].
     pub fn draw_text(origin: Point, text: &str, font: FontId, style: FontStyle) {
         super::current().draw_text(origin, text, font, style)
     }
@@ -121,34 +131,42 @@ impl Renderer {
         super::current().set_clip(None)
     }
 
+    /// See [`Canvas::fill_rect`].
     pub fn fill_rect(rect: Rect, black: bool) {
         super::current().fill_rect(rect, black)
     }
 
+    /// See [`Canvas::stroke_rect`].
     pub fn stroke_rect(rect: Rect) {
         super::current().stroke_rect(rect)
     }
 
+    /// See [`Canvas::draw_line`].
     pub fn draw_line(from: Point, to: Point) {
         super::current().draw_line(from, to)
     }
 
+    /// See [`Canvas::fill_rect_dither`].
     pub fn fill_rect_dither(rect: Rect, light: bool) {
         super::current().fill_rect_dither(rect, light)
     }
 
+    /// See [`Canvas::scrim`].
     pub fn scrim(rect: Rect) {
         super::current().scrim(rect)
     }
 
+    /// See [`Canvas::draw_image`].
     pub fn draw_image(origin: Point, data: &[u8], size: Size) {
         super::current().draw_image(origin, data, size)
     }
 
+    /// See [`Canvas::draw_icon`].
     pub fn draw_icon(origin: Point, icon: IconRef) {
         super::current().draw_icon(origin, icon)
     }
 
+    /// See [`Canvas::icon_size`].
     pub fn icon_size(icon: IconRef) -> i32 {
         super::current().icon_size(icon)
     }

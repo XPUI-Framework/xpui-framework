@@ -10,33 +10,54 @@ use crate::geometry::Point;
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Button {
+    /// Leaves the screen, cancels an open edit, or dismisses a dialog.
     Back = 0,
+    /// Acts on whatever has focus.
     Confirm = 1,
+    /// Nudges the focused value down; where nothing under the focus
+    /// adjusts, moves focus back.
     Left = 2,
+    /// Nudges the focused value up; where nothing under the focus adjusts,
+    /// moves focus forward.
     Right = 3,
+    /// Moves focus to the previous control, or raises an open value.
     Up = 4,
+    /// Moves focus to the next control, or lowers an open value.
     Down = 5,
+    /// The power key.
     Power = 6,
-    /// Page navigation, honouring the user's side-button swap.
+    /// Page navigation backwards, honouring the user's side-button swap.
     PageBack = 7,
+    /// Page navigation forwards, honouring the user's side-button swap.
     PageForward = 8,
+    /// The next item, as a reader's side key means it.
     NavNext = 9,
+    /// The previous item, as a reader's side key means it.
     NavPrevious = 10,
-    /// Direction as seen on the rendered screen, whatever the orientation.
+    /// Left as seen on the rendered screen, whatever the orientation.
     ScreenLeft = 11,
+    /// Right as seen on the rendered screen, whatever the orientation.
     ScreenRight = 12,
+    /// Up as seen on the rendered screen, whatever the orientation.
     ScreenUp = 13,
+    /// Down as seen on the rendered screen, whatever the orientation.
     ScreenDown = 14,
 }
 
+/// The direction a completed swipe travelled.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 #[repr(u8)]
 pub enum SwipeDir {
+    /// No swipe this frame.
     #[default]
     None = 0,
+    /// Towards the left edge.
     Left = 1,
+    /// Towards the right edge.
     Right = 2,
+    /// Towards the top edge.
     Up = 3,
+    /// Towards the bottom edge.
     Down = 4,
 }
 
@@ -52,10 +73,14 @@ pub enum SwipeDir {
 /// which reports whether this frame carries any touch at all, down or just
 /// lifted, and never whether the panel has a digitiser.
 pub trait InputSource {
+    /// Whether `button` went down this frame.
     fn was_pressed(&self, button: Button) -> bool;
+    /// Whether `button` is down, this frame included.
     fn is_pressed(&self, button: Button) -> bool;
+    /// Whether `button` came up this frame.
     fn was_released(&self, button: Button) -> bool;
 
+    /// Whether this frame carries any touch at all, down or just lifted.
     fn has_touch(&self) -> bool;
 
     /// Whether the device has a Left/Right pair to nudge a value with.
@@ -76,11 +101,15 @@ pub trait InputSource {
     /// slider drag needs.
     fn touch_held(&self) -> Option<Point>;
 
+    /// Whether a finger lifted this frame.
     fn touch_released(&self) -> bool;
 
+    /// A completed swipe, or [`SwipeDir::None`].
     fn swipe(&self) -> SwipeDir;
 
+    /// The system back gesture, an edge swipe on a touch device.
     fn was_back_gesture(&self) -> bool;
+    /// The system home gesture, offered to the screen before the host acts.
     fn was_home_gesture(&self) -> bool;
 
     /// Which way a vertical swipe moves focus.
@@ -98,18 +127,22 @@ pub trait InputSource {
 pub struct Input;
 
 impl Input {
+    /// See [`InputSource::was_pressed`].
     pub fn was_pressed(button: Button) -> bool {
         super::current().was_pressed(button)
     }
 
+    /// See [`InputSource::is_pressed`].
     pub fn is_pressed(button: Button) -> bool {
         super::current().is_pressed(button)
     }
 
+    /// See [`InputSource::was_released`].
     pub fn was_released(button: Button) -> bool {
         super::current().was_released(button)
     }
 
+    /// See [`InputSource::has_touch`].
     pub fn has_touch() -> bool {
         super::current().has_touch()
     }
@@ -119,26 +152,32 @@ impl Input {
         super::current().has_left_right_keys()
     }
 
+    /// See [`InputSource::tap`].
     pub fn tap() -> Option<Point> {
         super::current().tap()
     }
 
+    /// See [`InputSource::touch_held`].
     pub fn touch_held() -> Option<Point> {
         super::current().touch_held()
     }
 
+    /// See [`InputSource::touch_released`].
     pub fn touch_released() -> bool {
         super::current().touch_released()
     }
 
+    /// See [`InputSource::swipe`].
     pub fn swipe() -> SwipeDir {
         super::current().swipe()
     }
 
+    /// See [`InputSource::was_back_gesture`].
     pub fn was_back_gesture() -> bool {
         super::current().was_back_gesture()
     }
 
+    /// See [`InputSource::was_home_gesture`].
     pub fn was_home_gesture() -> bool {
         super::current().was_home_gesture()
     }
@@ -207,10 +246,12 @@ impl KeyRow {
         self.0.is_empty()
     }
 
+    /// Whether some slot carries `key`.
     pub fn contains(&self, key: RowKey) -> bool {
         self.0.contains(&key)
     }
 
+    /// The slots, left to right.
     pub fn iter(&self) -> impl Iterator<Item = RowKey> + use<> {
         self.0.iter().copied()
     }

@@ -20,9 +20,12 @@ use crate::geometry::{Point, Size};
 /// ```
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub enum Alignment {
+    /// Against the leading edge: left in a `vstack!`, top in an `hstack!`.
     #[default]
     Start,
+    /// Centred across the stack.
     Center,
+    /// Against the trailing edge: right in a `vstack!`, bottom in an `hstack!`.
     End,
 }
 

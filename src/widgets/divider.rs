@@ -24,6 +24,7 @@ impl Default for Divider {
 }
 
 impl Divider {
+    /// A rule across the width it is given.
     pub fn new() -> Self {
         Divider {
             measured: Size::ZERO,
