@@ -155,9 +155,6 @@ flowchart TD
   style xpui stroke-width:3px
 ```
 
-How the ten are checked out side by side, and the rules all of them share, is in
-[`xpui`'s `docs/orientation.md`](https://github.com/XPUI-Framework/xpui-framework/blob/main/docs/orientation.md).
-
 ## License
 
 MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Thiago Holanda.
