@@ -108,16 +108,13 @@ xpui::testing::reset();
 
 ## 4. Pixels
 
-`xpui-screenshot` renders to memory, and `assert_screenshot` compares the panel against a committed PNG, pixel for
-pixel. One flipped pixel fails.
-
-```bash
-UPDATE_SNAPSHOTS=1 cargo test   # accept intended changes, then look at them
-open target/diff/               # after a failure: expected | actual | differences
-```
-
-The first run of a new shot writes the golden **and fails**, so nobody commits
-a picture they never looked at.
+Nothing in this repository draws a pixel — it has no backend — so no test
+here compares one. `xpui-screenshot` renders to memory and compares the panel
+against a committed PNG, pixel for pixel, and it lives beside the backends:
+[`xpui-backends`' screenshot guide](https://github.com/XPUI-Framework/xpui-backends/blob/main/embedded_graphics/docs/screenshots.md)
+is how such a test is written and a golden accepted, and
+[`xpui-gallery`](https://github.com/XPUI-Framework/xpui-gallery) runs every
+screen through it on all seven boards.
 
 ## Two things that will bite
 

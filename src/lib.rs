@@ -16,8 +16,10 @@
 //! # ;
 //! ```
 //!
-//! See `docs/tutorial.md` for a walkthrough, and `docs/architecture.md` for
-//! how a frame runs.
+//! See [the tutorial](https://github.com/XPUI-Framework/xpui-framework/blob/main/docs/tutorial.md)
+//! for a walkthrough, and
+//! [the architecture](https://github.com/XPUI-Framework/xpui-framework/blob/main/docs/architecture.md)
+//! for how a frame runs.
 //!
 //! # Layers
 //!

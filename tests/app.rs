@@ -371,9 +371,8 @@ fn only_one_screen_is_accepted_per_frame() {
 
 /// Navigation makes the screen stale without anyone asking.
 ///
-/// It is not the only thing that does — see `moving_the_focus_repaints`. This
-/// comment used to claim it was, which is roughly how the arrow keys came to
-/// do nothing.
+/// It is not the only thing that does — see `moving_the_focus_repaints`, which
+/// is what keeps the arrow keys from doing nothing.
 #[test]
 fn navigating_marks_the_screen_dirty() {
     let _guard = serial();

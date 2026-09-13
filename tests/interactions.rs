@@ -663,9 +663,8 @@ impl xpui::Screen for ClampedDial {
 
 /// Opening a value changes the frame, and changes it differently from focus.
 ///
-/// The whole complaint against spec 26's mode was that entering it repainted an
-/// identical frame — on a Badger, a second of the panel's life spent saying
-/// nothing. Three states, three pictures: idle, focused, open. If any two match,
+/// A mode whose entry repaints an identical frame is invisible — on a Badger, a
+/// second of the panel's life spent saying nothing. Three states, three pictures: idle, focused, open. If any two match,
 /// the mode is invisible and the refresh that entered it bought nothing.
 #[test]
 fn the_three_states_of_a_value_row_look_different() {
@@ -1216,13 +1215,13 @@ fn a_mapped_child_inherits_the_focus_of_the_control_wrapping_it() {
 
 /// A value control behind `map` gets the whole mode, not half of it.
 ///
-/// `Interactions::child` builds the collector a sub-component declares into. It
-/// used to build a bare one, so a `Slider` inside a mapped component learned
-/// neither that an edit was open nor what the working value was: the knob stood
-/// still while the keys moved a copy it could not see, the hint bar promised
+/// `Interactions::child` builds the collector a sub-component declares into. A
+/// bare one would leave a `Slider` inside a mapped component knowing neither
+/// that an edit was open nor what the working value was: the knob standing
+/// still while the keys moved a copy it could not see, the hint bar promising
 /// Cancel and Done because the runtime reads its own state, and Confirm then
-/// jumped the screen to a number the panel had never shown. That is exactly the
-/// invisible mode this whole mechanism exists to remove, reintroduced for every
+/// jumping the screen to a number the panel had never shown. That is exactly
+/// the invisible mode this whole mechanism exists to remove, for every
 /// component that speaks its own message type.
 #[test]
 fn a_mapped_value_control_shows_the_open_edit() {
@@ -1299,11 +1298,10 @@ fn a_mapped_value_control_shows_the_open_edit() {
 
 /// A mapped control does not paint itself focused when the keys are elsewhere.
 ///
-/// `child` used to hand a sub-component `focus.saturating_sub(focusable)`,
-/// which answers `0` when the focus is *behind* the subtree — so the first
-/// control inside a mapped component believed it held a focus sitting on a row
-/// above it. Two things looked selected and one was. Invisible while a focused
-/// slider looked like an unfocused one; a wrong highlight now that it does not.
+/// Handing a sub-component `focus.saturating_sub(focusable)` answers `0` when
+/// the focus is *behind* the subtree — so the first control inside a mapped
+/// component would believe it held a focus sitting on a row above it, and two
+/// things would look selected when one was.
 #[test]
 fn a_mapped_control_is_not_focused_when_the_focus_is_above_it() {
     testing::install();
@@ -1628,7 +1626,7 @@ fn the_bar_offers_no_edit_on_a_control_that_cannot_be_opened() {
 /// A swipe cannot walk the focus out from under an open edit.
 ///
 /// Touch and swipe are resolved before the keys and know nothing about the
-/// edit, so a swipe used to move the highlight while the keys carried on
+/// edit, so unchecked a swipe moves the highlight while the keys carry on
 /// driving the control it left — the value and the thing that looks selected
 /// disagreeing, with no way back to noticing it.
 #[test]
@@ -1671,8 +1669,8 @@ fn a_swipe_is_declined_while_a_value_is_open() {
 
 /// One nudge, five units — what a frontlight row does.
 ///
-/// The other way a cancel computed from steps goes wrong, and the one spec 26
-/// got right: a screen that scales reads an inverse total of `-4` as `-20`.
+/// The other way a cancel computed from steps goes wrong: a screen that scales
+/// reads an inverse total of `-4` as `-20`.
 struct ScaledDial {
     value: i32,
     dispatches: usize,
@@ -1802,10 +1800,10 @@ fn a_control_that_cannot_be_committed_is_not_editable() {
 /// Cancel costs nothing on a screen that clamps, and the panel clamps too.
 ///
 /// From 98, four Ups against a maximum of 100: two land and two are refused.
-/// Cancelling used to dispatch the inverse of the four steps it had counted and
+/// A cancel that dispatched the inverse of the four steps it had counted would
 /// leave the value on **96** — below where the edit began, which is the one
-/// thing a cancel must never do. There is no count and no dispatch now; the
-/// clamp lives in the working copy, so the panel stops at 100 as well.
+/// thing a cancel must never do. There is no count and no dispatch; the clamp
+/// lives in the working copy, so the panel stops at 100 as well.
 #[test]
 fn cancelling_an_edit_costs_nothing_when_the_value_clamps() {
     testing::install();
@@ -2035,9 +2033,9 @@ fn editing_across_a_panel_refresh_moves_by_one_step() {
 /// The Badger's e-ink refresh is around 800 ms and the loop is blind for all of
 /// it: the frame that presented sampled input *before* the press did anything,
 /// and the finger comes off somewhere inside the refresh, so the level still
-/// reads down on the frame after. Repeat used to credit that whole gap to the
-/// hold and fire — a single press of Down walked the selection several rows,
-/// which is what it did on real hardware.
+/// reads down on the frame after. A repeat that credits that whole gap to the
+/// hold fires, and a single press of Down walks the selection several rows on
+/// real hardware.
 #[test]
 fn a_slow_panel_does_not_turn_one_press_into_many() {
     let mut runtime = runtime(false);

@@ -1,7 +1,7 @@
 # Writing a backend
 
 You have hardware nobody here supports and you want a screen on it. This is the
-path: six traits, in the order you need them, and the obligations the compiler
+path: five traits, in the order you need them, and the obligations the compiler
 cannot check.
 
 [`host.md`](host.md) is the contract itself, method by method.

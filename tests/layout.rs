@@ -45,9 +45,9 @@ fn layout_and_capture(view: &mut dyn View<()>) -> Vec<testing::TextDraw> {
     testing::drawn_text()
 }
 
-/// The regression that started all this: a flexible spacer used to be measured
-/// against the whole screen on top of its fixed siblings, so the footer landed
-/// hundreds of pixels below the panel and the renderer logged a write per pixel.
+/// A flexible spacer measured against the whole screen on top of its fixed
+/// siblings lands the footer hundreds of pixels below the panel, and the
+/// renderer logs a write per pixel.
 #[test]
 fn every_draw_lands_inside_the_content_band() {
     let mut screen = info_screen();
@@ -125,8 +125,8 @@ fn text_measures_with_real_font_metrics() {
     assert_eq!(size.width, testing::text_width("hello", font_id));
 }
 
-/// Bold must actually change the style handed to the renderer. It used to be a
-/// builder that returned `self` unchanged.
+/// Bold must actually change the style handed to the renderer, not return
+/// `self` unchanged.
 #[test]
 fn bold_reaches_the_renderer() {
     let mut plain = Text::new("x");

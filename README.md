@@ -1,6 +1,11 @@
 [![CI](https://github.com/XPUI-Framework/xpui-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/XPUI-Framework/xpui-framework/actions/workflows/ci.yml) [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-# `xpui`
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-black.png">
+  <img src="assets/logo-white.png" alt="XPUI" width="64" height="64">
+</picture>
+
+# XPUI Framework
 
 > [!WARNING]
 > Under heavy development. Not production-ready. The API can break without
@@ -16,6 +21,8 @@ bare metal, and holds no trace of any product or drawing library: a
 painting through five small traits, which is what lets every test run on a
 laptop.
 
+Every document in this repository is listed in [docs/README.md](docs/README.md).
+
 ## Using it
 
 ```toml
@@ -28,7 +35,7 @@ xpui = { git = "https://github.com/XPUI-Framework/xpui-framework", branch = "mai
 xpui = { git = "https://github.com/XPUI-Framework/xpui-framework", branch = "main", features = ["testing"] }
 ```
 
-Nothing is on crates.io yet, which is what the banner above is about. A
+Nothing is on crates.io yet, which is why the dependency above is a `git` URL. A
 screen is a struct that says what it looks like and how it changes:
 
 ```rust
@@ -96,22 +103,6 @@ the tests, every documented snippet compiled, every public item documented,
 and every link and command in the prose resolved. How a change is reviewed
 is in [docs/contributing.md](docs/contributing.md).
 
-## Where next
-
-| | |
-|---|---|
-| [docs/reference.md](docs/reference.md) | the whole of the public API, by area |
-| [docs/orientation.md](docs/orientation.md) | the ten repositories, a clean machine, the gate, and the traps |
-| [docs/tutorial.md](docs/tutorial.md) | from an empty file to a screen |
-| [docs/a-second-screen.md](docs/a-second-screen.md) | lists, navigation, scrolling, and where to go for a widget of your own |
-| [docs/architecture.md](docs/architecture.md) | the three conversations, how a frame runs, and what the crate holds |
-| [docs/design.md](docs/design.md) | the arguments behind choices the code states in one sentence |
-| [docs/host.md](docs/host.md) | the contract a backend implements |
-| [docs/writing-a-backend.md](docs/writing-a-backend.md) | implementing the five traits, and proving the result |
-| [docs/writing-a-widget.md](docs/writing-a-widget.md) | adding to the framework |
-| [docs/testing.md](docs/testing.md) | the four layers, and driving a screen the way a person does |
-| [docs/contributing.md](docs/contributing.md) | building it, the gate, the five review steps, and how a commit is written |
-
 ## Where it sits
 
 Every arrow is a dependency in a `Cargo.toml`, and they all point inward
@@ -121,7 +112,7 @@ knowing it exists, and a firmware reaches whatever it needs directly rather
 than through whoever happens to sit above it.
 
 ```mermaid
-flowchart BT
+flowchart TD
   xpui["xpui<br/>the framework"]
   chrome["xpui-chrome<br/>components"]
   boards["xpui-boards<br/>seven devices"]
@@ -163,6 +154,9 @@ flowchart BT
   dev --> gallery
   style xpui stroke-width:3px
 ```
+
+How the ten are checked out side by side, and the rules all of them share, is in
+[`xpui`'s `docs/orientation.md`](https://github.com/XPUI-Framework/xpui-framework/blob/main/docs/orientation.md).
 
 ## License
 

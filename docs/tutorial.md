@@ -27,7 +27,7 @@ a switch for what to do when the cover closes.
 │  Sleep when closed         Yes   │
 │                                  │
 ├──────────────────────────────────┤
-│  Back        Save                │   button hints — also the backend's
+│  Back        Edit                │   button hints — also the backend's
 └──────────────────────────────────┘
 ```
 
@@ -118,6 +118,8 @@ cd xpui-gallery && cargo run -p xpui-tutorial
 
 Beside this checkout, not inside it — every repository in the organisation
 expects its siblings next to it, and the rest of this page assumes the same.
+The window is drawn through SDL2, which has to be installed first; it is one
+step of [a clean machine, in order](orientation.md#a-clean-machine-in-order).
 
 Arrows move focus, Enter confirms, Backspace goes back, Q or Escape quits.
 Clicking is a tap and the scroll wheel is a swipe, so touch behaviour works too.
@@ -484,5 +486,7 @@ open tutorial/tests/screenshots/tutorial.png  # the frame it must paint
 - [reference.md](reference.md) — every widget, layout and modifier
 - [architecture.md](architecture.md) — how a frame actually runs
 - [host.md](host.md) — the contract a backend implements
-- [`examples/gallery/`](https://github.com/XPUI-Framework/xpui-gallery/tree/main/gallery) — five more screens, each
-  demonstrating one part of the framework
+- [orientation.md](orientation.md) — the ten repositories side by side, a
+  clean machine, and the gate
+- [`xpui-gallery`'s `gallery/`](https://github.com/XPUI-Framework/xpui-gallery/tree/main/gallery) — seven more
+  screens, each demonstrating one part of the framework

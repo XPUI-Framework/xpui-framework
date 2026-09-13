@@ -32,13 +32,9 @@ change is done, and read the real exit code.
 
 ## What only this repository checks
 
-- **`the framework names no product`** — the genericity grep, carried by
-  `xpui` alone. Every other repository is allowed to say a device's name.
-- **Two bare-metal clippy runs** under `lint`, on `riscv32imc` and
-  `thumbv6m`. The host build never parses code behind
-  `cfg(target_os = "none")`, so these are the only checks that reach the
-  `no_std` paths before a firmware build does.
-- **The genericity of the README** is not checked; the grep reads `src/`.
+**`the framework names no product`** — the genericity grep, carried by
+`xpui` alone. Every other repository is allowed to say a device's name. It
+reads `src/`, so the README's genericity is not checked.
 
 ## Style that bites here
 
@@ -68,6 +64,7 @@ change is done, and read the real exit code.
 | Document | Proven by |
 |---|---|
 | [`README.md`](README.md) | its `rust` fences are doctests, mounted by `src/lib.rs` |
+| [`docs/README.md`](docs/README.md) | its paths resolve; the README-heading check exempts it, because it is the index of `docs/`, not a front page |
 | [`docs/reference.md`](docs/reference.md) | doctests, mounted by `src/lib.rs` |
 | [`docs/tutorial.md`](docs/tutorial.md), [`docs/a-second-screen.md`](docs/a-second-screen.md) | doctests, mounted by `src/lib.rs` |
 | [`docs/architecture.md`](docs/architecture.md), [`docs/host.md`](docs/host.md) | doctests, mounted by `src/lib.rs` |
@@ -76,7 +73,7 @@ change is done, and read the real exit code.
 | [`docs/orientation.md`](docs/orientation.md) | every relative path resolves (`documented paths resolve`); its organisation links are `xpui-dev`'s to check |
 | [`docs/contributing.md`](docs/contributing.md) | every path and command it gives resolves; the umbrella command is `xpui-dev`'s |
 | `AGENTS.md` | the stage list above is compared to what the gate runs |
-| every `///` and `//!` | `rustdoc links resolve`, and the two comment checks |
+| every `///` and `//!` | `rustdoc links resolve`, built with `--features testing` only — the default build docs.rs makes is not checked — and the two comment checks |
 
 A `rust` fence in a page nothing mounts fails `prose is compiled`. A path or
 command in any page that does not resolve fails its check.

@@ -70,6 +70,9 @@ it names. So a device states its row, and a slot with nothing behind it is
 ## `Text` is one line
 
 There is no wrapping widget yet, and list rows that carry a subtitle are
-single-line by the theme's own rule. A label wider than its space is cut by
-the panel's edge, not wrapped; `ListRow` is the widget that measures and
-ellipses.
+single-line by the theme's own rule. `Text` measures one line, the font's line
+height, and a label wider than its space is cut by the panel's edge. A list
+row is different: `Chrome::draw_list` hands the host each title, value and
+subtitle whole, so whether a long one ends in an ellipsis is the backend's
+decision rather than the framework's. `xpui-chrome` shortens them; a C++ host
+drawing its own widgets does whatever that toolkit does.

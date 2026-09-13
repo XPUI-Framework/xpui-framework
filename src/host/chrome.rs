@@ -102,7 +102,7 @@ pub trait Chrome {
     fn metric(&self, metric: ThemeMetric) -> i32;
 
     /// The header band, including whatever the host puts in it (a battery
-    /// indicator, say). `None` uses the screen's own title.
+    /// indicator, say). `None` means no title: the band is drawn empty.
     fn draw_header(&self, title: Option<&str>, subtitle: Option<&str>);
 
     /// A section heading in `rect`, with an optional right-aligned value.

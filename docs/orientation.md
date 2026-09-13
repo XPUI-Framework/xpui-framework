@@ -63,8 +63,8 @@ the crate. See [the repository name](#the-repository-name).
    toolchain file, so rustup installs it on the first call; where a gate finds
    one missing it either fails and says which command installs it, or prints
    `SKIPPED` and the target — never silence.
-3. **SDL2** — `brew install sdl2` or `apt install libsdl2-dev`. The simulator
-   links it.
+3. **SDL2** — `brew install sdl2` or `sudo apt install libsdl2-dev`. The
+   simulator links it.
 4. **clang-format 21 or newer** — the two repositories with C++ format it,
    and an older clang-format ignores options it does not know rather than
    rejecting them.

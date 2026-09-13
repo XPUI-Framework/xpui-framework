@@ -16,7 +16,7 @@ what exists.
 - [The host façades](#the-host-façades)
 - [Geometry](#geometry)
 
-Every ```rust block below is compiled and run by `cargo test -p xpui --features
+Every `rust` block below is compiled and run by `cargo test -p xpui --features
 testing --doc`. That is the point of writing them this way: a snippet that stops
 matching the API fails CI rather than quietly teaching the wrong thing. It is
 also why most of them install the fake host first — widgets resolve fonts and
@@ -952,7 +952,7 @@ than threading a context through every call.
 
 | Façade | For |
 |---|---|
-| `Renderer` | Drawing primitives and `screen_size()`. Mostly for widget authors. |
+| `Renderer` | Drawing primitives, `screen_size()` and `screen_bounds()`. Mostly for widget authors. |
 | `Theme` | Themed furniture and the metrics behind it. |
 | `Input` | One frame of buttons, touch and gestures. |
 | `ScreenChrome` | The header band and the button hints. Used by the screen roots. |
@@ -1039,6 +1039,7 @@ assert_eq!(Size::new(10, 10).shrink(20, 0), Size::new(0, 10));
 ```
 
 `Rect` also offers `x()`, `y()`, `width()`, `height()`, `right()`, `bottom()`
-and `intersects()`. Edges are treated consistently: both `contains` and
-`intersects` count the right and bottom edges as outside, so two rectangles that
-merely touch do not overlap.
+and `intersects()`, and `Insets` its `horizontal()` and `vertical()` totals.
+Edges are treated consistently: both `contains` and `intersects` count the
+right and bottom edges as outside, so two rectangles that merely touch do not
+overlap.

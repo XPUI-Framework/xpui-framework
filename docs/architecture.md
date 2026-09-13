@@ -175,7 +175,10 @@ from both entry points rather than assuming which arrives first.
 
 ## What the crate holds
 
-Every public item is in [reference.md](reference.md); this is the shape.
+[reference.md](reference.md) is the API a screen uses, by area;
+[writing-a-widget.md](writing-a-widget.md) carries what a widget author adds
+to it, `Trigger` and `Interactions` among them; rustdoc lists every item. This
+is the shape.
 
 **Widgets** — [`src/widgets/`](../src/widgets/)
 

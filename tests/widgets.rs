@@ -221,8 +221,8 @@ fn image_measures_to_its_own_size_and_rejects_a_short_buffer() {
 }
 
 /// A 32px glyph is a legitimate control but a poor finger target, and two of
-/// them side by side used to need the screen to reserve space by hand. The
-/// widget must do it: each reserves the theme minimum on both axes, so laying
+/// them side by side must not need the screen to reserve space by hand. The
+/// widget does it: each reserves the theme minimum on both axes, so laying
 /// two in a row cannot leave them competing for the same tap.
 #[test]
 fn icon_toggle_reserves_a_full_touch_target() {

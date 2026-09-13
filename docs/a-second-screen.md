@@ -8,7 +8,7 @@ Everything below runs with no backend at all — `xpui::testing` is a host that
 draws into memory and records what it drew. Put a window under it whenever you
 like; you will not need one to follow this.
 
-`examples/gallery` in the [gallery repository](https://github.com/XPUI-Framework/xpui-gallery)
+`gallery/` in the [gallery repository](https://github.com/XPUI-Framework/xpui-gallery)
 is the worked version of all of it, running on seven panels.
 
 ## 1. A list is not a stack of rows
