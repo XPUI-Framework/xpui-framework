@@ -71,6 +71,7 @@ impl<M: Clone + 'static> Stepper<M> {
     }
 
     /// Names the control on the same line as its number.
+    ///
     /// See [`Slider::title`](crate::Slider::title).
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
@@ -78,12 +79,19 @@ impl<M: Clone + 'static> Stepper<M> {
     }
 
     /// Sends `make(new_value)` when the track is dragged or tapped.
+    ///
+    /// It is also what an open edit commits, so a stepper without it can be
+    /// nudged but never opened.
     pub fn on_change(mut self, make: fn(i32) -> M) -> Self {
         self.change = Some(make);
         self
     }
 
-    /// Sends `make(-1)` or `make(+1)` from the end glyphs.
+    /// Sends `make(-1)` or `make(+1)` from the end glyphs and the Left/Right
+    /// keys.
+    ///
+    /// It is also what draws the glyphs and makes the stepper a focus stop:
+    /// without it, no key reaches the control.
     pub fn on_step(mut self, make: fn(i32) -> M) -> Self {
         self.step = Some(make);
         self

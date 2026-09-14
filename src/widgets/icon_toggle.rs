@@ -50,8 +50,10 @@ impl<M: Clone> IconToggle<M> {
         }
     }
 
-    /// Sends `make(next_state)` when tapped. The framework flips the value, so
-    /// the screen never writes `!self.something`.
+    /// Sends `make(next_state)` when tapped.
+    ///
+    /// The framework flips the value, so the screen never writes
+    /// `!self.something`.
     pub fn on_change(mut self, make: fn(bool) -> M) -> Self {
         self.message = Some(make(!self.on));
         self

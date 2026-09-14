@@ -75,7 +75,10 @@ impl<M: 'static> NavigationScreen<M> {
         self
     }
 
-    /// The overlay, only when `when` holds. Saves a screen an `if` in `body`.
+    /// The overlay, only when `when` holds.
+    ///
+    /// Saves a screen an `if` in `body`, where both branches would otherwise
+    /// have to name the same type.
     pub fn overlay_if(self, when: bool, overlay: impl View<M> + 'static) -> Self {
         if when { self.overlay(overlay) } else { self }
     }

@@ -28,8 +28,10 @@ use crate::view::{InputMask, View};
 
 /// Chainable modifiers, available on every view.
 pub trait Modifiers<M>: View<M> + Sized {
-    /// Report a touch on this view as `message`. Also reachable by Up/Down and
-    /// fired by Confirm, so a finger and a button produce the same message.
+    /// Report a touch on this view, or Confirm while it holds focus, as
+    /// `message`.
+    ///
+    /// Up and Down reach it, so a finger and a button produce the same message.
     fn on_tap(self, message: M) -> Tappable<Self, M> {
         Tappable::new(self, message)
     }
@@ -53,8 +55,8 @@ pub trait Modifiers<M>: View<M> + Sized {
         Flexible::new(self)
     }
 
-    /// Fix this view's size, centring it in the frame. Either axis may be zero
-    /// to stay natural.
+    /// Fix this view's size, centring it in the frame; an axis of zero or less
+    /// stays natural.
     fn frame(self, width: i32, height: i32) -> Frame<Self> {
         Frame::new(self).width(width).height(height)
     }

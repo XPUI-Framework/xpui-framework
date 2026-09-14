@@ -21,9 +21,9 @@ pub struct TestHost;
 
 pub(super) static TEST_HOST: TestHost = TestHost;
 
-/// Installs the fake. Idempotent, so every test may call it.
+/// Installs the fake as the host and the navigator, each only if none is installed yet.
 ///
-/// **Idempotent means it will not take the global back off another host.** A
+/// Idempotent, so every test may call it. **Idempotent means it will not take the global back off another host.** A
 /// test binary that installs a real backend — to render pixels — and then
 /// calls this gets the backend, not the fake, and every `drawn_*` accessor
 /// comes back empty while the assertions read as though the screen drew

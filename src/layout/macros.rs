@@ -30,7 +30,7 @@ macro_rules! vstack {
     };
 }
 
-/// A horizontal stack. Same shape as [`vstack!`].
+/// A horizontal stack, written the same way as [`vstack!`].
 ///
 /// ```rust
 /// # use xpui::{HStack, Spacer, Text, hstack};

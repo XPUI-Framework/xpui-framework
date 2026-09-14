@@ -1,8 +1,9 @@
 # Orientation
 
 Read this before exploring any of the ten repositories. It is what the code
-cannot tell you: what the ten are, how they sit on disk, what a clean machine
-needs, how a change is proved, and the traps that have already cost a day.
+cannot tell you: what the ten are, how they sit on disk, and what a clean
+machine needs. How a change is proved, and the traps that have already cost a
+day, are in [contributing.md](contributing.md).
 
 ## What XPUI is
 
@@ -84,109 +85,6 @@ the crate. See [the repository name](#the-repository-name).
 | `xpui-esp32` | Rust, `riscv32imc-unknown-none-elf`; the `esp` fork for the S3 image |
 | `xpui-cpp` | Rust, clang-format; the SDK and SDL2 for the host's compile, CMake for `all` |
 | `xpui-dev` | Rust, and the other nine checked out beside it |
-
-## The gate
-
-One command in every repository:
-
-```bash
-./build-and-test.sh          # everything CI checks
-./build-and-test.sh fix      # the same, formatting in place first
-```
-
-The three repositories that produce an image — `xpui-rp2040`, `xpui-esp32`,
-`xpui-cpp` — also take `all`, which adds the link, the build or the self-test
-a quick run should not pay for.
-
-The script builds and runs `xtask/`, a Rust program with no dependencies.
-Its `main.rs` is that repository's own list of checks and is meant to differ;
-the ten modules under it — reading a markdown fence, a manifest, a path, a
-comment — are byte-identical across the nine, and `xpui-dev` fails if any two
-copies differ. A check that is written and never listed is a dead function the
-build refuses, so the list in `main.rs` is the truth about what a repository
-checks.
-
-`xpui-dev` runs what no single repository can: that the shared files agree,
-that every lock file resolves the crates whose types cross a boundary the same
-way, that every `github.com/XPUI-Framework/…` link names a file on that
-repository's pushed `main`, and — by default — every sibling's own gate. Its
-[README](https://github.com/XPUI-Framework/xpui-dev/blob/main/README.md) says
-what `cross` skips and why.
-
-## Who verifies what
-
-| | |
-|---|---|
-| **The assistant proves** | every gate, both bare-metal targets linking, each fix failing before it passes, and both agent reviews |
-| **The author proves** | the simulator window as a person sees it, flashing a board, anything on hardware |
-
-Do not open the simulator window and report what it looks like — ask. The
-headless `--frames N` path exists so the loop can be *tested*; it is not a
-substitute for eyes.
-
-## How work is organised
-
-**Work is specified before it is written.** A spec says why, what exists
-already, what to do, the acceptance criteria, and the command that proves it
-done; it is finished when somebody who was not in the conversation can execute
-it. The code comes last.
-
-A change goes through five steps, in order, and none is skipped:
-
-1. The gate passes, with the real exit code read.
-2. The [code-reviewer](../.claude/agents/code-reviewer.md) agent reviews it
-   — every finding resolved, not noted.
-3. The [docs-reviewer](../.claude/agents/docs-reviewer.md) agent reviews the
-   prose, last of the automated checks: it runs every command a document
-   gives, resolves every snippet against the API that exists, and judges every
-   comment.
-4. The author reviews the code and tests it in the simulator or on a board.
-5. They say commit. Not before.
-
-Both agents are the same two files in every repository, compared by
-`xpui-dev`. Each repository's `AGENTS.md`, loaded into every session, says
-what that repository is, what only it checks, and the style that bites there;
-this one is [`AGENTS.md`](../AGENTS.md).
-
-### Git
-
-Never stage and never commit without being asked, each time. Never push and
-never open a pull request without being asked, each time. No assistant
-self-attribution in a commit message. Never rewrite a commit that already
-exists; a correction is a new commit. The index is the reviewer's queue —
-leave new work unstaged.
-
-## Traps that have cost time
-
-- **The framework may not name a product, a device or a backend.** `xpui`'s
-  gate greps its `src/` for eleven forbidden words. Device names live in
-  `xpui-boards`, one crate per vendor; if you want to reach for a backend from
-  inside the framework, add a trait method — that is what the seam is for.
-- **Neither bare-metal target has atomic compare-and-swap.** Load and store
-  only — never `swap`, `fetch_or` or `compare_exchange`. Cortex-M0+ has none,
-  and neither does `riscv32imc`, which has no A extension. The gates lint both
-  so a crate cannot be checked on one and not the other.
-- **`Canvas::draw_text` takes a top-left origin, not a baseline.** Most
-  drawing libraries take a baseline, so it is the obligation a new backend is
-  most likely to get backwards — every glyph one line too high while
-  everything compiles and every test passes. The method's own documentation
-  says how to convert. And **a font id is derived from the face's bytes**: a
-  glyph cache is keyed on it, so a stable id over changed bytes serves
-  yesterday's type with every test green; `TextMetrics::font` says so.
-- **Screenshots are compared pixel for pixel.** A first run writes the golden
-  *and fails*, so nobody commits a picture they never looked at. Re-bless with
-  `UPDATE_SNAPSHOTS=1`, then open them.
-- **The `Host` is process-wide.** Tests that install one hold the shared
-  lock `xpui::testing::Ui` keeps for its whole life, or they corrupt each
-  other in ways that look like flakiness.
-- **A git dependency on `main` means a sibling's push changes your build.**
-  Every `xpui*` dependency is `git = …, branch = "main"`, and `Cargo.lock` is
-  committed. `cargo update` re-resolves every one of them to the sibling's
-  current `main` and every third-party crate to its newest compatible version:
-  run it on purpose, in its own commit, and let `xpui-dev` compare the lock
-  files afterwards. To test a change across repositories before anything is
-  pushed, build from `xpui-dev`, whose `[patch]` table points every git
-  dependency at the checkout beside it.
 
 ## The repository name
 

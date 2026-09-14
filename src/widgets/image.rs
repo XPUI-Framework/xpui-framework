@@ -98,7 +98,7 @@ pub struct Icon {
 }
 
 impl Icon {
-    /// An icon for a role, at the theme's usual 32px.
+    /// An icon for a role, asking the host for a 32-pixel edge.
     pub fn new(icon: impl Into<IconRef>) -> Self {
         Icon {
             spec: icon.into(),

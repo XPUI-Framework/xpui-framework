@@ -41,8 +41,10 @@ use crate::testing::{Recorder, ops_log, reset};
 /// A backend already has these — this names them so the harness can reach them
 /// without knowing which backend it is driving.
 pub trait Drive {
-    /// Starts a frame, clearing the previous frame's edges. Without this a
-    /// press stays "just pressed" forever and every frame acts on it again.
+    /// Starts a frame at `millis`, clearing the previous frame's edges.
+    ///
+    /// Without this a press stays "just pressed" forever and every frame acts
+    /// on it again.
     fn begin(&self, millis: u32);
     /// Reports `button` as pressed this frame.
     fn inject_press(&self, button: Button);

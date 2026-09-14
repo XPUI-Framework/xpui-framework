@@ -25,8 +25,9 @@ pub struct ProgressBar {
 }
 
 impl ProgressBar {
-    /// A bar at `current`/`total`. A zero `total` renders empty rather than
-    /// dividing by zero.
+    /// A bar at `current` out of `total`.
+    ///
+    /// A zero `total` draws nothing rather than dividing by zero.
     pub fn new(current: u32, total: u32) -> Self {
         ProgressBar {
             current,

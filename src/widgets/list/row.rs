@@ -5,7 +5,9 @@ use alloc::string::String;
 use crate::host::RowField;
 
 /// One row: a title, and optionally a subtitle beneath it and a value on the
-/// right. Strings are converted once here rather than on every frame.
+/// right.
+///
+/// Strings are converted once here rather than on every frame.
 pub struct ListRow<M> {
     pub(super) title: String,
     pub(super) subtitle: Option<String>,
@@ -33,8 +35,9 @@ impl<M> ListRow<M> {
         self
     }
 
-    /// A boolean setting: a row whose value reads as one of two words. The
-    /// theme draws no switch graphic. Put it in the screen's
+    /// A boolean setting: a row whose value reads as one of two words.
+    ///
+    /// The theme draws no switch graphic. Put it in the screen's
     /// [`List`](crate::List) like any other row, so the theme marks the
     /// focused one.
     ///
@@ -63,7 +66,9 @@ impl<M> ListRow<M> {
         ListRow::new(title).value(value)
     }
 
-    /// Secondary text below the title. Rows get taller when any row has one.
+    /// Secondary text below the title.
+    ///
+    /// Every row in the list gets taller when any row has one.
     pub fn subtitle(mut self, subtitle: impl Into<String>) -> Self {
         self.subtitle = Some(subtitle.into());
         self
@@ -75,8 +80,9 @@ impl<M> ListRow<M> {
         self
     }
 
-    /// The right-hand value as text, if the row has one. Mainly for tests:
-    /// the theme reads it through the callback below.
+    /// The right-hand value as text, if the row has one.
+    ///
+    /// Mainly for tests: the theme reads a row's fields for itself.
     pub fn value_text(&self) -> Option<&str> {
         self.value.as_deref()
     }

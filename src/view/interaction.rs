@@ -250,7 +250,10 @@ impl<M> Interactions<M> {
     }
 
     /// Published by a scroll view: the visible band, and how tall its content
-    /// is. `None` means nothing on this screen scrolls.
+    /// is.
+    ///
+    /// Until a scroll view calls this, [`viewport`](Interactions::viewport)
+    /// answers `None`: nothing on this screen scrolls.
     pub fn set_viewport(&mut self, viewport: Rect, content_height: i32) {
         self.viewport = Some((viewport, content_height));
     }
@@ -261,16 +264,19 @@ impl<M> Interactions<M> {
         self.viewport
     }
 
-    /// How many interactions have been declared so far. A container uses this
-    /// to find the ones its own child added.
+    /// How many interactions have been declared so far.
+    ///
+    /// A container uses this to find the ones its own child added.
     pub fn len(&self) -> usize {
         self.items.len()
     }
 
     /// Withdraws `mask` from every interaction declared since `from` that falls
-    /// outside `visible`. A scrolled-away control keeps its focus stop, so it
-    /// can still be reached, but stops accepting touches aimed at whatever now
-    /// occupies that part of the screen.
+    /// outside `visible`.
+    ///
+    /// A scrolled-away control keeps its focus stop, so it can still be
+    /// reached, but stops accepting touches aimed at whatever now occupies that
+    /// part of the screen.
     pub fn restrict_outside(&mut self, from: usize, visible: Rect, mask: InputMask) {
         for item in self.items.iter_mut().skip(from) {
             if !item.rect.intersects(visible) {
@@ -284,8 +290,9 @@ impl<M> Interactions<M> {
         self.captured
     }
 
-    /// Rect of the focusable interaction at `focus`, in tree order. The
-    /// runtime scrolls to bring this into view.
+    /// Rect of the focusable interaction at `focus`, in tree order.
+    ///
+    /// The runtime scrolls to bring this into view.
     pub fn focused_rect(&self, focus: usize) -> Option<Rect> {
         self.items
             .iter()
@@ -294,8 +301,9 @@ impl<M> Interactions<M> {
             .map(|item| item.rect)
     }
 
-    /// How many interactions can hold focus. The runtime wraps its cursor on
-    /// this.
+    /// How many interactions can hold focus.
+    ///
+    /// The runtime wraps its cursor on this.
     pub fn focusable_count(&self) -> usize {
         self.focusable
     }

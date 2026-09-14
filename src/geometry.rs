@@ -29,8 +29,11 @@ impl Point {
     }
 }
 
-/// A width and height. Never negative: constructors clamp at zero so a
-/// layout that over-subtracts cannot produce inverted rectangles.
+/// A width and height, clamped at zero by every constructor.
+///
+/// A layout that over-subtracts therefore cannot produce an inverted
+/// rectangle. The fields are public, so a struct literal is not clamped: build
+/// a size from computed numbers with [`Size::new`].
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct Size {
     /// Pixels across.
@@ -182,9 +185,10 @@ impl Rect {
             && point.y < self.bottom()
     }
 
-    /// Whether the two overlap at all. Touching edges do not count, matching
-    /// [`contains`](Rect::contains), which treats the right and bottom edges as
-    /// outside.
+    /// Whether the two overlap at all.
+    ///
+    /// Touching edges do not count, matching [`contains`](Rect::contains),
+    /// which treats the right and bottom edges as outside.
     pub fn intersects(&self, other: Rect) -> bool {
         self.origin.x < other.right()
             && other.origin.x < self.right()

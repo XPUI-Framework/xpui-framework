@@ -91,8 +91,9 @@ impl<M: Clone + 'static> OverlayPanel<M> {
         self
     }
 
-    /// Overrides the header title. Prefer the activity's own, already
-    /// translated, title.
+    /// Overrides the header title.
+    ///
+    /// Prefer the activity's own, already translated, title.
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
         self

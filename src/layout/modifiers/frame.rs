@@ -24,8 +24,8 @@ use crate::view::{Interactions, View};
 /// ```
 ///
 /// `Text` and `Icon` are views for *every* message type, so a frame built from
-/// a bare one has to name which is meant. Inside a tree it never comes up: the
-/// stack supplies the type, and this reads as `child.frame(w, h)`.
+/// a bare one has to name which is meant, inside a stack as much as outside
+/// one: `Frame` does not mention the message type, so nothing infers it.
 pub struct Frame<V> {
     child: V,
     width: Option<i32>,
@@ -44,13 +44,13 @@ impl<V> Frame<V> {
         }
     }
 
-    /// Fixes the width. Zero or less leaves it natural.
+    /// Fixes the width, or leaves it natural when `width` is zero or less.
     pub fn width(mut self, width: i32) -> Self {
         self.width = (width > 0).then_some(width);
         self
     }
 
-    /// Fixes the height. Zero or less leaves it natural.
+    /// Fixes the height, or leaves it natural when `height` is zero or less.
     pub fn height(mut self, height: i32) -> Self {
         self.height = (height > 0).then_some(height);
         self

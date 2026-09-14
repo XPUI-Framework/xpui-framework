@@ -4,8 +4,9 @@
 //! painted and pushes content off the panel. Every width and height comes from
 //! the host's own font engine.
 
-/// A font the host has registered. Opaque: only the host knows what it means,
-/// and `0` means "this build does not ship that font".
+/// A font the host has registered, as a number only the host can interpret.
+///
+/// `0` means "this build does not ship that font".
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub struct FontId(
     /// The host's own number for the font; `0` is none.
@@ -13,7 +14,7 @@ pub struct FontId(
 );
 
 impl FontId {
-    /// The font a build compiled out. Measures zero and draws nothing.
+    /// The font a build compiled out, which measures zero.
     pub const UNAVAILABLE: FontId = FontId(0);
 
     /// Whether this build ships the font.
@@ -89,8 +90,10 @@ pub struct Font {
 }
 
 impl Font {
-    /// A font this build does not ship. Measures zero and draws nothing, so a
-    /// missing face degrades quietly rather than painting garbage.
+    /// A font this build does not ship, which measures zero.
+    ///
+    /// A missing face therefore takes no room in a layout. What drawing with it
+    /// paints is the host's decision.
     pub const UNAVAILABLE: Font = Font {
         id: FontId::UNAVAILABLE,
         style: FontStyle::Regular,

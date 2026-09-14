@@ -34,14 +34,17 @@ pub trait View<M> {
     fn render(&self, origin: Point);
 
     /// Declare any interactive regions, given this view sits at `origin`.
+    ///
     /// Non-interactive leaves keep the default and declare nothing.
     fn interactions(&mut self, origin: Point, out: &mut Interactions<M>) {
         let _ = (origin, out);
     }
 
     /// Whether this view absorbs leftover space along its parent's stacking
-    /// axis. Flexible views are measured in a second pass, against only what
-    /// the fixed-size siblings left behind.
+    /// axis.
+    ///
+    /// Flexible views are measured in a second pass, against only what the
+    /// fixed-size siblings left behind.
     fn is_flexible(&self) -> bool {
         false
     }
@@ -186,7 +189,8 @@ pub enum Scrim {
     /// Left exactly as it was.
     #[default]
     None,
-    /// Darkened, so the panel reads as the foreground. What is behind stays
-    /// legible — roughly half its pixels survive.
+    /// Darkened, so the panel reads as the foreground.
+    ///
+    /// What is behind stays legible — roughly half its pixels survive.
     Dim,
 }

@@ -36,29 +36,37 @@ pub enum ThemeMetric {
     ListRowHeight = 7,
     /// Height of a list row carrying a subtitle.
     ListRowHeightWithSubtitle = 8,
-    /// Space the theme leaves between one row and the next. A list that
-    /// measured without it asks for less height than the host needs, and the
-    /// host draws only rows that fully fit — so the last one silently vanishes.
+    /// Space the theme leaves between one row and the next.
+    ///
+    /// A list that measured without it asks for less height than the host
+    /// needs, and the host draws only rows that fully fit — so the last one
+    /// silently vanishes.
     ListRowGap = 14,
     /// Height of the themed progress bar.
     ProgressBarHeight = 9,
     /// The smallest comfortably tappable dimension.
     MinTouchSize = 10,
-    /// A slider knob's width. The framework converts a touch to a value with
-    /// this and [`SliderSideInset`](ThemeMetric::SliderSideInset), so both
-    /// must be the numbers the host actually draws with.
+    /// A slider knob's width.
+    ///
+    /// The framework converts a touch to a value with this and
+    /// [`SliderSideInset`](ThemeMetric::SliderSideInset), so both must be the
+    /// numbers the host actually draws with.
     SliderKnobWidth = 11,
     /// A slider knob's height, and so the least height its track needs.
     SliderKnobHeight = 12,
     /// The padding a slider's track is inset by at each end.
     SliderSideInset = 13,
     /// Height of the band a sub-header needs: the heading's own line, not a
-    /// list row. The theme draws the label top-aligned and ignores the rest,
-    /// so reserving a row's worth leaves a hole under every heading.
+    /// list row.
+    ///
+    /// The theme draws the label top-aligned and ignores the rest, so
+    /// reserving a row's worth leaves a hole under every heading.
     SubHeaderHeight = 15,
-    /// The theme's small step, for space *within* a group. Separation between
-    /// groups is the caller's stack spacing, which must stay the larger of the
-    /// two or a heading reads as belonging to whatever sits above it.
+    /// The theme's small step, for space *within* a group.
+    ///
+    /// Separation between groups is the caller's stack spacing, which must stay
+    /// the larger of the two or a heading reads as belonging to whatever sits
+    /// above it.
     SpacingSmall = 16,
 }
 
@@ -71,17 +79,21 @@ pub enum ThemeMetric {
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
 pub enum ControlState {
-    /// The keys are elsewhere. Draw it as the value it holds and nothing more.
+    /// The keys are elsewhere, so the control shows the value it holds and
+    /// nothing more.
     #[default]
     Idle = 0,
-    /// The keys would act on this control if they moved a value now. Other
-    /// focusable things already show this — match whatever a focused list row
-    /// does rather than inventing a second idiom.
+    /// The keys would act on this control if they moved a value now.
+    ///
+    /// Other focusable things already show this — match whatever a focused
+    /// list row does rather than inventing a second idiom.
     Focused = 1,
     /// The control is open: the keys that walked the list are moving this
     /// value, Confirm keeps it, and Back drops the edit rather than leaving the
-    /// screen. Must be distinguishable from [`Focused`](ControlState::Focused)
-    /// at a glance, or the mode is still invisible.
+    /// screen.
+    ///
+    /// Must be distinguishable from [`Focused`](ControlState::Focused) at a
+    /// glance, or the mode is still invisible.
     Editing = 2,
 }
 
@@ -101,33 +113,45 @@ pub trait Chrome {
     /// One geometry value from the active theme, in pixels.
     fn metric(&self, metric: ThemeMetric) -> i32;
 
-    /// The header band, including whatever the host puts in it (a battery
-    /// indicator, say). `None` means no title: the band is drawn empty.
+    /// Draws the header band, including whatever the host puts in it (a battery
+    /// indicator, say).
+    ///
+    /// A `None` title means no title, and a `None` subtitle no subtitle: with
+    /// both, the band is drawn empty. `None` never stands for the screen's own
+    /// title, which [`ScreenChrome::draw_screen_header`] fetches and passes.
     fn draw_header(&self, title: Option<&str>, subtitle: Option<&str>);
 
     /// A section heading in `rect`, with an optional right-aligned value.
     fn draw_sub_header(&self, rect: Rect, label: &str, right_label: Option<&str>);
 
-    /// The four hints, given by meaning. The host reorders them to match the
-    /// user's button layout; `None` means "your standard label for this slot".
+    /// The four button hints, given by meaning rather than by position.
+    ///
+    /// The host reorders them to match the user's button layout.
+    /// [`Hint::Standard`] means "your standard label for this slot", and
+    /// [`Hint::label`] and [`Hint::word`] say what to draw.
     fn draw_button_hints(&self, back: &Hint, confirm: &Hint, previous: &Hint, next: &Hint);
 
     /// The themed progress bar, `current` of `total` along.
     fn draw_progress_bar(&self, rect: Rect, current: u32, total: u32);
 
     /// The themed slider: a track, a fill up to `value`, and a knob over both.
+    ///
     /// The host owns every dimension of it; the framework says only where it
     /// goes, how far along it is, and what the keys will do to it next.
     fn draw_slider(&self, rect: Rect, value: i32, max: i32, state: ControlState);
 
     /// The scroll indicator beside a scrolling region: how much of `content`
-    /// the `rect`-sized window shows, and how far down it sits. The host draws
-    /// nothing when everything already fits.
+    /// the `rect`-sized window shows, and how far down it sits.
+    ///
+    /// The host draws nothing when everything already fits.
     fn draw_scroll_indicator(&self, rect: Rect, content: i32, visible: i32, offset: i32);
 
-    /// The themed list. `row` is called back per visible row and field;
-    /// returning `None` omits that field, which is how the host decides between
-    /// a one- and two-line row.
+    /// The themed list: `rows` rows laid out in `rect`, with the one at
+    /// `selected` highlighted.
+    ///
+    /// `row` is called back per visible row and field; returning `None` omits
+    /// that field, which is how the host decides between a one- and two-line
+    /// row.
     fn draw_list<'a>(
         &self,
         rect: Rect,
@@ -136,7 +160,10 @@ pub trait Chrome {
         row: &dyn Fn(usize, RowField) -> Option<&'a str>,
     );
 
-    /// The themed modal. `option` is called back per row.
+    /// The themed modal: `title` over `count` options, with the one at
+    /// `selected` highlighted.
+    ///
+    /// `options` is called back per row.
     fn draw_option_popup<'a>(
         &self,
         title: &str,
@@ -155,7 +182,7 @@ pub trait Chrome {
         index: usize,
     ) -> Option<Rect>;
 
-    /// Asks for a repaint. E-ink does not refresh on its own.
+    /// Asks for a repaint, since e-ink does not refresh on its own.
     ///
     /// On the painting trait, not [`Navigator`](super::Navigator): a repaint
     /// is a display concern, and a host that installed no navigator must
@@ -180,11 +207,14 @@ pub enum Hint {
     /// a host answers with its own word. The runtime asks for this over the
     /// Confirm key when the focused control can be edited.
     Edit,
-    /// The host's word for keeping what a value now reads. Over Confirm while
-    /// a control is open.
+    /// The host's word for keeping what a value now reads.
+    ///
+    /// Over Confirm while a control is open.
     Done,
-    /// The host's word for putting a value back. Over Back while a control is
-    /// open — the key that would otherwise leave the screen.
+    /// The host's word for putting a value back.
+    ///
+    /// Over Back while a control is open — the key that would otherwise leave
+    /// the screen.
     Cancel,
 }
 
@@ -348,7 +378,7 @@ impl ScreenChrome {
 /// compare-and-swap, so `swap` and `fetch_or` do not compile there.
 static NEEDS_PAINT: AtomicBool = AtomicBool::new(false);
 
-/// Asks for a repaint. E-ink does not refresh on its own.
+/// Asks for a repaint, which e-ink never does on its own.
 ///
 /// Anything that changes what the panel should show calls this — moving the
 /// focus, nudging a slider, a screen's own `update`. Navigation does not need

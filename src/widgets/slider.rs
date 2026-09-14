@@ -53,8 +53,10 @@ pub struct Slider<M> {
 }
 
 impl<M> Slider<M> {
-    /// A slider at `value` of `max`. A `max` of zero renders empty rather than
-    /// dividing by zero.
+    /// A slider at `value` of `max`.
+    ///
+    /// A `max` of zero or less draws no track rather than dividing by zero; a
+    /// title and a readout still draw.
     pub fn new(value: i32, max: i32) -> Self {
         Slider {
             value,
@@ -73,7 +75,8 @@ impl<M> Slider<M> {
         Slider::new(percent.clamp(0, 100), 100)
     }
 
-    /// Reports drags and taps by building a message from the new value.
+    /// Reports drags, taps and key nudges by building a message from the new
+    /// value.
     ///
     /// The framework converts the touch position, so the screen never sees
     /// geometry:

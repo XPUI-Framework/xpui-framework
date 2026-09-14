@@ -9,9 +9,9 @@ use crate::view::{InputMask, Interactions, View};
 /// Shows as much of its content as fits, and lets the rest be scrolled to.
 ///
 /// Wrap a screen's content in one and everything below the fold becomes
-/// reachable — by swipe on a touch panel, by Up/Down on a button one. The
-/// runtime scrolls to keep whatever holds focus on screen, so a screen never
-/// tracks a scroll position itself.
+/// reachable. The runtime scrolls to keep whatever holds focus on screen, so a
+/// screen never tracks a scroll position itself; where focus cannot move, Up
+/// and Down scroll by half the view instead.
 ///
 /// ```rust
 /// # use xpui::{List, ListRow, NavigationScreen, ScrollView, Section, Text, vstack};

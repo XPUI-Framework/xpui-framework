@@ -39,8 +39,10 @@ impl RectKind {
     }
 }
 
-/// The three fields of a list row, as the theme asked for them. `None` is a
-/// field the row omitted, which is how a host chooses a one- or two-line row.
+/// The title, subtitle and value of a list row, as the theme asked for them.
+///
+/// `None` is a field the row omitted, which is how a host chooses a one- or
+/// two-line row.
 pub type RowCells = [Option<String>; 3];
 
 /// One call the framework made on the host.
@@ -93,7 +95,7 @@ pub enum DrawOp {
         /// Which icon, and at what size.
         icon: IconRef,
     },
-    /// `None` lifts the clip.
+    /// A clip set on the host, or lifted when `None`.
     Clip(Option<Rect>),
     /// The header band.
     Header {
@@ -111,8 +113,11 @@ pub enum DrawOp {
         /// A right-aligned value, when the screen gave one.
         right: Option<String>,
     },
-    /// The four slots in meaning order: back, confirm, previous, next. `None`
-    /// is the host's own standard label for that slot.
+    /// The button hints in meaning order: back, confirm, previous, next.
+    ///
+    /// `None` is the host's own standard label for that slot, a word the host
+    /// owns is recorded as `<edit>`, `<done>` or `<cancel>`, and a blank slot is
+    /// an empty string.
     Hints([Option<String>; 4]),
     /// A determinate progress bar.
     ProgressBar {

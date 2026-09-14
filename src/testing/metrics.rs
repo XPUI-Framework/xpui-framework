@@ -5,7 +5,7 @@ use crate::geometry::Size;
 
 /// The width of the panel the fake reports: a portrait e-reader.
 pub const SCREEN_WIDTH: i32 = 480;
-/// Its height.
+/// The height of the panel the fake reports.
 pub const SCREEN_HEIGHT: i32 = 800;
 
 /// Gap above the header band.

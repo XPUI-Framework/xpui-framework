@@ -175,41 +175,7 @@ from both entry points rather than assuming which arrives first.
 
 ## What the crate holds
 
-[reference.md](reference.md) is the API a screen uses, by area;
+[reference.md](reference.md) is every public item the crate holds, by area,
+each with its declaration, examples and a picture of what it draws.
 [writing-a-widget.md](writing-a-widget.md) carries what a widget author adds
-to it, `Trigger` and `Interactions` among them; rustdoc lists every item. This
-is the shape.
-
-**Widgets** — [`src/widgets/`](../src/widgets/)
-
-| | |
-|---|---|
-| [`Text`](../src/widgets/text.rs) | One line, measured with the backend's real font metrics |
-| [`Icon`](../src/widgets/image.rs) | A backend asset chosen by *role*, not filename |
-| [`IconToggle`](../src/widgets/icon_toggle.rs) | An icon that shows a boolean and flips it |
-| [`Image`](../src/widgets/image.rs) | A 1-bit bitmap you supply |
-| [`List` / `ListRow`](../src/widgets/list/) | Rows drawn by the backend's own theme |
-| [`Section`](../src/widgets/section.rs) | A titled group of anything |
-| [`Toggle`](../src/widgets/toggle.rs) | A boolean row reading On / Off |
-| [`Slider`](../src/widgets/slider.rs) | A track, moved by a drag, a tap or a key, over its own name and value |
-| [`Stepper`](../src/widgets/stepper.rs) | `−`, track and `+` as one control, over the same line |
-| [`ProgressBar`](../src/widgets/progress.rs) | Determinate progress |
-| [`Divider`](../src/widgets/divider.rs) | A one-pixel rule |
-| [`Modal`](../src/widgets/modal.rs) | A centred option dialog that captures input while open |
-
-**Layout** — [`src/layout/`](../src/layout/)
-
-`vstack!` and `hstack!` stack things with a gap. `Spacer` eats whatever space is
-left, so a footer sits at the bottom without arithmetic. `Padding`, `Frame`,
-`Flexible` and `Tappable` are chainable modifiers: `Text::new("−").frame(44, 44)`.
-
-`ScrollView` wraps content taller than the screen. It clips what overflows and
-the runtime scrolls to keep the focused control visible — by swipe on a touch
-panel, by Up/Down on a button one — so a screen never tracks a scroll position.
-
-**Screen roots** — [`src/screen/`](../src/screen/)
-
-`NavigationScreen` is an ordinary page with a header and button hints, and takes
-an `.overlay()` drawn above its content for dialogs. `OverlayPanel` is a
-drop-down that leaves the screen beneath it intact, and can dim it with
-`Scrim::Dim`.
+to it, `Trigger` and `Interactions` among them.

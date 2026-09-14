@@ -62,7 +62,9 @@ pub fn drawn_headers() -> Vec<Option<String>> {
 }
 
 /// Every list drawn since the last [`reset`](super::reset), as
-/// `(rows, selected)`. `selected` is `-1` when the theme was asked to highlight
+/// `(rows, selected)`.
+///
+/// `selected` is `-1` when the theme was asked to highlight
 /// nothing — which is what a list behind a dialog must report.
 pub fn drawn_lists() -> Vec<(usize, i32)> {
     ops_log()
@@ -87,7 +89,9 @@ pub fn drawn_list_rows() -> Vec<Vec<RowCells>> {
 }
 
 /// Every option dialog drawn since the last [`reset`](super::reset), as
-/// `(title, options, highlighted)`. The highlight is what the arrows move, so
+/// `(title, options, highlighted)`.
+///
+/// The highlight is what the arrows move, so
 /// this is how a test proves they are alive.
 pub fn drawn_popups() -> Vec<(String, usize, i32)> {
     ops_log()
@@ -135,7 +139,9 @@ pub fn drawn_sub_headers() -> Vec<(Rect, String)> {
 }
 
 /// Every slider drawn since the last [`reset`](super::reset), as
-/// `(rect, value, max)`. The host owns the knob and track, so this is what a
+/// `(rect, value, max)`.
+///
+/// The host owns the knob and track, so this is what a
 /// test can hold the widget to.
 pub fn drawn_sliders() -> Vec<(Rect, i32, i32)> {
     ops_log()
@@ -183,7 +189,8 @@ pub fn drawn_indicators() -> Vec<(i32, i32, i32)> {
 }
 
 /// Every clip set or lifted since the last [`reset`](super::reset), in order.
-/// `None` is a lift - a scroll view must leave one behind, or the chrome drawn
+///
+/// `None` is a lift: a scroll view must leave one behind, or the chrome drawn
 /// after it would stay clipped away.
 pub fn clips() -> Vec<Option<Rect>> {
     ops_log()

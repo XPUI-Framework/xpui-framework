@@ -15,7 +15,7 @@
 
 use alloc::boxed::Box;
 
-use crate::screen::Driver;
+use crate::screen::{Driver, Screen};
 
 /// The navigation a screen sits inside.
 pub trait Navigator: Sync {
@@ -87,7 +87,7 @@ pub fn finish_screen() {
 /// Returns `false` when the host's navigation is not the framework's to drive
 /// — see [`Navigator::present`]. The screen is dropped in that case, having
 /// gone nowhere.
-pub fn present<S: crate::screen::Screen + 'static>(screen: S) -> bool {
+pub fn present<S: Screen + 'static>(screen: S) -> bool {
     super::navigator()
         .present(Box::new(crate::screen::Runtime::new(screen)))
         .is_none()

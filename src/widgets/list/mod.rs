@@ -66,11 +66,12 @@ impl<M> List<M> {
         self
     }
 
-    /// Highlights a row explicitly, overriding the framework's focus.
+    /// Highlights a row whenever none of the list's rows holds focus.
     ///
-    /// Rarely needed: a list whose rows carry messages is highlighted by
-    /// whichever row currently holds focus. Out-of-range values highlight
-    /// nothing.
+    /// A list whose rows carry messages is highlighted by whichever row holds
+    /// focus, and focus wins. This is for rows nothing focuses: a list of
+    /// read-outs, or a list while focus is on a control beside it. An index
+    /// past the last row highlights nothing.
     pub fn selected(mut self, index: usize) -> Self {
         self.selected = i32::try_from(index).unwrap_or(-1);
         self

@@ -66,6 +66,46 @@ pub mod testing;
 mod guides {
     #[doc = include_str!("../docs/reference.md")]
     pub mod reference {}
+    #[doc = include_str!("../docs/reference/lists.md")]
+    pub mod reference_lists {}
+    #[doc = include_str!("../docs/reference/navigation.md")]
+    pub mod reference_navigation {}
+    #[doc = include_str!("../docs/reference/screens.md")]
+    pub mod reference_screens {}
+    #[doc = include_str!("../docs/reference/views.md")]
+    pub mod reference_views {}
+    #[doc = include_str!("../docs/reference/layout.md")]
+    pub mod reference_layout {}
+    #[doc = include_str!("../docs/reference/modifiers.md")]
+    pub mod reference_modifiers {}
+    #[doc = include_str!("../docs/reference/text-and-images.md")]
+    pub mod reference_text_and_images {}
+    #[doc = include_str!("../docs/reference/controls.md")]
+    pub mod reference_controls {}
+    #[doc = include_str!("../docs/reference/dialogs.md")]
+    pub mod reference_dialogs {}
+    #[doc = include_str!("../docs/reference/indicators.md")]
+    pub mod reference_indicators {}
+    #[doc = include_str!("../docs/reference/input.md")]
+    pub mod reference_input {}
+    #[doc = include_str!("../docs/reference/theme.md")]
+    pub mod reference_theme {}
+    #[doc = include_str!("../docs/reference/geometry.md")]
+    pub mod reference_geometry {}
+    #[doc = include_str!("../docs/reference/backend-contract.md")]
+    pub mod reference_backend_contract {}
+    #[doc = include_str!("../docs/reference/testing.md")]
+    pub mod reference_testing {}
+    #[doc = include_str!("../docs/reference/toggles.md")]
+    pub mod reference_toggles {}
+    #[doc = include_str!("../docs/reference/app.md")]
+    pub mod reference_app {}
+    #[doc = include_str!("../docs/reference/interactions.md")]
+    pub mod reference_interactions {}
+    #[doc = include_str!("../docs/reference/canvas-and-chrome.md")]
+    pub mod reference_canvas_and_chrome {}
+    #[doc = include_str!("../docs/reference/recording.md")]
+    pub mod reference_recording {}
     #[doc = include_str!("../docs/architecture.md")]
     pub mod architecture {}
     #[doc = include_str!("../docs/design.md")]

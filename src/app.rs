@@ -183,7 +183,9 @@ impl App {
         Some(screen)
     }
 
-    /// Whether any screen is left. The loop ends when the last one finishes.
+    /// Whether any screen is left.
+    ///
+    /// The loop ends when the last one finishes.
     pub fn is_running(&self) -> bool {
         !self.stack.is_empty()
     }
@@ -267,8 +269,10 @@ impl App {
         }
     }
 
-    /// Paints only when something changed. E-ink takes a second or more to
-    /// refresh, so an unconditional repaint is not free.
+    /// Paints only when something changed, returning whether it painted.
+    ///
+    /// E-ink takes a second or more to refresh, so an unconditional repaint is
+    /// not free.
     pub fn render_if_dirty(&mut self) -> bool {
         if !self.is_dirty() || self.stack.is_empty() {
             return false;

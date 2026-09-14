@@ -171,8 +171,8 @@ macro_rules! stack_impl {
                 $name(Stack::new($axis, spacing))
             }
 
-            /// Positions children across the stacking axis. Defaults to
-            /// [`Alignment::Start`].
+            /// Positions children across the stacking axis, at
+            /// [`Alignment::Start`] unless this is called.
             pub fn align(mut self, alignment: Alignment) -> Self {
                 self.0.alignment = alignment;
                 self
@@ -203,7 +203,9 @@ macro_rules! stack_impl {
             }
 
             /// Appends every view an iterator yields, for lists built at run
-            /// time. The item type is uniform; mix types by boxing to
+            /// time.
+            ///
+            /// The item type is uniform; mix types by boxing to
             /// `Box<dyn View>` first, which is itself a view.
             pub fn extend<V: View<M> + 'static>(
                 mut self,

@@ -24,7 +24,10 @@ pub(super) fn push(op: DrawOp) {
     OPS.with(|ops| ops.borrow_mut().push(op));
 }
 
-/// Forgets every recorded draw. Call at the start of each test.
+/// Forgets every recorded draw, pending input, input flag and counter.
+///
+/// Call at the start of each test. The clock [`set_millis`] moved stays where
+/// it is.
 pub fn reset() {
     OPS.with(|ops| ops.borrow_mut().clear());
     SWIPE.with(|swipe| swipe.set(SwipeDir::None));
@@ -43,12 +46,15 @@ pub fn ops_log() -> Vec<DrawOp> {
 }
 
 /// Reports one swipe to the next frame the runtime reads input, so navigation
-/// can be tested without a finger. Cleared by [`reset`].
+/// can be tested without a finger.
+///
+/// Cleared by [`reset`], and consumed when read.
 pub fn set_swipe(direction: SwipeDir) {
     SWIPE.with(|swipe| swipe.set(direction));
 }
 
 /// Reports one button press to the next frame the runtime reads input.
+///
 /// Cleared by [`reset`], and consumed when read, so it fires exactly once.
 pub fn press(button: Button) {
     PRESSED.with(|pressed| pressed.set(Some(button)));
@@ -69,6 +75,8 @@ pub fn release() {
 }
 
 /// Chooses which way a swipe moves focus, so both readings can be tested.
+///
+/// `false` until set, and reset to `false` by [`reset`].
 /// See [`InputSource::swipe_moves_selection`](crate::host::InputSource::swipe_moves_selection).
 pub fn set_swipe_moves_selection(enabled: bool) {
     SWIPE_MOVES_SELECTION.with(|flag| flag.set(enabled));

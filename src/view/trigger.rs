@@ -33,6 +33,7 @@ pub enum Trigger<M> {
         value: i32,
     },
     /// A relative nudge: `-1` or `+1` from Left/Right, or from a `-`/`+` glyph.
+    ///
     /// Distinct from [`Trigger::Value`] because the screen adds the delta to
     /// whatever it currently holds, rather than being handed an absolute.
     Step {
@@ -82,8 +83,9 @@ pub enum Trigger<M> {
 }
 
 impl<M: Clone> Trigger<M> {
-    /// Resolves to a message. `x` is the touch position, ignored by controls
-    /// that do not depend on it.
+    /// Resolves to a message.
+    ///
+    /// `x` is the touch position, ignored by controls that do not depend on it.
     ///
     /// Public so a test can assert what a control *would* send without driving
     /// the whole runtime.

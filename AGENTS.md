@@ -23,7 +23,7 @@ for. Screens belong in an application, devices in `xpui-boards`, painting in
 ```
 
 ```text
-format · the framework names no product · file sizes · crates are tested · READMEs warn · prose is compiled · documented paths resolve · rustdoc links resolve · documented commands resolve · lint · tests · doctests · README sections · AGENTS.md · published crates deny missing_docs · comment blocks · comment narration
+format · the framework names no product · file sizes · crates are tested · READMEs warn · prose is compiled · documented paths resolve · rustdoc links resolve · the reference mirrors rustdoc · documented commands resolve · lint · tests · doctests · README sections · AGENTS.md · published crates deny missing_docs · comment blocks · comment narration
 ```
 
 There is no `all` mode; this list is the whole of it, and a last stage,
@@ -65,7 +65,7 @@ reads `src/`, so the README's genericity is not checked.
 |---|---|
 | [`README.md`](README.md) | its `rust` fences are doctests, mounted by `src/lib.rs` |
 | [`docs/README.md`](docs/README.md) | its paths resolve; the README-heading check exempts it, because it is the index of `docs/`, not a front page |
-| [`docs/reference.md`](docs/reference.md) | doctests, mounted by `src/lib.rs` |
+| [`docs/reference.md`](docs/reference.md), [`docs/reference/`](docs/reference/) | doctests, mounted by `src/lib.rs`; every public name mirrored by `the reference mirrors rustdoc` |
 | [`docs/tutorial.md`](docs/tutorial.md), [`docs/a-second-screen.md`](docs/a-second-screen.md) | doctests, mounted by `src/lib.rs` |
 | [`docs/architecture.md`](docs/architecture.md), [`docs/host.md`](docs/host.md) | doctests, mounted by `src/lib.rs` |
 | [`docs/design.md`](docs/design.md) | mounted by `src/lib.rs`, but it carries no `rust` fence; its paths are checked like any page's |
@@ -83,6 +83,6 @@ command in any page that does not resolve fails its check.
 Never stage, never commit, never push without being asked, each time. The
 index is the reviewer's queue; leave new work unstaged. No self-attribution
 in a commit message. Never rewrite a commit that exists; a correction is a new
-commit. The rules that apply to all ten repositories, and the five review
-steps, are in [`docs/orientation.md`](docs/orientation.md); how a change is
-built and reviewed here is in [`docs/contributing.md`](docs/contributing.md).
+commit. The rules that apply to all ten repositories, the five review steps,
+and how a change is built and reviewed here are in
+[`docs/contributing.md`](docs/contributing.md).

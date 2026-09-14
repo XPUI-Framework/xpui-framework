@@ -7,12 +7,15 @@
 use super::{Runtime, Screen};
 
 /// A screen with its type erased, so a host can drive one without knowing
-/// which `Screen` it is. The lifecycle entry points live in the host crate.
+/// which `Screen` it is.
+///
+/// The lifecycle entry points live in the host crate.
 pub trait Driver {
     /// The screen was pushed, before its first frame.
     fn on_enter(&mut self);
-    /// Ticks the screen, then handles one frame of input. Called on every
-    /// frame, quiet ones included, or `tick` never runs.
+    /// Ticks the screen, then handles one frame of input.
+    ///
+    /// Called on every frame, quiet ones included, or `tick` never runs.
     fn loop_(&mut self);
     /// The screen is being popped.
     fn on_exit(&mut self);

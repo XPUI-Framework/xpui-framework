@@ -39,8 +39,10 @@ pub use metrics::{Font, FontId, FontRole, FontStyle, TextMetrics};
 pub use navigator::{Navigator, finish_screen, present};
 pub(crate) use value_mode::{ValueMode, set_value_mode, value_mode};
 
-/// Everything a backend must provide. One object implements all five, so a
-/// host installs a single value and the framework keeps one pointer.
+/// Everything a backend must provide, as one object implementing all five traits.
+///
+/// A host installs a single value and the framework keeps one pointer. Nothing
+/// implements it by hand: any `Sync` type that implements the five is a `Host`.
 pub trait Host: Canvas + TextMetrics + Chrome + InputSource + Clock + Sync {}
 
 impl<T> Host for T where T: Canvas + TextMetrics + Chrome + InputSource + Clock + Sync {}
@@ -53,7 +55,7 @@ impl<T> Host for T where T: Canvas + TextMetrics + Chrome + InputSource + Clock 
 /// layout pass.
 static mut HOST: Option<&'static dyn Host> = None;
 
-/// Installs the host. Call before any view is measured or drawn.
+/// Installs the host, before any view is measured or drawn.
 ///
 /// Installing again replaces it — another panel size is another backend —
 /// and the old `&'static` stays valid for anything that read it.
@@ -112,7 +114,7 @@ pub fn is_installed() -> bool {
 /// supplies this.
 static mut NAVIGATOR: Option<&'static dyn Navigator> = None;
 
-/// Installs the navigator. Call once, before the first frame.
+/// Installs the navigator, before the first frame.
 ///
 /// # Safety
 /// Same contract as [`install`]: before any frame runs, and never concurrently

@@ -103,15 +103,18 @@ impl<S: Screen> Runtime<S> {
         }
     }
 
-    /// The screen itself. Exposed only for tests that drive the runtime
-    /// directly.
+    /// The screen itself.
+    ///
+    /// Exposed only for tests that drive the runtime directly.
     #[cfg(any(test, feature = "testing"))]
     pub fn screen(&self) -> &S {
         &self.screen
     }
 
-    /// Which interaction holds focus. Exposed only for tests that drive the
-    /// runtime directly; screens never see focus at all.
+    /// Which interaction holds focus.
+    ///
+    /// Exposed only for tests that drive the runtime directly; screens never
+    /// see focus at all.
     #[cfg(any(test, feature = "testing"))]
     pub fn focused_index(&self) -> usize {
         self.focus

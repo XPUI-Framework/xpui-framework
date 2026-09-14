@@ -6,9 +6,10 @@ use crate::geometry::{Point, Size};
 use crate::view::{Interactions, View};
 use crate::widgets::{List, ListRow};
 
-/// A row whose value reads as one of two words. The theme draws no switch
-/// graphic. It renders through the theme's list, so it is identical whether
-/// it stands alone or sits in a [`List`].
+/// A boolean setting, drawn as a row whose value reads as one of two words.
+///
+/// The theme draws no switch graphic. It renders through the theme's list, so
+/// it is identical whether it stands alone or sits in a [`List`].
 ///
 /// ```rust
 /// # use xpui::Toggle;
@@ -40,8 +41,10 @@ impl<M: Clone> Toggle<M> {
         }
     }
 
-    /// Sends `make(next_state)` when tapped or confirmed. The framework flips
-    /// the value, so the screen never writes `!self.something`.
+    /// Sends `make(next_state)` when tapped or confirmed.
+    ///
+    /// The framework flips the value, so the screen never writes
+    /// `!self.something`.
     pub fn on_change(mut self, make: fn(bool) -> M) -> Self {
         let next = !self.on;
         if let Some(row) = self.row.take() {
@@ -51,6 +54,10 @@ impl<M: Clone> Toggle<M> {
     }
 
     /// Consumes the builder into the row, for putting several in one [`List`].
+    ///
+    /// The row carries no message, so give it one with
+    /// [`ListRow::on_tap`]. `None` once [`on_change`](Toggle::on_change) has
+    /// taken the row.
     pub fn into_row(mut self) -> Option<ListRow<M>> {
         self.row.take()
     }

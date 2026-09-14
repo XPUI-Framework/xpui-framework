@@ -37,8 +37,8 @@ impl<V, M> Tappable<V, M> {
         }
     }
 
-    /// Replaces the accepted input kinds. Defaults to [`InputMask::DEFAULT`] —
-    /// tap plus button focus.
+    /// Replaces the accepted input kinds, which are [`InputMask::DEFAULT`] (a
+    /// tap plus button focus) until this is called.
     pub fn accepting(mut self, mask: InputMask) -> Self {
         self.mask = mask;
         self

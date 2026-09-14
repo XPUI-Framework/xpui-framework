@@ -46,11 +46,14 @@ pub use runtime::Runtime;
 /// }
 /// ```
 pub trait Screen {
-    /// What this screen's controls send back. One enum per screen, matched
-    /// exhaustively in [`update`](Screen::update).
+    /// What this screen's controls send back.
+    ///
+    /// One enum per screen, matched exhaustively in [`update`](Screen::update).
     type Message: Clone;
 
-    /// Describes the screen. A pure function of `self` — no device writes.
+    /// Describes the screen.
+    ///
+    /// A pure function of `self` — no device writes.
     ///
     /// Called once per paint and once per frame that carries input. Built
     /// fresh rather than stored because `loop_` and `render` may run on
@@ -58,12 +61,15 @@ pub trait Screen {
     /// walking what the other is replacing.
     fn body(&self) -> impl View<Self::Message>;
 
-    /// Applies a message. The only place state changes; the runtime repaints
-    /// afterwards, so no screen calls `request_update` itself.
+    /// Applies a message.
+    ///
+    /// The only place state changes; the runtime repaints afterwards, so no
+    /// screen calls `request_update` itself.
     fn update(&mut self, message: Self::Message);
 
-    /// A key the runtime has not claimed, offered before it applies its own
-    /// meaning. Return a message to consume it.
+    /// A key, offered to the screen before the runtime applies its own meaning.
+    ///
+    /// Return a message to consume it.
     ///
     /// Consulted **first**, so a screen that wants Up/Down for something other
     /// than moving focus simply says so. Auto-repeat applies to whatever is
@@ -73,7 +79,8 @@ pub trait Screen {
         None
     }
 
-    /// A swipe, offered before the runtime gives it its own meaning.
+    /// A swipe, offered to the screen before the runtime gives it its own meaning.
+    ///
     /// Return a message to consume it.
     ///
     /// Consulted **first**, so a screen that pages on a swipe — a reader, say —
@@ -82,9 +89,11 @@ pub trait Screen {
         None
     }
 
-    /// A touch that no control claimed. Return a message to consume it.
+    /// A touch that no control claimed.
     ///
-    /// An overlay uses this to close when the scrim is tapped.
+    /// Return a message to consume it. A screen closing on a tap outside its
+    /// content can use this; an [`OverlayPanel`] does the same with
+    /// [`OverlayPanel::on_scrim_tap`], an ordinary interaction.
     fn on_background_tap(&self, point: Point) -> Option<Self::Message> {
         let _ = point;
         None
@@ -121,15 +130,21 @@ pub trait Screen {
     /// wants the time asks the clock. Ask for a repaint if something changed.
     fn tick(&mut self) {}
 
-    /// The screen was pushed, before its first frame. A screen uncovered by
-    /// a pop is not told.
+    /// The screen was pushed, before its first frame.
+    ///
+    /// A screen uncovered by a pop is not told.
     fn on_enter(&mut self) {}
 
-    /// The screen is being popped. A screen covered by a push is not told.
+    /// The screen is being popped.
+    ///
+    /// A screen covered by a push is not told.
     fn on_exit(&mut self) {}
 
-    /// The system home gesture. Return `true` to consume it; an overlay does,
-    /// so the gesture dismisses the overlay rather than the screen below.
+    /// The system home gesture, offered to the screen on top.
+    ///
+    /// Return `true` to consume it. An overlay does, finishing itself, so the
+    /// gesture dismisses the overlay rather than every screen below it. The
+    /// host reports the gesture through [`App::home_gesture`](crate::App::home_gesture).
     fn handle_home_gesture(&mut self) -> bool {
         false
     }

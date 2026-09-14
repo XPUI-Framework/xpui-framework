@@ -16,6 +16,9 @@ All four run under `cargo test`. None needs hardware, and none opens a window.
 cargo test --workspace --features xpui/testing
 ```
 
+Every item in `xpui::testing`, with its declaration, is in
+[the testing reference](reference/testing.md).
+
 ## 1. Behaviour
 
 `update` is an ordinary method. Call it.
@@ -60,16 +63,8 @@ fn opens_the_list_screen<H: Host + Drive + 'static>(backend: &'static H) {
 }
 ```
 
-| | |
-|---|---|
-| `tap_text(label)` | tap where that text was drawn |
-| `tap_nth_text(label, n)` | when the same string appears more than once |
-| `tap_at(point)` | a raw coordinate, for backgrounds and dismissals |
-| `press(button)` / `swipe(dir)` | the key and gesture paths |
-| `visible_text()` | every string on the panel, in paint order |
-| `rect_of_text(label)` | where it landed, for asserting layout |
-| `changed()` | whether the last action repainted anything |
-| `depth()` | how deep the screen stack is |
+Every method `Ui` has, from tapping a label to reading the stack's depth, is in
+[the reference](reference/testing.md#testingui).
 
 **Assert on what is on the screen, not on the depth.** `depth() == 2` says
 *something* opened. It does not say the right thing did — and that exact
@@ -116,35 +111,16 @@ is how such a test is written and a golden accepted, and
 [`xpui-gallery`](https://github.com/XPUI-Framework/xpui-gallery) runs every
 screen through it on all seven boards.
 
-## Two things that will bite
+## Three things that will bite
 
 **The host is process-wide.** `install` writes a static, so tests that install
-one must not run concurrently. Every test file here takes the same
-`static SERIAL: Mutex<()>` first. `Ui` holds that lock for you.
+one must not run concurrently. `Ui` holds a lock for as long as it exists, so
+tests built on it take turns.
 
 **A test that cannot fail is worse than none**, because it is counted — and
 believed. Before keeping a test, break the thing it covers and watch it go red.
 The habit that finds these is mutation, not review.
 
-Eight that were shipped here, all written in good faith and all passing:
-
-- **A test that never installed the backend**, so it exercised a different host
-  and asserted `0 == 0`.
-- **A window-geometry test that asserted its own arithmetic** — it recomputed
-  the number it was checking.
-- **A scaling test that still passed with half its assertion deleted.**
-- **A menu test that let two rows open the wrong screen.**
-- **`scrolling_sections`, whose content fitted on one screen**, so it asserted
-  a scroll that never happened.
-- **A dialog paint-versus-hit-test check too loose to notice a six-pixel
-  drift** — a row is 40px, so "the text is somewhere inside the rect" tolerated
-  a fault that makes tapping row 3 select row 2.
-- **A headless `--frames N` run treated as an input test.** It proves the loop
-  starts, ticks and exits; it drives no input and asserts no pixels. The arrow
-  keys doing nothing survived 249 tests that way.
-- **A test driving `Runtime` directly and asserting `focused_index()`**, which
-  moves correctly even when nothing is ever drawn.
-
-The last is the general lesson: **prefer an assertion that pins a relationship
-over one that pins a number.** "The label sits at the same offset within every
-row" catches drift that "the label is inside its row" cannot.
+**Prefer an assertion that pins a relationship over one that pins a number.**
+"The label sits at the same offset within every row" catches drift that "the
+label is inside its row" cannot.

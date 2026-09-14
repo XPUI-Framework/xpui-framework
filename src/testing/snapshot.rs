@@ -50,8 +50,9 @@ fn updating() -> bool {
 
 /// Asserts that everything drawn since the last `reset` matches the golden.
 ///
-/// Writes the golden instead when `UPDATE_SNAPSHOTS` is set, and always writes
-/// it when it does not exist yet — a new test should not need two runs.
+/// Writes the golden instead when `UPDATE_SNAPSHOTS` is set. A golden that does
+/// not exist yet is written too, and the test then fails so the new file is
+/// read before it is trusted.
 pub fn assert_snapshot(name: &str) {
     assert_text_snapshot(name, &ops::render(&super::ops_log()));
 }

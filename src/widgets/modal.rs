@@ -62,8 +62,8 @@ impl<M: Clone> Modal<M> {
         }
     }
 
-    /// Choosing one value from several — the settings-row case. Reads better
-    /// than `new` at the call site, and is the same dialog.
+    /// A dialog for choosing one value from several, the same dialog as
+    /// [`new`](Modal::new) under a name that reads better at a settings row.
     pub fn picker<S: Into<String>>(
         title: impl Into<String>,
         options: impl IntoIterator<Item = S>,
@@ -71,8 +71,8 @@ impl<M: Clone> Modal<M> {
         Self::new(title, options)
     }
 
-    /// A yes/no question. The confirming choice comes first, so it is where
-    /// focus opens.
+    /// A yes/no question, opening with focus on the first of `choices`, so the
+    /// confirming one goes first.
     pub fn confirm<S: Into<String>>(
         title: impl Into<String>,
         choices: impl IntoIterator<Item = S>,
@@ -92,7 +92,8 @@ impl<M: Clone> Modal<M> {
         self
     }
 
-    /// Dims what is behind the dialog. Defaults to [`Scrim::None`].
+    /// Sets how the whole panel behind the dialog is painted, left as it was
+    /// ([`Scrim::None`]) unless this is called.
     pub fn scrim(mut self, scrim: Scrim) -> Self {
         self.scrim = scrim;
         self

@@ -33,8 +33,10 @@ pub trait Canvas {
     /// The panel's size in logical pixels, in the current orientation.
     fn screen_size(&self) -> Size;
 
-    /// Clears to background. A screen painting over what is already there —
-    /// an overlay — must not call this.
+    /// Clears to background.
+    ///
+    /// A screen painting over what is already there — an overlay — must not
+    /// call this.
     fn clear(&self);
 
     /// Draws `text` with its **top-left** corner at `origin`.
@@ -59,9 +61,10 @@ pub trait Canvas {
     /// A one-pixel line in ink from `from` to `to`, both ends included.
     fn draw_line(&self, from: Point, to: Point);
 
-    /// Fills with a 50% dither, which reads as grey on a 1-bit panel. `light`
-    /// picks which checkerboard parity takes ink, so two adjacent dithers can
-    /// differ.
+    /// Fills `rect` with a 50% dither, which reads as grey on a 1-bit panel.
+    ///
+    /// `light` picks which checkerboard parity takes ink, so two adjacent
+    /// dithers can differ.
     fn fill_rect_dither(&self, rect: Rect, light: bool);
 
     /// Darkens `rect` while leaving what is already drawn there legible.
@@ -72,13 +75,16 @@ pub trait Canvas {
     /// back behind an overlay without repainting it.
     fn scrim(&self, rect: Rect);
 
-    /// Confines drawing to `rect` until cleared with `None`. A view taller than
-    /// the space it was given - a scrolling one - relies on this to keep its
-    /// overflow off the chrome around it.
+    /// Confines drawing to `rect`, or lifts the clip when it is `None`.
+    ///
+    /// A view taller than the space it was given - a scrolling one - relies on
+    /// this to keep its overflow off the chrome around it.
     fn set_clip(&self, rect: Option<Rect>);
 
-    /// Draws a 1-bpp bitmap. Row-major, MSB first, `(w + 7) / 8` bytes per row,
-    /// and **bit 0 is ink** — inverted from the usual convention.
+    /// Draws a 1-bpp bitmap of `size` with its top-left corner at `origin`.
+    ///
+    /// Row-major, MSB first, `(w + 7) / 8` bytes per row, and **bit 0 is ink** —
+    /// inverted from the usual convention.
     fn draw_image(&self, origin: Point, data: &[u8], size: Size);
 
     /// Draws `icon` with its top-left corner at `origin`, at the size
@@ -121,7 +127,9 @@ impl Renderer {
         super::current().draw_text(origin, text, font, style)
     }
 
-    /// Confines drawing to `rect`. Pair every call with [`Renderer::clear_clip`].
+    /// Confines drawing to `rect`.
+    ///
+    /// Pair every call with [`Renderer::clear_clip`].
     pub fn clip(rect: Rect) {
         super::current().set_clip(Some(rect))
     }

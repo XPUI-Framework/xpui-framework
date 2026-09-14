@@ -97,8 +97,7 @@ pub trait InputSource {
     /// A completed tap, at the position the finger went down.
     fn tap(&self) -> Option<Point>;
 
-    /// True while a finger is down, reporting where it is now — the signal a
-    /// slider drag needs.
+    /// Where a finger is while one is down, the signal a slider drag needs.
     fn touch_held(&self) -> Option<Point>;
 
     /// Whether a finger lifted this frame.
@@ -199,12 +198,18 @@ pub enum RowKey {
     Back,
     /// Acts on whatever has focus.
     Confirm,
-    /// Walks a list backwards. `Up` on a device with a reader's four keys.
+    /// Walks a list backwards.
+    ///
+    /// `Up` on a device with a reader's four keys.
     Previous,
-    /// Walks a list forwards. `Down` on the same.
+    /// Walks a list forwards.
+    ///
+    /// `Down` on a device with a reader's four keys.
     Next,
-    /// A key with no word in the hint vocabulary — either nothing is mapped to
-    /// it, or what is has no label, as a power key does. Drawn blank.
+    /// A key with no word in the hint vocabulary, drawn blank.
+    ///
+    /// Either nothing is mapped to it, or what is has no label, as a power key
+    /// does.
     Unassigned,
 }
 
@@ -230,7 +235,9 @@ impl KeyRow {
         RowKey::Next,
     ]);
 
-    /// A row of a device's own. `const`, so a board table can hold one.
+    /// A row of a device's own.
+    ///
+    /// `const`, so a board table can hold one.
     pub const fn new(keys: &'static [RowKey]) -> KeyRow {
         KeyRow(keys)
     }
@@ -240,8 +247,9 @@ impl KeyRow {
         self.0.len()
     }
 
-    /// Whether the device has a bottom row at all. One that does not reserves
-    /// no band, and there is nothing to label.
+    /// Whether the device has no bottom row at all.
+    ///
+    /// A device without one reserves no band, and there is nothing to label.
     pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
