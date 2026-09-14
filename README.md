@@ -11,15 +11,35 @@
 > Under heavy development. Not production-ready. The API can break without
 > notice. Use at your own risk.
 
-A small declarative UI framework for e-ink firmware: you describe what a
-screen looks like and how it changes, and `xpui` measures, routes input and
-paints. It was written for e-ink readers — 1-bit panels, a few hundred KB of
-RAM, no GPU and no room for waste — and those constraints shaped every
-decision in it. It has no dependencies and no build script, runs `no_std` on
-bare metal, and holds no trace of any product or drawing library: a
-[backend](https://github.com/XPUI-Framework/xpui-backends) supplies the
-painting through five small traits, which is what lets every test run on a
-laptop.
+Write an e-Paper screen once, and run it wherever an e-Paper panel is. A screen is
+a plain Rust struct that says what it looks like and how it changes, and the
+same code runs on a bare-metal microcontroller board, hosted inside a C++ e-Paper
+firmware, and in a desktop simulator on your laptop. You find out a screen is
+right before any device is on the desk, and the framework asks nothing of your
+firmware: no dependencies, no build script, `no_std`.
+
+- **One screen, every panel.** Describe a screen with stacks, lists, sliders,
+  toggles and dialogs; a [backend](https://github.com/XPUI-Framework/xpui-backends)
+  paints it through whatever the device has. The
+  [gallery](https://github.com/XPUI-Framework/xpui-gallery) runs the same
+  screens on seven boards, and the
+  [simulator](https://github.com/XPUI-Framework/xpui-simulator) puts them in a
+  window, inside the device's own body.
+- **Tested on a laptop, not on a device.** The `testing` feature is a fake host
+  that records every draw call, so `update` and `body` are ordinary code in an
+  ordinary `cargo test`. Every gallery screen is also compared, pixel for pixel,
+  against golden images of each board's panel.
+- **Buttons and touch, handled for you.** A screen tags its controls with its own
+  messages; focus, key repeat, value editing and dialogs that capture input are
+  the framework's job, so a button-only reader and a touch panel behave alike.
+- **Built for e-Paper's limits.** 1-bit panels, a few hundred KB of RAM, no GPU,
+  and a refresh that takes a second: nothing allocates per frame, and a screen
+  repaints only when something changed.
+
+Under the hood, you describe what a screen looks like and `xpui` measures it,
+routes input to it and paints it through five small traits a backend
+implements. The framework names no product and no drawing library, which is
+what lets the same screen move between devices, and every test run on a laptop.
 
 Every document in this repository is listed in [docs/README.md](docs/README.md).
 
@@ -35,7 +55,7 @@ xpui = { git = "https://github.com/XPUI-Framework/xpui-framework", branch = "mai
 xpui = { git = "https://github.com/XPUI-Framework/xpui-framework", branch = "main", features = ["testing"] }
 ```
 
-Nothing is on crates.io yet, which is why the dependency above is a `git` URL. A
+Nothing is on [crates.io](https://crates.io/) yet, which is why the dependency above is a `git` URL. A
 screen is a struct that says what it looks like and how it changes:
 
 ```rust
@@ -97,8 +117,8 @@ something that can paint. `alloc` is required; `std` is used only by the
 ```
 
 The checks themselves are in [`xtask/`](xtask/) — this repository's own list,
-in Rust, holding nothing it does not run. `./build-and-test.sh fix` formats
-in place first. Format, clippy on the host and two bare-metal architectures,
+in [Rust](https://rust-lang.org/), holding nothing it does not run. `./build-and-test.sh fix` formats
+in place first. Format, [clippy](https://github.com/rust-lang/rust-clippy) on the host and two bare-metal architectures,
 the tests, every documented snippet compiled, every public item documented,
 and every link and command in the prose resolved. How a change is reviewed
 is in [docs/contributing.md](docs/contributing.md).
