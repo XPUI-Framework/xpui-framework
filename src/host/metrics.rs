@@ -92,8 +92,10 @@ pub struct Font {
 impl Font {
     /// A font this build does not ship, which measures zero.
     ///
-    /// A missing face therefore takes no room in a layout. What drawing with it
-    /// paints is the host's decision.
+    /// A missing face therefore takes no room in a layout, and a
+    /// [`Text`](crate::Text) in it draws nothing. A widget calling
+    /// [`Renderer::draw_text`](crate::host::Renderer::draw_text) itself checks
+    /// [`is_available`](Font::is_available) first.
     pub const UNAVAILABLE: Font = Font {
         id: FontId::UNAVAILABLE,
         style: FontStyle::Regular,

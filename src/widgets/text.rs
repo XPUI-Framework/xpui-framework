@@ -18,6 +18,9 @@ use crate::view::View;
 /// out and kept for [`View::size`]. Estimating it instead drifts from what is
 /// painted and pushes content past the bottom of the screen.
 ///
+/// In [`Font::UNAVAILABLE`] it measures zero and never reaches the host, so no
+/// backend paints it in another face over space nothing reserved.
+///
 /// ```rust
 /// # use xpui::{Font, Text};
 /// # xpui::testing::install();
@@ -74,6 +77,36 @@ impl<M> View<M> for Text {
     }
 
     fn render(&self, origin: Point) {
+        // Measured at zero, so nothing reserved room for it: a host handed
+        // an id it does not know may fall back to a face it does.
+        if !self.font.is_available() {
+            return;
+        }
         Renderer::draw_text(origin, &self.content, self.font.id(), self.font.style());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Text;
+    use crate::geometry::{Point, Size};
+    use crate::host::Font;
+    use crate::testing;
+    use crate::view::View;
+
+    #[test]
+    fn text_in_a_missing_face_never_reaches_the_host() {
+        testing::install();
+        testing::reset();
+        let mut text = Text::new("invisible").font(Font::UNAVAILABLE);
+        View::<()>::measure(&mut text, Size::new(200, 100));
+        View::<()>::render(&text, Point::ORIGIN);
+
+        assert_eq!(View::<()>::size(&text), Size::ZERO);
+        assert_eq!(
+            testing::unavailable_text_draws(),
+            0,
+            "the fake drops a draw in font 0, so only this count shows it was asked"
+        );
     }
 }

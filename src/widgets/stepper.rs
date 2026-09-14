@@ -81,7 +81,9 @@ impl<M: Clone + 'static> Stepper<M> {
     /// Sends `make(new_value)` when the track is dragged or tapped.
     ///
     /// It is also what an open edit commits, so a stepper without it can be
-    /// nudged but never opened.
+    /// nudged but never opened. Given no [`on_step`](Stepper::on_step), it
+    /// drives the glyphs and the Left/Right keys as well, with the value one
+    /// step either side, held inside the range.
     pub fn on_change(mut self, make: fn(i32) -> M) -> Self {
         self.change = Some(make);
         self
@@ -90,8 +92,9 @@ impl<M: Clone + 'static> Stepper<M> {
     /// Sends `make(-1)` or `make(+1)` from the end glyphs and the Left/Right
     /// keys.
     ///
-    /// It is also what draws the glyphs and makes the stepper a focus stop:
-    /// without it, no key reaches the control.
+    /// Optional: for a screen that wants a relative nudge, whatever a step is
+    /// worth to it. Without it, the glyphs and the keys send
+    /// [`on_change`](Stepper::on_change) one step from the current value.
     pub fn on_step(mut self, make: fn(i32) -> M) -> Self {
         self.step = Some(make);
         self
@@ -113,20 +116,19 @@ impl<M: Clone + 'static> Stepper<M> {
         }
 
         let mut stack = HStack::new(gap);
-        if let Some(step) = self.step {
+        if let Some(minus) = self.nudge(-1) {
             // `Text` is a `View<M>` for every `M`, so the message type has to
             // be named before the modifier chain can resolve.
             // Touch-only: the row as a whole is the focus stop, so buttons
             // never land on a bare glyph.
             stack = stack.push(
-                Modifiers::<M>::frame(Text::new("-"), row_height, row_height).on_touch(step(-1)),
+                Modifiers::<M>::frame(Text::new("-"), row_height, row_height).on_touch(minus),
             );
         }
         stack = stack.push(slider.flexible());
-        if let Some(step) = self.step {
-            stack = stack.push(
-                Modifiers::<M>::frame(Text::new("+"), row_height, row_height).on_touch(step(1)),
-            );
+        if let Some(plus) = self.nudge(1) {
+            stack = stack
+                .push(Modifiers::<M>::frame(Text::new("+"), row_height, row_height).on_touch(plus));
         }
 
         self.row = Some(stack.align(Alignment::Center));
@@ -134,6 +136,42 @@ impl<M: Clone + 'static> Stepper<M> {
 }
 
 impl<M: Clone + 'static> Stepper<M> {
+    /// What a glyph `delta` steps away sends: the nudge when there is one,
+    /// otherwise the value that far along, held inside the range.
+    fn nudge(&self, delta: i32) -> Option<M> {
+        match (self.step, self.change) {
+            (Some(step), _) => Some(step(delta)),
+            (None, Some(change)) => Some(change(
+                self.value.saturating_add(delta).clamp(0, self.max.max(0)),
+            )),
+            (None, None) => None,
+        }
+    }
+
+    /// The one focus stop's trigger: relative when the screen asked for
+    /// nudges, absolute otherwise, and `None` when nothing could change it.
+    fn trigger(&self) -> Option<Trigger<M>> {
+        match (self.step, self.change) {
+            (Some(step), set) => Some(Trigger::Step {
+                make: step,
+                // The track's own setter, so an open edit can commit an
+                // absolute value whatever a step is worth to the screen.
+                set,
+                max: self.max,
+                value: self.value,
+            }),
+            // An absolute trigger is nudged by resolving `value ± 1` against
+            // its range, and an edit commits through it, so the keys need
+            // nothing more.
+            (None, Some(make)) => Some(Trigger::Value {
+                make,
+                max: self.max,
+                value: self.value,
+            }),
+            (None, None) => None,
+        }
+    }
+
     fn header(&self) -> Header<'_> {
         Header {
             title: self.title.as_deref(),
@@ -192,19 +230,9 @@ impl<M: Clone + 'static> View<M> for Stepper<M> {
         // the keys are on it: an embedded slider takes no focus of its own and
         // has nothing else to learn it from. The order is free — the glyphs are
         // touch-only and this declaration takes no tap, so nothing else moves.
-        let focused = self.step.is_some_and(|step| {
-            out.declare(
-                self.bounds(origin),
-                InputMask::FOCUS.union(InputMask::ADJUST),
-                Trigger::Step {
-                    make: step,
-                    // The track's own setter, so an open edit can commit an
-                    // absolute value whatever a step is worth to the screen.
-                    set: self.change,
-                    max: self.max,
-                    value: self.value,
-                },
-            )
+        let bounds = self.bounds(origin);
+        let focused = self.trigger().is_some_and(|trigger| {
+            out.declare(bounds, InputMask::FOCUS.union(InputMask::ADJUST), trigger)
         });
 
         // **The working value, before the row is walked.** The embedded track

@@ -2,6 +2,7 @@
 //! content is scrolled, and the tree painted from the two.
 
 mod input;
+mod touch;
 
 use super::Screen;
 use crate::geometry::Point;
@@ -71,6 +72,8 @@ pub struct Runtime<S: Screen> {
     painted: bool,
     /// Swallows the release that ends a drag, so it cannot also read as a tap.
     dragging: bool,
+    /// The finger resting on the panel, timed towards a long press.
+    hold: Option<touch::Hold>,
     /// Where focus sat before a view captured input, so dismissing a dialog
     /// returns to the row that opened it rather than wherever its index landed.
     focus_before_capture: Option<usize>,
@@ -91,6 +94,7 @@ impl<S: Screen> Runtime<S> {
             focus: 0,
             painted: false,
             dragging: false,
+            hold: None,
             focus_before_capture: None,
             scroll: 0,
             repeat: Repeat {

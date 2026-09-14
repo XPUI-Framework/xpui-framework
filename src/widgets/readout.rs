@@ -8,7 +8,7 @@
 //! line it owns.
 
 use crate::geometry::{Point, Rect};
-use crate::host::{Font, Renderer, Theme, ThemeMetric};
+use crate::host::{Font, FontId, FontStyle, Renderer, Theme, ThemeMetric};
 
 /// The number a value control draws on the line above its track.
 ///
@@ -96,6 +96,14 @@ pub(crate) fn font() -> Font {
     Font::ui()
 }
 
+/// Draws `text` only in a font the host has, as `Text` does: a missing face
+/// measures zero, so nothing reserved room for what it would paint.
+fn draw_available(at: Point, text: &str, font: FontId, style: FontStyle) {
+    if font.is_available() {
+        Renderer::draw_text(at, text, font, style);
+    }
+}
+
 /// Draws `value` right-aligned against `rect`'s trailing edge.
 ///
 /// Right-aligned because the number's width changes with the value — `9%` is
@@ -108,7 +116,7 @@ pub(crate) fn draw(rect: Rect, value: i32, suffix: &str) {
     let text = Readout::new(value, suffix);
     let x = rect.x() + rect.width() - font.text_width(text.as_str());
     let y = rect.y() + (rect.height() - font.line_height()) / 2;
-    Renderer::draw_text(Point::new(x, y), text.as_str(), font.id(), font.style());
+    draw_available(Point::new(x, y), text.as_str(), font.id(), font.style());
 }
 
 /// The line above a value control carrying its name and its number.
@@ -145,7 +153,7 @@ impl Header<'_> {
         let font = font();
         let line = Rect::new(rect.x(), rect.y(), rect.width(), font.line_height());
         if let Some(title) = self.title {
-            Renderer::draw_text(
+            draw_available(
                 Point::new(line.x(), line.y()),
                 title,
                 font.id(),

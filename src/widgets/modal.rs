@@ -18,17 +18,20 @@ use crate::view::{InputMask, Interactions, Scrim, Trigger, View};
 /// screen draws its content first and puts the dialog last.
 ///
 /// The screen owns whether it is open — hold that in your own state and include
-/// the dialog in `body()` while it is true.
+/// the dialog in `body()` while it is true. Back never finishes the screen
+/// under an open dialog: it sends [`on_dismiss`](Modal::on_dismiss), or
+/// nothing.
 ///
 /// ```rust
 /// # use xpui::Modal;
 /// # #[derive(Clone, Copy)]
-/// # enum Msg { Chose(usize) }
+/// # enum Msg { Chose(usize), Dismiss }
 /// # xpui::testing::install();
 /// # let current = 1;
 /// Modal::picker("Refresh Frequency", ["1 page", "5 pages", "10 pages"])
 ///     .selected(current)
-///     .on_select(Msg::Chose);
+///     .on_select(Msg::Chose)
+///     .on_dismiss(Msg::Dismiss);
 /// ```
 pub struct Modal<M> {
     title: String,
@@ -38,6 +41,9 @@ pub struct Modal<M> {
     /// Set by [`on_select`](Modal::on_select); without one the dialog still
     /// captures and draws, it simply reports nothing.
     make: Option<fn(usize) -> M>,
+    /// Set by [`on_dismiss`](Modal::on_dismiss): what Back and a tap outside
+    /// the options send.
+    dismiss: Option<M>,
     /// Which option held focus at the last interactions walk, so `render` can
     /// highlight it. Without this the dialog would keep painting whichever
     /// value was passed to `selected`, and the arrows would appear dead.
@@ -57,6 +63,7 @@ impl<M: Clone> Modal<M> {
             selected: 0,
             scrim: Scrim::None,
             make: None,
+            dismiss: None,
             focused_option: None,
             measured: Size::ZERO,
         }
@@ -89,6 +96,18 @@ impl<M: Clone> Modal<M> {
     /// Sends `make(index)` when an option is chosen, by touch or by Confirm.
     pub fn on_select(mut self, make: fn(usize) -> M) -> Self {
         self.make = Some(make);
+        self
+    }
+
+    /// Sends `message` when the dialog is dismissed without a choice: by a Back
+    /// the screen does not claim, or by a tap on none of its options.
+    ///
+    /// Without it, Back does nothing while the dialog is open, and a tap
+    /// outside the options goes to `Screen::on_background_tap`. Either way the
+    /// screen is never finished from under an open dialog. Like a choice, the
+    /// message does not close the dialog; `update` does.
+    pub fn on_dismiss(mut self, message: M) -> Self {
+        self.dismiss = Some(message);
         self
     }
 
@@ -169,6 +188,9 @@ impl<M: Clone> View<M> for Modal<M> {
         // the value already chosen. This happens even with no `on_select`: a
         // dialog with no outcome must still not let input through to the list.
         out.capture(self.selected);
+        if let Some(message) = &self.dismiss {
+            out.dismiss_with(message.clone());
+        }
 
         let Some(make) = self.make else {
             return;

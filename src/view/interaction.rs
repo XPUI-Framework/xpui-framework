@@ -5,7 +5,8 @@
 //! list. What a declaration turns into is [`Trigger`](crate::view::Trigger);
 //! see [`crate::screen`] for the resolution itself.
 
-use alloc::boxed::Box;
+mod mapping;
+
 use alloc::vec::Vec;
 
 use crate::geometry::Rect;
@@ -14,7 +15,8 @@ use crate::view::Trigger;
 /// Which kinds of input an interaction accepts.
 ///
 /// This is what stops a finger resting on a button re-firing it every frame:
-/// only [`InputMask::DRAG`] interactions are offered held touches, and
+/// only [`InputMask::DRAG`] interactions are offered every held frame,
+/// [`InputMask::LONG_PRESS`] acts once when a hold crosses the threshold, and
 /// everything else acts once, on release.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct InputMask(u8);
@@ -27,6 +29,11 @@ impl InputMask {
     /// Receives every frame the finger is down, with its position.
     pub const DRAG: InputMask = InputMask(1 << 2);
     /// A press held past the long-press threshold.
+    ///
+    /// The threshold is 500 ms, the delay before a held key starts repeating,
+    /// so a held finger and a held key turn into a hold at the same moment. It
+    /// fires once, while the finger is still down, and the release that ends
+    /// it fires nothing.
     pub const LONG_PRESS: InputMask = InputMask(1 << 3);
     /// This control is moved one step at a time rather than fired.
     ///
@@ -89,6 +96,9 @@ pub struct Interactions<M> {
     /// Set when a view captured input, carrying the focus index it would like
     /// while it is up. `None` means nothing captured this frame.
     captured: Option<usize>,
+    /// What dismissing the capturing view sends. Cleared by every `capture`,
+    /// so a dialog without one never inherits the dialog before it.
+    dismissal: Option<M>,
     /// While true, declarations are ignored entirely. Set on the second pass of
     /// a frame that captures, so views behind a dialog neither take focus nor
     /// paint themselves focused — clearing them afterwards is too late, since a
@@ -129,6 +139,7 @@ impl<M> Interactions<M> {
             focus,
             focusable: 0,
             captured: None,
+            dismissal: None,
             scroll: 0,
             viewport: None,
             ignoring: false,
@@ -148,6 +159,7 @@ impl<M> Interactions<M> {
             focus,
             focusable: 0,
             captured: None,
+            dismissal: None,
             scroll: 0,
             viewport: None,
             ignoring: true,
@@ -191,7 +203,25 @@ impl<M> Interactions<M> {
         self.items.clear();
         self.focusable = 0;
         self.captured = Some(preferred_focus);
+        self.dismissal = None;
         self.ignoring = false;
+    }
+
+    /// Says what dismissing the view that just captured input sends.
+    ///
+    /// The runtime sends it for a Back the screen does not claim, and for a
+    /// tap that lands on nothing the capturing view declared. Called after
+    /// [`capture`](Interactions::capture), which clears it. Ignored while
+    /// nothing has captured.
+    pub fn dismiss_with(&mut self, message: M) {
+        if self.captured.is_some() {
+            self.dismissal = Some(message);
+        }
+    }
+
+    /// What dismissing the capturing view sends, if it said.
+    pub fn dismissal(&self) -> Option<&M> {
+        self.dismissal.as_ref()
     }
 
     /// Whether the control being walked into is the one holding focus.
@@ -316,82 +346,5 @@ impl<M> Interactions<M> {
     /// Whether nothing has been declared.
     pub fn is_empty(&self) -> bool {
         self.items.is_empty()
-    }
-
-    /// A collector for a sub-component, positioned so its focus numbering
-    /// continues this one's. A mapped component's controls therefore sit in the
-    /// parent's focus order exactly where they appear in the tree.
-    ///
-    /// **Everything a widget can ask crosses with it.** A sub-component is a
-    /// tree like any other: a `Slider` inside one has to learn that it holds
-    /// focus, that the control wrapping it does, and that an edit is open on
-    /// it, or it paints the screen's value while the keys move a copy it
-    /// cannot see.
-    pub(crate) fn child<N>(&self) -> Interactions<N> {
-        // `saturating_sub` would answer `0` when the focus is *behind* this
-        // subtree, telling the first thing inside it that it holds a focus that
-        // is somewhere above. `NO_FOCUS` is the honest answer: nothing here.
-        let focus = self.focus.checked_sub(self.focusable).unwrap_or(NO_FOCUS);
-        Interactions {
-            items: Vec::new(),
-            focus,
-            focusable: 0,
-            captured: None,
-            scroll: self.scroll,
-            viewport: None,
-            ignoring: self.ignoring,
-            parent_focused: self.parent_focused,
-            editing: self.editing,
-        }
-    }
-
-    /// Folds a sub-component's interactions in, translating its messages.
-    pub(crate) fn absorb<N: 'static>(&mut self, inner: Interactions<N>, convert: fn(N) -> M)
-    where
-        M: 'static,
-    {
-        for item in inner.items {
-            let trigger = match item.trigger {
-                Trigger::Message(message) => Trigger::Message(convert(message)),
-                Trigger::Value { make, max, value } => Trigger::MappedValue {
-                    make: Box::new(move |v| convert(make(v))),
-                    max,
-                    value,
-                },
-                Trigger::MappedValue { make, max, value } => Trigger::MappedValue {
-                    make: Box::new(move |v| convert(make(v))),
-                    max,
-                    value,
-                },
-                Trigger::Step {
-                    make,
-                    set,
-                    max,
-                    value,
-                } => Trigger::MappedStep {
-                    make: Box::new(move |delta| convert(make(delta))),
-                    set: set.map(|set| Box::new(move |v| convert(set(v))) as Box<dyn Fn(i32) -> M>),
-                    max,
-                    value,
-                },
-                Trigger::MappedStep {
-                    make,
-                    set,
-                    max,
-                    value,
-                } => Trigger::MappedStep {
-                    make: Box::new(move |delta| convert(make(delta))),
-                    set: set.map(|set| Box::new(move |v| convert(set(v))) as Box<dyn Fn(i32) -> M>),
-                    max,
-                    value,
-                },
-            };
-            self.items.push(Interaction {
-                rect: item.rect,
-                mask: item.mask,
-                trigger,
-            });
-        }
-        self.focusable += inner.focusable;
     }
 }

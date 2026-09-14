@@ -1,19 +1,21 @@
 //! One frame of input, in the order a screen is offered it: touch, then a
-//! swipe, then the buttons — and the screen gets first refusal of each.
+//! swipe, then the buttons and the back gesture — and the screen gets first
+//! refusal of each.
 
 use super::{Editing, Repeat, Runtime};
 use crate::host::{Button, Input, SwipeDir, finish_screen, millis, request_update};
 use crate::screen::Screen;
-use crate::screen::routing::{adjustable, focused, focused_message, focused_step, resolve};
-use crate::view::InputMask;
+use crate::screen::routing::{adjustable, focused, focused_message, focused_step};
 
 /// How long a press is held before it starts repeating.
 const REPEAT_DELAY_MS: u32 = 500;
 /// The gap between one repeat and the next.
 const REPEAT_INTERVAL_MS: u32 = 500;
 
-/// Buttons the runtime offers a screen before claiming them itself.
-const KEYS: [Button; 8] = [
+/// Every button, each offered to the screen before the runtime gives it a
+/// meaning. The last seven have none of the runtime's; a screen that wants one
+/// claims it, and one that does not loses nothing.
+const KEYS: [Button; 15] = [
     Button::Left,
     Button::Right,
     Button::Up,
@@ -22,6 +24,13 @@ const KEYS: [Button; 8] = [
     Button::Back,
     Button::PageBack,
     Button::PageForward,
+    Button::Power,
+    Button::NavNext,
+    Button::NavPrevious,
+    Button::ScreenLeft,
+    Button::ScreenRight,
+    Button::ScreenUp,
+    Button::ScreenDown,
 ];
 
 impl<S: Screen> Runtime<S> {
@@ -32,6 +41,14 @@ impl<S: Screen> Runtime<S> {
         // Every frame that reaches here has looked at input, whatever it
         // decides — so the gap below measures blindness, not inactivity.
         let seen_at = core::mem::replace(&mut self.repeat.seen_at, now);
+
+        // The back gesture is Back, arriving by another road: offered to the
+        // screen, cancelling an edit, dismissing a dialog, leaving. An edge
+        // with nothing held behind it, so it never repeats.
+        if Input::was_back_gesture() {
+            self.repeat.button = None;
+            return Some(Button::Back);
+        }
 
         for key in KEYS {
             if Input::was_pressed(key) {
@@ -162,33 +179,12 @@ impl<S: Screen> Runtime<S> {
         // the keys acting on a control the highlight has left. A mode only some
         // inputs respect is not a mode.
         if self.editing.is_none() && self.painted && Input::has_touch() {
-            if let Some(point) = Input::touch_held() {
-                let interactions = self.collect_settled();
-                if let Some(message) = resolve(&interactions, point, InputMask::DRAG) {
-                    self.dragging = true;
-                    self.dispatch(message);
-                    return;
-                }
-            }
-
-            if Input::touch_released() && self.dragging {
-                // Swallow the release that ended a drag: otherwise it reads as
-                // a tap elsewhere and, on an overlay, closes the panel.
-                self.dragging = false;
+            if self.touch() {
                 return;
             }
-
-            if let Some(point) = Input::tap() {
-                let interactions = self.collect_settled();
-                if let Some(message) = resolve(&interactions, point, InputMask::TAP) {
-                    self.dispatch(message);
-                    return;
-                }
-                if let Some(message) = self.screen.on_background_tap(point) {
-                    self.dispatch(message);
-                    return;
-                }
-            }
+        } else {
+            // A hold this frame cannot see is over, whatever ended it.
+            self.hold = None;
         }
 
         // -- swipe ----------------------------------------------------------
@@ -303,8 +299,24 @@ impl<S: Screen> Runtime<S> {
                     }
                 }
             }
-            Button::Back => finish_screen(),
+            Button::Back => self.back(),
             _ => {}
+        }
+    }
+
+    /// Back that nothing claimed and no edit took.
+    ///
+    /// **Never finishes the screen from under a dialog.** The dialog is what
+    /// the reader is looking at, so Back is about the dialog: it sends the
+    /// dialog's dismiss message, or, when it has none, does nothing at all.
+    fn back(&mut self) {
+        let interactions = self.collect_settled();
+        if interactions.captured_focus().is_none() {
+            finish_screen();
+            return;
+        }
+        if let Some(message) = interactions.dismissal().cloned() {
+            self.dispatch(message);
         }
     }
 }

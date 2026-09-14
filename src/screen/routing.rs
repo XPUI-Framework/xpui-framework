@@ -26,6 +26,26 @@ pub(crate) fn resolve<M: Clone>(
         .map(|item| item.trigger.resolve(item.rect, point.x))
 }
 
+/// The message from the innermost `LONG_PRESS` region under `origin`, where the
+/// finger went down, while the finger at `now` is still inside it.
+///
+/// A finger that slid off the control fires nothing, as a tap released outside
+/// its control does not.
+pub(crate) fn long_press<M: Clone>(
+    interactions: &Interactions<M>,
+    origin: Point,
+    now: Point,
+) -> Option<M> {
+    let item = interactions
+        .items()
+        .iter()
+        .rev()
+        .find(|item| item.mask.contains(InputMask::LONG_PRESS) && item.rect.contains(origin))?;
+    item.rect
+        .contains(now)
+        .then(|| item.trigger.resolve(item.rect, origin.x))
+}
+
 /// The focused interaction, if any.
 pub(crate) fn focused<M>(
     interactions: &Interactions<M>,

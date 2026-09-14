@@ -18,7 +18,8 @@ mod runtime;
 pub use driver::Driver;
 pub use runtime::Runtime;
 
-/// A screen.
+/// A page of the interface: its state, what it looks like, and how a message
+/// changes it.
 ///
 /// ```rust
 /// # use xpui::{Screen, Slider, Toggle, View, vstack};
@@ -72,8 +73,10 @@ pub trait Screen {
     /// Return a message to consume it.
     ///
     /// Consulted **first**, so a screen that wants Up/Down for something other
-    /// than moving focus simply says so. Auto-repeat applies to whatever is
-    /// claimed here.
+    /// than moving focus simply says so. Every [`Button`] is offered, the ones
+    /// the runtime has no meaning for included, and the system back gesture
+    /// arrives as [`Button::Back`]. Auto-repeat applies to whatever is claimed
+    /// here.
     fn on_key(&self, key: Button) -> Option<Self::Message> {
         let _ = key;
         None
@@ -93,7 +96,9 @@ pub trait Screen {
     ///
     /// Return a message to consume it. A screen closing on a tap outside its
     /// content can use this; an [`OverlayPanel`] does the same with
-    /// [`OverlayPanel::on_scrim_tap`], an ordinary interaction.
+    /// [`OverlayPanel::on_scrim_tap`], an ordinary interaction. Under a dialog
+    /// given [`Modal::on_dismiss`](crate::Modal::on_dismiss), the dialog takes
+    /// the tap and this is not asked.
     fn on_background_tap(&self, point: Point) -> Option<Self::Message> {
         let _ = point;
         None
@@ -143,8 +148,10 @@ pub trait Screen {
     /// The system home gesture, offered to the screen on top.
     ///
     /// Return `true` to consume it. An overlay does, finishing itself, so the
-    /// gesture dismisses the overlay rather than every screen below it. The
-    /// host reports the gesture through [`App::home_gesture`](crate::App::home_gesture).
+    /// gesture dismisses the overlay rather than every screen below it.
+    /// [`App::tick`](crate::App::tick) reads the gesture from the host's input
+    /// and offers it here; a host may also report one through
+    /// [`App::home_gesture`](crate::App::home_gesture).
     fn handle_home_gesture(&mut self) -> bool {
         false
     }

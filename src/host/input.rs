@@ -107,8 +107,13 @@ pub trait InputSource {
     fn swipe(&self) -> SwipeDir;
 
     /// The system back gesture, an edge swipe on a touch device.
+    ///
+    /// The runtime treats it as [`Button::Back`], offered to the screen first.
     fn was_back_gesture(&self) -> bool;
     /// The system home gesture, offered to the screen before the host acts.
+    ///
+    /// [`App::tick`](crate::App::tick) reads it and offers it to the screen on
+    /// top, so a host has nothing to call.
     fn was_home_gesture(&self) -> bool;
 
     /// Which way a vertical swipe moves focus.

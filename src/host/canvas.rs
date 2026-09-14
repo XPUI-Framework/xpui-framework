@@ -79,6 +79,10 @@ pub trait Canvas {
     ///
     /// A view taller than the space it was given - a scrolling one - relies on
     /// this to keep its overflow off the chrome around it.
+    ///
+    /// One clip, not a stack: `Some` replaces whatever was set. Nesting is
+    /// [`Renderer`]'s job, which always passes the whole clip in force, already
+    /// intersected with every clip outside it.
     fn set_clip(&self, rect: Option<Rect>);
 
     /// Draws a 1-bpp bitmap of `size` with its top-left corner at `origin`.
@@ -127,16 +131,41 @@ impl Renderer {
         super::current().draw_text(origin, text, font, style)
     }
 
-    /// Confines drawing to `rect`.
+    /// Confines drawing to `rect`, inside whatever clip is already set.
     ///
-    /// Pair every call with [`Renderer::clear_clip`].
+    /// Pair every call with [`Renderer::clear_clip`]. Clips nest: the host is
+    /// given `rect` intersected with the clip in force, so a clipping view
+    /// inside a scroll view cannot draw past either. A rect that misses the
+    /// outer clip entirely confines drawing to nothing.
+    ///
+    /// Eight deep are remembered, on a fixed stack with no allocation. A clip
+    /// past the eighth still applies, intersected with the eighth, and clearing
+    /// it restores the eighth.
     pub fn clip(rect: Rect) {
-        super::current().set_clip(Some(rect))
+        let depth = clips::depth();
+        let effective = match depth.min(CLIP_DEPTH) {
+            0 => rect,
+            remembered => intersection(rect, clips::get(remembered - 1)),
+        };
+        if depth < CLIP_DEPTH {
+            clips::put(depth, effective);
+        }
+        clips::set_depth(depth.saturating_add(1));
+        super::current().set_clip(Some(effective))
     }
 
-    /// Lifts the clip set by [`Renderer::clip`].
+    /// Lifts the innermost clip, restoring the one it was set inside.
+    ///
+    /// With no clip outside it, the host's clip is lifted entirely. A call with
+    /// no clip set lifts the host's clip and is otherwise ignored.
     pub fn clear_clip() {
-        super::current().set_clip(None)
+        let depth = clips::depth().saturating_sub(1);
+        clips::set_depth(depth);
+        let outer = match depth.min(CLIP_DEPTH) {
+            0 => None,
+            remembered => Some(clips::get(remembered - 1)),
+        };
+        super::current().set_clip(outer)
     }
 
     /// See [`Canvas::fill_rect`].
@@ -177,5 +206,176 @@ impl Renderer {
     /// See [`Canvas::icon_size`].
     pub fn icon_size(icon: IconRef) -> i32 {
         super::current().icon_size(icon)
+    }
+}
+
+/// How many nested clips [`Renderer`] remembers.
+const CLIP_DEPTH: usize = 8;
+
+/// What two rects share; zero-sized where they do not meet.
+fn intersection(a: Rect, b: Rect) -> Rect {
+    let left = a.x().max(b.x());
+    let top = a.y().max(b.y());
+    let right = a.right().min(b.right());
+    let bottom = a.bottom().min(b.bottom());
+    Rect::new(left, top, (right - left).max(0), (bottom - top).max(0))
+}
+
+/// The clip stack on a device: one thread, one panel, fixed storage. Load and
+/// store only, which both targets have.
+#[cfg(not(all(any(test, feature = "testing"), not(target_os = "none"))))]
+mod clips {
+    use core::sync::atomic::{AtomicI32, AtomicUsize, Ordering};
+
+    use super::CLIP_DEPTH;
+    use crate::geometry::Rect;
+
+    static DEPTH: AtomicUsize = AtomicUsize::new(0);
+    /// x, y, width and height of each remembered clip, in nesting order.
+    static EDGES: [AtomicI32; CLIP_DEPTH * 4] = [const { AtomicI32::new(0) }; CLIP_DEPTH * 4];
+
+    pub(super) fn depth() -> usize {
+        DEPTH.load(Ordering::Relaxed)
+    }
+
+    pub(super) fn set_depth(depth: usize) {
+        DEPTH.store(depth, Ordering::Relaxed);
+    }
+
+    pub(super) fn get(level: usize) -> Rect {
+        let edge = |index: usize| EDGES[level * 4 + index].load(Ordering::Relaxed);
+        Rect::new(edge(0), edge(1), edge(2), edge(3))
+    }
+
+    pub(super) fn put(level: usize, rect: Rect) {
+        let values = [rect.x(), rect.y(), rect.width(), rect.height()];
+        for (index, value) in values.into_iter().enumerate() {
+            EDGES[level * 4 + index].store(value, Ordering::Relaxed);
+        }
+    }
+}
+
+/// **Thread-local under test**, for the reason `value_mode` gives: cases run
+/// on parallel threads, and a clip one case set would confine another's frame.
+#[cfg(all(any(test, feature = "testing"), not(target_os = "none")))]
+mod clips {
+    use core::cell::Cell;
+
+    use super::CLIP_DEPTH;
+    use crate::geometry::{Point, Rect, Size};
+
+    const NONE: Rect = Rect {
+        origin: Point::ORIGIN,
+        size: Size::ZERO,
+    };
+
+    thread_local! {
+        static DEPTH: Cell<usize> = const { Cell::new(0) };
+        static STACK: Cell<[Rect; CLIP_DEPTH]> = const { Cell::new([NONE; CLIP_DEPTH]) };
+    }
+
+    pub(super) fn depth() -> usize {
+        DEPTH.with(Cell::get)
+    }
+
+    pub(super) fn set_depth(depth: usize) {
+        DEPTH.with(|cell| cell.set(depth));
+    }
+
+    pub(super) fn get(level: usize) -> Rect {
+        STACK.with(|stack| stack.get()[level])
+    }
+
+    pub(super) fn put(level: usize, rect: Rect) {
+        STACK.with(|stack| {
+            let mut rects = stack.get();
+            rects[level] = rect;
+            stack.set(rects);
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Renderer;
+    use crate::geometry::Rect;
+    use crate::testing;
+
+    #[test]
+    fn an_inner_clip_stays_inside_the_outer_and_gives_it_back() {
+        testing::install();
+        testing::reset();
+        let outer = Rect::new(0, 60, 480, 700);
+
+        Renderer::clip(outer);
+        Renderer::clip(Rect::new(16, 40, 200, 100));
+        Renderer::clear_clip();
+        Renderer::clear_clip();
+
+        assert_eq!(
+            testing::clips(),
+            [
+                Some(outer),
+                Some(Rect::new(16, 60, 200, 80)),
+                Some(outer),
+                None
+            ],
+            "clearing the inner clip must restore the outer, not lift both"
+        );
+    }
+
+    #[test]
+    fn a_clip_outside_the_outer_confines_to_nothing() {
+        testing::install();
+        testing::reset();
+        Renderer::clip(Rect::new(0, 0, 100, 100));
+        Renderer::clip(Rect::new(200, 200, 50, 50));
+        Renderer::clear_clip();
+        Renderer::clear_clip();
+
+        let inner = testing::clips()[1].expect("a clip, not a lift");
+        assert_eq!((inner.width(), inner.height()), (0, 0));
+    }
+
+    #[test]
+    fn a_clip_past_the_depth_stays_inside_the_deepest_remembered() {
+        testing::install();
+        testing::reset();
+        let nested = |level: i32| Rect::new(level, level, 100 - 2 * level, 100 - 2 * level);
+        for level in 0..10 {
+            Renderer::clip(nested(level));
+        }
+        for _ in 0..10 {
+            Renderer::clear_clip();
+        }
+
+        let clips = testing::clips();
+        assert_eq!(
+            &clips[..10],
+            (0..10).map(|l| Some(nested(l))).collect::<Vec<_>>()
+        );
+        assert_eq!(
+            clips[10],
+            Some(nested(7)),
+            "clearing the tenth restores the eighth: the ninth was never remembered"
+        );
+        assert_eq!(clips[11], Some(nested(7)), "clearing the ninth, the eighth");
+        assert_eq!(
+            clips[12],
+            Some(nested(6)),
+            "and below it, the stack is exact"
+        );
+        assert_eq!(clips[19], None);
+    }
+
+    #[test]
+    fn an_unmatched_clear_lifts_the_clip_and_is_forgotten() {
+        testing::install();
+        testing::reset();
+        let rect = Rect::new(0, 0, 50, 50);
+        Renderer::clear_clip();
+        Renderer::clip(rect);
+        Renderer::clear_clip();
+        assert_eq!(testing::clips(), [None, Some(rect), None]);
     }
 }
