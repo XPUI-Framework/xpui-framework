@@ -35,6 +35,7 @@ pub struct Modal<M>
 | [`new`](#modalnew) · [`picker`](#modalpicker) · [`confirm`](#modalconfirm) | the title and the options | — |
 | [`selected`](#modalselected) | the option highlighted, and where focus opens | the first option |
 | [`on_select`](#modalon_select) | the message a choice sends, which makes the options reachable | nothing is sent, and the dialog still captures input |
+| [`on_dismiss`](#modalon_dismiss) | the message Back and a tap outside the options send | Back does nothing while the dialog is open, and a tap outside goes to `Screen::on_background_tap` |
 | [`scrim`](#modalscrim) | how the panel behind the dialog is painted | `Scrim::None`: left as it was |
 
 **A dialog captures input.** While one is in the tree, nothing declared before
@@ -60,15 +61,16 @@ the theme centres the dialog and sizes it to its title and options. It draws
 over what is already on the panel without clearing it. An empty dialog draws
 nothing and captures nothing.
 
-> [!WARNING]
-> **Back is not the dialog's.** A Back that no screen claims finishes the
-> screen, dialog and all. A screen whose dialog should close on Back claims the
-> key in `Screen::on_key` while the dialog is open, as the picker below does.
+**Back belongs to the dialog.** While a dialog is open, a Back the screen does
+not claim never finishes the screen. It sends the dialog's
+[`on_dismiss`](#modalon_dismiss) message or, when the dialog has none, does
+nothing at all. The system back gesture is the same Back. `Screen::on_key` is
+still asked first, so a screen that claims Back keeps it.
 
-> [!NOTE]
-> A tap that lands on no option, on the dimmed panel or on the dialog's own
-> title, goes to `Screen::on_background_tap`. That is where a tap outside closes
-> the dialog.
+**So does a tap outside its options.** A tap that lands on no option, on the
+dimmed panel or on the dialog's own title, sends `on_dismiss`, and
+`Screen::on_background_tap` is not asked. A dialog without `on_dismiss` leaves
+that tap to `on_background_tap`, as it always did.
 
 **Example — a typeface picker**
 
@@ -76,7 +78,7 @@ A settings row opens it. Focus opens on the face already chosen, a choice or a
 tap outside closes it, and Back closes it rather than leaving the screen.
 
 ```rust
-use xpui::{Button, List, ListRow, Modal, NavigationScreen, Point, Screen, Scrim, View};
+use xpui::{App, Button, List, ListRow, Modal, NavigationScreen, Screen, Scrim, View, testing};
 
 const FONTS: [&str; 3] = ["Serif", "Sans", "Mono"];
 
@@ -108,6 +110,7 @@ impl Screen for Typeface {
             Modal::picker("Typeface", FONTS)
                 .selected(self.chosen) // focus opens on the current face
                 .on_select(Msg::Chose)
+                .on_dismiss(Msg::Dismiss) // Back, or a tap outside the options
                 .scrim(Scrim::Dim),
         )
     }
@@ -123,16 +126,6 @@ impl Screen for Typeface {
         }
     }
 
-    /// A touch no option claimed: the dimmed panel around the dialog.
-    fn on_background_tap(&self, _at: Point) -> Option<Msg> {
-        self.picking.then_some(Msg::Dismiss)
-    }
-
-    /// Unclaimed, Back would finish this screen with the dialog still up.
-    fn on_key(&self, key: Button) -> Option<Msg> {
-        (self.picking && matches!(key, Button::Back)).then_some(Msg::Dismiss)
-    }
-
     fn title(&self) -> Option<&'static str> {
         Some("Typeface")
     }
@@ -142,6 +135,18 @@ let mut screen = Typeface { chosen: 0, picking: false };
 screen.update(Msg::Open);
 screen.update(Msg::Chose(1));
 assert_eq!((screen.chosen, screen.picking), (1, false));
+
+// Driven: Back closes the open picker, and the screen stays.
+testing::install();
+testing::reset();
+let mut app = App::new(Typeface { chosen: 0, picking: true });
+app.render();
+testing::press(Button::Back);
+app.tick();
+testing::reset();
+app.render();
+assert!(app.is_running());
+assert!(testing::drawn_popups().is_empty(), "the dialog is gone");
 ```
 
 **Example — what capturing does**
@@ -345,6 +350,79 @@ pub fn on_select(self, make: fn(usize) -> M) -> Self
 A function pointer, not a closure, so it captures nothing: the index is all it
 is given. Choosing does not close the dialog; `update` does, by clearing the
 flag that put it in `body`.
+
+### Dismissing
+
+#### `Modal::on_dismiss`
+
+Sends `message` when the dialog is dismissed without a choice: by a Back the screen does not claim, or by a tap on none of its options.
+
+```text
+pub fn on_dismiss(self, message: M) -> Self
+```
+
+| Parameter | Meaning |
+|---|---|
+| `message` | What the screen is sent. Usually a variant with no payload, `Msg::Dismiss`, cloned each time it is sent. |
+
+Without it, Back does nothing while the dialog is open, and a tap outside the
+options goes to `Screen::on_background_tap`. Either way the screen is never
+finished from under an open dialog. Like a choice, the message does not close
+the dialog: `update` does, by clearing the flag that put it in `body`. An empty
+dialog captures nothing, so there is nothing to dismiss and Back leaves the
+screen as usual.
+
+**Example — Back closes the question, then the screen**
+
+```rust
+use xpui::{App, Button, Modal, NavigationScreen, Screen, Text, View, testing, vstack};
+
+#[derive(Clone, Copy)]
+enum Msg {
+    Answer(usize),
+    Dismiss,
+}
+
+struct Book {
+    asking: bool,
+}
+
+impl Screen for Book {
+    type Message = Msg;
+
+    fn body(&self) -> impl View<Msg> {
+        NavigationScreen::new(vstack![0; Text::new("Walden")]).overlay_if(
+            self.asking,
+            Modal::confirm("Delete this book?", ["Delete", "Keep"])
+                .on_select(Msg::Answer)
+                .on_dismiss(Msg::Dismiss),
+        )
+    }
+
+    fn update(&mut self, message: Msg) {
+        match message {
+            Msg::Answer(_) | Msg::Dismiss => self.asking = false,
+        }
+    }
+
+    fn title(&self) -> Option<&'static str> {
+        Some("Walden")
+    }
+}
+
+testing::install();
+testing::reset();
+let mut app = App::new(Book { asking: true });
+app.render();
+
+testing::press(Button::Back); // the dialog is open: Back dismisses it
+app.tick();
+assert!(app.is_running(), "the screen is still here");
+
+testing::press(Button::Back); // nothing is open now, so Back leaves
+app.tick();
+assert!(!app.is_running());
+```
 
 ### Dimming
 

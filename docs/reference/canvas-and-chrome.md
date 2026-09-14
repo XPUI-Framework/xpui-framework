@@ -7,7 +7,7 @@ pixels: [`host::Canvas`](#hostcanvas) is the framebuffer,
 bars on the framework's behalf, asking for a list row a piece at a time by
 [`host::RowField`](#hostrowfield). Each is a supertrait of
 [`host::Host`](backend-contract.md#hosthost). A screen never calls them: it
-reaches them through [`Renderer`](theme.md#renderer) and
+reaches them through [`Renderer`](renderer.md#renderer) and
 [`Theme`](theme.md#theme).
 
 [The backend contract](backend-contract.md) is the rest: the `Host` object,
@@ -36,7 +36,7 @@ Twelve primitives in logical pixels, with the origin at the top-left of the
 panel in its current orientation. "Ink" is the foreground colour and
 "background" the paper; on a 1-bit panel they are black and white, and a host
 with a palette chooses what each means. A widget reaches these through
-[`Renderer`](theme.md#renderer), which forwards to the installed host, rather
+[`Renderer`](renderer.md#renderer), which forwards to the installed host, rather
 than holding a host of its own.
 
 Every drawing call honours the clip set by
@@ -80,8 +80,8 @@ fn draw_text(&self, origin: Point, text: &str, font: FontId, style: FontStyle)
 |---|---|
 | `origin` | The top-left of the line the text occupies. The line fills `[y, y + line_height)`. |
 | `text` | The string to draw, already translated. |
-| `font` | A [`FontId`](text-and-images.md#fontid) this host handed out from [`host::TextMetrics::font`](#hosttextmetricsfont). |
-| `style` | The [`FontStyle`](text-and-images.md#fontstyle) to draw it in. |
+| `font` | A [`FontId`](text.md#fontid-1) this host handed out from [`host::TextMetrics::font`](#hosttextmetricsfont). |
+| `style` | The [`FontStyle`](text.md#fontstyle) to draw it in. |
 
 > [!WARNING]
 > **Not a baseline.** Most drawing libraries take one. Passing `origin.y`
@@ -92,7 +92,8 @@ fn draw_text(&self, origin: Point, text: &str, font: FontId, style: FontStyle)
 What this paints must be as wide as
 [`host::TextMetrics::text_width`](#hosttextmetricstext_width) says, or a label
 reserved to fit overruns the space it was given. A font this build does not
-ship, `FontId::UNAVAILABLE`, measures zero; the fake host draws nothing for it.
+ship, `FontId::UNAVAILABLE`, measures zero, and a `Text` in it never calls this.
+The fake host records nothing if something else does.
 
 #### `host::Canvas::fill_rect`
 
@@ -159,9 +160,11 @@ fn set_clip(&self, rect: Option<Rect>)
 ```
 
 A view taller than the space it was given - a scrolling one - relies on this to
-keep its overflow off the chrome around it. There is one clip, not a stack:
-`Some` replaces whatever was set, and `None` lifts it entirely. A widget pairs
-`Renderer::clip` with `Renderer::clear_clip`.
+keep its overflow off the chrome around it. The host keeps one clip, not a
+stack: `Some` replaces whatever was set, and `None` lifts it entirely. Nesting
+is [`Renderer::clip`](renderer.md#rendererclip)'s job, which always passes the
+whole clip in force, already intersected with every clip outside it, and
+passes the outer clip back when an inner one is cleared.
 
 It must really clip. Nothing in the framework checks what a mis-measured widget
 paints outside its bounds; the clip is what keeps it off the header, the hints,
@@ -197,7 +200,7 @@ Draws `icon` with its top-left corner at `origin`, at the size `icon_size` answe
 fn draw_icon(&self, origin: Point, icon: IconRef)
 ```
 
-An [`IconRef`](text-and-images.md#iconref) is an opaque number meaning "the
+An [`IconRef`](images.md#iconref) is an opaque number meaning "the
 thing you use for this", and the host chooses the asset. A backend with no
 assets draws them from lines and rectangles; `xpui-embedded-graphics` takes
 `xpui_chrome::draw_icon`.
@@ -215,7 +218,7 @@ ships. `0` makes the icon take no room in a layout, rather than a hole of a
 guessed size. The fake host echoes `icon.size`, so icon layout in a test is
 predictable.
 
-**See also:** [`host::TextMetrics`](#hosttextmetrics), [`Renderer`](theme.md#renderer)
+**See also:** [`host::TextMetrics`](#hosttextmetrics), [`Renderer`](renderer.md#renderer)
 
 ## `host::TextMetrics`
 
@@ -228,7 +231,7 @@ pub trait TextMetrics
 The framework never estimates a glyph's size. An estimate drifts from what is
 painted and pushes content off the panel, so every width and height is asked of
 the same font engine [`host::Canvas::draw_text`](#hostcanvasdraw_text) paints
-with. A widget reaches these through [`Font`](text-and-images.md#font), which
+with. A widget reaches these through [`Font`](text.md#font), which
 also answers zero for a font this build lacks without asking the host.
 
 ### Required methods
@@ -241,7 +244,7 @@ The font for a role, or `FontId::UNAVAILABLE` when this build does not ship one.
 fn font(&self, role: FontRole) -> FontId
 ```
 
-A [`FontRole`](text-and-images.md#fontrole) says what the text is for; the host
+A [`FontRole`](text.md#fontrole-1) says what the text is for; the host
 decides which face that means.
 
 > [!IMPORTANT]
@@ -297,7 +300,7 @@ It is asked without a style, so it must hold the tallest style the face is
 drawn in: `xpui-embedded-graphics` answers with the band of the face's
 tallest style, so a bold taller than its regular stays inside it.
 
-**See also:** [`host::Canvas::draw_text`](#hostcanvasdraw_text), [`Font`](text-and-images.md#font)
+**See also:** [`host::Canvas::draw_text`](#hostcanvasdraw_text), [`Font`](text.md#font)
 
 ## `host::Chrome`
 
@@ -308,14 +311,14 @@ pub trait Chrome
 ```
 
 The header, the button hints, a list, a dialog, a slider: the framework lays
-them out and the host paints them, so a Rust screen and a native one are the
+them out and the host paints them, so a [Rust](https://rust-lang.org/) screen and a native one are the
 same pixels, and both follow the user's theme without the framework knowing
 what a theme is. A host sitting on a component library answers by calling it.
 One sitting on a drawing library takes all eleven painting methods from
 `xpui-chrome`'s `plain_chrome!`, which paints them with its own `Canvas`.
 
 A screen reaches these through [`Theme`](theme.md#theme) and
-[`ScreenChrome`](theme.md#screenchrome), never through the trait.
+[`ScreenChrome`](renderer.md#screenchrome), never through the trait.
 
 ### Required methods
 
@@ -521,7 +524,7 @@ xpui::request_update();
 assert_eq!(testing::updates(), 1);
 ```
 
-**See also:** [`Theme`](theme.md#theme), [`ScreenChrome`](theme.md#screenchrome), [`host::RowField`](#hostrowfield)
+**See also:** [`Theme`](theme.md#theme), [`ScreenChrome`](renderer.md#screenchrome), [`host::RowField`](#hostrowfield)
 
 ## `host::RowField`
 

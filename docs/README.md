@@ -10,19 +10,26 @@ repository, and what each is for:
 | [reference/navigation.md](reference/navigation.md) | opening and closing screens, the two screen roots, and button hints |
 | [reference/screens.md](reference/screens.md) | the `Screen` trait |
 | [reference/views.md](reference/views.md) | the `View` trait, boxing and measuring |
-| [reference/layout.md](reference/layout.md) | stacks, spacers, padding, scrolling and alignment |
+| [reference/stacks.md](reference/stacks.md) | stacks, the stack macros and alignment |
+| [reference/layout.md](reference/layout.md) | spacers, padding and scrolling |
 | [reference/modifiers.md](reference/modifiers.md) | taps, frames and flexible space on any view |
-| [reference/text-and-images.md](reference/text-and-images.md) | text, fonts, bitmaps and icons |
-| [reference/controls.md](reference/controls.md) | sliders and steppers |
+| [reference/text.md](reference/text.md) | text and fonts |
+| [reference/images.md](reference/images.md) | bitmaps and icons |
+| [reference/controls.md](reference/controls.md) | how a value control is driven, and sliders |
+| [reference/steppers.md](reference/steppers.md) | steppers |
 | [reference/dialogs.md](reference/dialogs.md) | modal dialogs and scrims |
 | [reference/indicators.md](reference/indicators.md) | progress bars |
-| [reference/input.md](reference/input.md) | buttons, swipes, touch, and the keys along the bottom edge |
+| [reference/input.md](reference/input.md) | buttons, swipes, touch, and how input reaches a screen |
+| [reference/key-rows.md](reference/key-rows.md) | the keys along the bottom edge |
 | [reference/interactions.md](reference/interactions.md) | how a view declares where it can be touched and focused |
-| [reference/theme.md](reference/theme.md) | the theme, its metrics, the renderer and the screen chrome |
+| [reference/triggers.md](reference/triggers.md) | what an interaction produces when it fires |
+| [reference/theme.md](reference/theme.md) | the theme, its metrics, and what a control shows the keys will do |
+| [reference/renderer.md](reference/renderer.md) | the renderer, the screen chrome, the clock and repaints |
 | [reference/geometry.md](reference/geometry.md) | points, sizes, rectangles and insets |
 | [reference/backend-contract.md](reference/backend-contract.md) | the `Host` object, input, the clock, and how a host is installed |
 | [reference/canvas-and-chrome.md](reference/canvas-and-chrome.md) | the traits a host draws with: canvas, text metrics and chrome |
-| [reference/testing.md](reference/testing.md) | the fake host, driving a screen in a test, input and the fake's metrics |
+| [reference/testing.md](reference/testing.md) | the fake host, what it counted and its metrics |
+| [reference/driving.md](reference/driving.md) | driving a screen in a test, and feeding the fake input |
 | [reference/recording.md](reference/recording.md) | recording draw calls, the draw accessors and snapshots |
 | [reference/toggles.md](reference/toggles.md) | toggles and icon toggles |
 | [reference/app.md](reference/app.md) | `App` and the runtime that drives a screen |

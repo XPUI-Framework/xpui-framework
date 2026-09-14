@@ -4,7 +4,7 @@ What drives a screen. `screen::Runtime` drives one `Screen`, and
 `screen::Driver` is that screen with its type erased, which is what a firmware
 whose own activity manager owns the stack keeps. `App` keeps a stack of them and
 runs the frame loop, for a host with no navigation of its own: a simulator, a
-bare-metal Rust binary, a test.
+bare-metal [Rust](https://rust-lang.org/) binary, a test.
 
 [How a frame runs](../architecture.md) follows one frame from input to paint.
 [Screens](screens.md) is the trait these drive. This page is what each piece
@@ -182,7 +182,9 @@ One frame of input, then whatever navigation it asked for.
 pub fn tick(&mut self)
 ```
 
-Runs the top screen's frame: its `tick`, then touch, swipe and keys, as
+First, when the host's input reports the home gesture, it does what
+[`home_gesture`](#apphome_gesture) does. Then it runs the top screen's frame:
+its `tick`, then touch, swipe and keys, as
 [`screen::Runtime`](#screenruntime) describes. Then it pops the screen if it
 asked to finish, and pushes the screen it presented. Call it on every pass of
 the loop, quiet ones included, or `Screen::tick` never runs. It paints nothing.
@@ -264,16 +266,16 @@ assert!(app.render_if_dirty());
 
 #### `App::push`
 
-Pushes a screen and shows it.
+Pushes a screen and marks the app dirty, without painting it.
 
 ```text
 pub fn push<S: Screen + 'static>(&mut self, screen: S)
 ```
 
 For the host: a screen asks with [`present`](navigation.md#present) instead,
-since it has no `App` to call. The push is immediate rather than queued, runs
-the screen's `on_enter`, and marks the app dirty, so the screen is painted by
-the next `render_if_dirty`.
+since it has no `App` to call. The push is immediate rather than queued, and
+runs the screen's `on_enter`. Nothing is painted here: the screen reaches the
+panel on the host's next `render` or `render_if_dirty`.
 
 #### `App::depth`
 
@@ -294,9 +296,13 @@ Offers the system home gesture to the top screen, and pops everything down to th
 pub fn home_gesture(&mut self)
 ```
 
-The host calls this when its input reports the gesture; the runtime does not
-look for one. Each popped screen gets its `on_exit`. The root is never popped
-here, with or without `keep_root`.
+[`tick`](#apptick) calls this itself when the host's input reports the gesture,
+so a host has nothing to call. A host that still calls it for the gesture is
+not acted on twice: a call straight after a `tick` that handled the gesture does
+nothing, and a `tick` straight after a call leaves that frame's gesture alone.
+A host with another way home, a key of its own, calls it directly. Each popped
+screen gets its `on_exit`. The root is never popped here, with or without
+`keep_root`.
 
 **See also:** [`Screen`](screens.md#screen), [`Navigator`](navigation.md#navigator), [`app::AppShell`](#appappshell)
 
@@ -502,9 +508,9 @@ that produces a message, or moves the focus, ends the frame:
 | Step | Offered to the screen as | Otherwise |
 |---|---|---|
 | tick | `Screen::tick` | always runs |
-| a drag or a tap | the control under it, then `on_background_tap` | ignored |
+| a drag, a long press or a tap | the control under it, then a dialog's `on_dismiss`, then `on_background_tap` | ignored |
 | a swipe | `on_swipe` | up and down move focus |
-| a key | `on_key` | the runtime's own meaning: focus, Confirm, a nudge, Back |
+| a key, or the back gesture as `Back` | `on_key` | the runtime's own meaning: focus, Confirm, a nudge, Back |
 
 **No touch or swipe is routed before the first paint**, since the tree it would
 be tested against has not been shown. Keys are. [How a frame

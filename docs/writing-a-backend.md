@@ -49,7 +49,7 @@ impl MyCanvas {
 }
 ```
 
-Most drawing libraries take a baseline. u8g2 does; `embedded-graphics` will if
+Most drawing libraries take a baseline. [u8g2](https://github.com/olikraus/u8g2) does; `embedded-graphics` will if
 you ask. Passing `origin.y` straight through compiles, runs, and puts every
 glyph one line too high — and a test that counts draw calls will not notice.
 The framework reserved `[y, y + line_height)`; fill that.

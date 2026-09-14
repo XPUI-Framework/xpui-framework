@@ -151,7 +151,7 @@ lifecycle installs from both entry points rather than assuming which wakes first
 
 **`Chrome` is your theme, and `xpui` has no opinion about it.** The framework
 never decides what a list row looks like; it asks, and you answer. A backend
-sitting on a component library — FreeInkUI, say — answers by calling that
+sitting on a component library — [FreeInkUI](https://github.com/Free-Ink/freeink-sdk/tree/main/libs/ui/FreeInkUI), say — answers by calling that
 library, so a screen written here and a native one are the same pixels.
 
 That leaves a backend sitting on a *drawing* library with eight components to

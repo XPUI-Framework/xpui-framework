@@ -4,7 +4,7 @@
 
 `rust-toolchain.toml` pins the toolchain and the two bare-metal targets, so
 `cargo build` on a fresh clone installs what it needs. There are no other
-dependencies: no C++, no SDL, no device.
+dependencies: no C++, no [SDL](https://www.libsdl.org/), no device.
 
 ```bash
 cargo test --features testing        # the suite, on a laptop
@@ -38,7 +38,7 @@ The three repositories that produce an image — `xpui-rp2040`, `xpui-esp32`,
 `xpui-cpp` — also take `all`, which adds the link, the build or the self-test
 a quick run should not pay for.
 
-The script builds and runs `xtask/`, a Rust program with no dependencies.
+The script builds and runs `xtask/`, a [Rust](https://rust-lang.org/) program with no dependencies.
 Its `main.rs` is that repository's own list of checks and is meant to differ;
 the ten modules under it — reading a markdown fence, a manifest, a path, a
 comment — are byte-identical across the nine, and `xpui-dev` fails if any two

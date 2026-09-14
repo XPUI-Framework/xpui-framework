@@ -5,12 +5,12 @@ names the item that carries the sentence.
 
 ## `App::keep_root` lives in the framework, not in a host
 
-`Button::Back` means three things, tried in order: a screen may claim it
-through `on_key`, an open edit cancels with it, and only then does it finish
-the screen. A host that withholds the key to prevent the third suppresses all
-three — a screen cannot dismiss its own picker, and a value opened on a root
-screen can be committed but never cancelled. Declining the *pop* leaves the
-first two meanings alone. Every host that owns no stack underneath its root
+`Button::Back` means four things, tried in order: a screen may claim it
+through `on_key`, an open edit cancels with it, an open dialog is dismissed
+with it, and only then does it finish the screen. A host that withholds the key
+to prevent the last suppresses all four — a picker cannot be dismissed with it,
+and a value opened on a root screen can be committed but never cancelled.
+Declining the *pop* leaves the first three meanings alone. Every host that owns no stack underneath its root
 wants this, and one solving it for itself reaches for the key rather than the
 pop; so the decision is `App`'s.
 

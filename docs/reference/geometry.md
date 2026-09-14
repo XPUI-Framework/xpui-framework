@@ -7,7 +7,7 @@ corner and `y` growing downwards.
 
 Never assume a panel size or shape. The panels this runs on are portrait and
 landscape, from 296x128 to 800x480; ask
-[`Renderer::screen_size`](theme.md#rendererscreen_size), or better, lay out
+[`Renderer::screen_size`](renderer.md#rendererscreen_size), or better, lay out
 from [`Theme::content_area`](theme.md#themecontent_area).
 [Writing a widget](../writing-a-widget.md) uses all four.
 
@@ -382,7 +382,7 @@ assert!(a.intersects(Rect::new(50, 50, 0, 0)));     // empty, but inside
 assert!(!Rect::new(50, 50, 0, 0).contains(Point::new(50, 50)));
 ```
 
-**See also:** [`Point`](#point), [`Size`](#size), [`Insets`](#insets), [`Renderer::clip`](theme.md#rendererclip)
+**See also:** [`Point`](#point), [`Size`](#size), [`Insets`](#insets), [`Renderer::clip`](renderer.md#rendererclip)
 
 ## `Insets`
 

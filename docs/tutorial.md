@@ -1,7 +1,7 @@
 # Your first screen
 
 From an empty file to a screen running in a window. No hardware, no C++, and
-no framework knowledge assumed — only ordinary Rust.
+no framework knowledge assumed — only ordinary [Rust](https://rust-lang.org/).
 
 Every Rust block below is compiled and run by
 `cargo test -p xpui --doc --features testing` — the feature, because most of
@@ -118,7 +118,7 @@ cd xpui-gallery && cargo run -p xpui-tutorial
 
 Beside this checkout, not inside it — every repository in the organisation
 expects its siblings next to it, and the rest of this page assumes the same.
-The window is drawn through SDL2, which has to be installed first; it is one
+The window is drawn through [SDL2](https://www.libsdl.org/), which has to be installed first; it is one
 step of [a clean machine, in order](orientation.md#a-clean-machine-in-order).
 
 Arrows move focus, Enter confirms, Backspace goes back, Q or Escape quits.
@@ -269,7 +269,7 @@ Your screen decides only whether the dialog is in `body()`.
 
 ```rust
 use xpui::screen::Screen;
-use xpui::{List, ListRow, Modal, NavigationScreen, Point, Scrim, View};
+use xpui::{List, ListRow, Modal, NavigationScreen, Scrim, View};
 
 const PRESETS: [&str; 4] = ["5 minutes", "15 minutes", "30 minutes", "1 hour"];
 
@@ -302,6 +302,7 @@ impl Screen for SleepTimer {
             Modal::picker("Sleep after", PRESETS)
                 .selected(1)
                 .on_select(Message::ChoosePreset)
+                .on_dismiss(Message::Dismiss)
                 .scrim(Scrim::Dim),
         )
     }
@@ -316,15 +317,13 @@ impl Screen for SleepTimer {
             Message::Dismiss => self.picking = false,
         }
     }
-
-    /// A touch no control claimed. The dialog uses it to close when the
-    /// dimmed area around it is tapped, so the screen never compares a touch
-    /// against the dialog's own geometry.
-    fn on_background_tap(&self, _at: Point) -> Option<Self::Message> {
-        self.picking.then_some(Message::Dismiss)
-    }
 }
 ```
+
+`.on_dismiss(Message::Dismiss)` is what Back and a tap outside the options send
+while the dialog is open, so the screen never compares a touch against the
+dialog's geometry. Without it, Back does nothing until an option is chosen: an
+open dialog is never finished along with its screen.
 
 `.scrim(Scrim::Dim)` darkens what is behind without erasing it — ink on one
 checkerboard parity, so roughly half of what was there survives and the page

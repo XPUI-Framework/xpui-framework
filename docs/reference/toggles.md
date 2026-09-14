@@ -289,7 +289,7 @@ Solid means on and outline means off. The glyph asks for 32 pixels and keeps
 whatever size the host draws, centred in a square the theme's minimum touch
 target wide, so two side by side each own a finger's worth of space.
 Which icon a number means is the host's to say; see
-[text and images](text-and-images.md).
+[images](images.md).
 
 **Touch only.** An icon toggle is never a focus stop, so a panel meant for a
 finger grows no stops that Up and Down must walk past. When the same action

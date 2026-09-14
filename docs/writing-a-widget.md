@@ -77,7 +77,7 @@ The mask is the important choice:
 | `TAP` | A completed tap. Held frames never arrive. |
 | `DRAG` | Every frame while a finger is down — sliders want this. |
 | `FOCUS` | Joins the Up/Down focus order for hardware buttons. |
-| `LONG_PRESS` | A press held past the threshold. |
+| `LONG_PRESS` | A finger held for 500 ms: fires once, and its release fires nothing. |
 | `ADJUST` | Moved one step at a time by Left/Right rather than fired by Confirm. What a value control declares. |
 | `DEFAULT` | `TAP` plus `FOCUS`: what most controls want. |
 

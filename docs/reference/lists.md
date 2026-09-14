@@ -341,7 +341,7 @@ pub struct Section<M>
 ![Two sections, Display and Power, each a heading with a rule and a one-row list beneath it](https://raw.githubusercontent.com/XPUI-Framework/xpui-gallery/main/gallery/tests/screenshots/reference/lists_section.png)
 
 The heading is drawn by the theme's own sub-header, so it matches the host's
-headings rather than being a bold [`Text`](text-and-images.md#text) that looks
+headings rather than being a bold [`Text`](text.md#text) that looks
 similar. Between the heading and its content is the theme's *small* spacing
 step. The space between one section and the next is the stack's own, so a
 heading sits closer to what it heads than to the group above.

@@ -128,7 +128,7 @@ from the host.
 | The stack lives in | `Navigator` is |
 |---|---|
 | a C++ firmware with its own activity manager | a call across the FFI |
-| a Rust binary, a simulator, an example | `App`, which installs itself |
+| a [Rust](https://rust-lang.org/) binary, a simulator, an example | `App`, which installs itself |
 | nowhere — a single screen with no Back | not installed, and Back does nothing |
 
 A screen reaches it through two free functions, [`present`](#present) and
@@ -208,7 +208,8 @@ pub fn finish_screen()
 ```
 
 A screen rarely needs this for Back: Back that no screen claims already
-finishes the screen. Call it when something else means "done": a Save, a
+finishes the screen, unless a dialog is open, when it dismisses the dialog
+instead. Call it when something else means "done": a Save, a
 confirmed dialog. When the last screen finishes, `App::is_running` returns
 `false` and the host's loop ends.
 

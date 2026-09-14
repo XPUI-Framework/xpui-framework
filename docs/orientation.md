@@ -7,9 +7,9 @@ day, are in [contributing.md](contributing.md).
 
 ## What XPUI is
 
-A declarative UI framework for e-ink screens, in Rust. A screen is written once
+A declarative UI framework for e-ink screens, in [Rust](https://rust-lang.org/). A screen is written once
 against `xpui`'s traits and runs on any backend — a C++ firmware drawing
-through FreeInkUI, a bare-metal Rust firmware drawing through
+through [FreeInkUI](https://github.com/Free-Ink/freeink-sdk/tree/main/libs/ui/FreeInkUI), a bare-metal Rust firmware drawing through
 `embedded-graphics`, or a window on a laptop. The framework depends on nothing
 and names no product, device or backend; everything else depends inward on it.
 
@@ -21,8 +21,8 @@ and names no product, device or backend; everything else depends inward on it.
 | [`xpui-backends`](https://github.com/XPUI-Framework/xpui-backends) | the `embedded-graphics` and FreeInkUI backends, the host framebuffer, the ABI checker | `xpui`, `xpui-chrome` |
 | [`xpui-simulator`](https://github.com/XPUI-Framework/xpui-simulator) | an `xpui` app in a desktop window | the four above |
 | [`xpui-gallery`](https://github.com/XPUI-Framework/xpui-gallery) | the reference application, and the seven-board conformance suite it doubles as | the five above |
-| [`xpui-rp2040`](https://github.com/XPUI-Framework/xpui-rp2040) | the gallery as firmware for the Badger 2040 and the Tufty 2040 | `xpui`, `xpui-boards`, `xpui-backends`, `xpui-gallery` |
-| [`xpui-esp32`](https://github.com/XPUI-Framework/xpui-esp32) | the gallery as firmware for the Xteink X3 and the Seeed Sticky | the same four |
+| [`xpui-rp2040`](https://github.com/XPUI-Framework/xpui-rp2040) | the gallery as firmware for the [Badger 2040](https://shop.pimoroni.com/products/badger-2040) and the [Tufty 2040](https://shop.pimoroni.com/products/tufty-2040) | `xpui`, `xpui-boards`, `xpui-backends`, `xpui-gallery` |
+| [`xpui-esp32`](https://github.com/XPUI-Framework/xpui-esp32) | the gallery as firmware for the [Xteink X3](https://www.xteink.com/products/xteink-x3) and the [Seeed Sticky](https://www.seeedstudio.com/reTerminal-Sticky-p-6861.html) | the same four |
 | [`xpui-cpp`](https://github.com/XPUI-Framework/xpui-cpp) | a C++ host for Rust screens over the C ABI, on a desktop and as an ESP32 image | `xpui`, `xpui-backends` |
 | [`xpui-dev`](https://github.com/XPUI-Framework/xpui-dev) | the umbrella: the nine built as one from local paths, and the checks no single repository can make | the six library repositories |
 
@@ -34,7 +34,7 @@ diagram is in each repository's README under **Where it sits**.
 Every cross-repository path in the organisation is relative and assumes the
 ten are cloned beside each other under one directory. `xpui-dev`'s `[patch]`
 table points at `../xpui`, `../xpui-chrome` and so on; `xpui-cpp` finds the
-backends' C++ at `../xpui-backends`; the C++ stages look for the FreeInk SDK
+backends' C++ at `../xpui-backends`; the C++ stages look for the [FreeInk SDK](https://github.com/Free-Ink/freeink-sdk)
 beside the checkouts.
 
 ```bash
@@ -50,10 +50,6 @@ git clone https://github.com/XPUI-Framework/xpui-cpp.git
 git clone https://github.com/XPUI-Framework/xpui-dev.git
 ```
 
-The first line names its directory on purpose: the repository is
-`xpui-framework`, the crate it holds is `xpui`, and the checkout is named for
-the crate. See [the repository name](#the-repository-name).
-
 ## A clean machine, in order
 
 1. **Rust, through `rustup`.** Every repository carries a `rust-toolchain.toml`
@@ -61,19 +57,19 @@ the crate. See [the repository name](#the-repository-name).
    compiler, `rustfmt` and `clippy`.
 2. **The two bare-metal targets.** `riscv32imc-unknown-none-elf` and
    `thumbv6m-none-eabi`. A repository that lints for one names it in its
-   toolchain file, so rustup installs it on the first call; where a gate finds
+   toolchain file, so [rustup](https://rustup.rs/) installs it on the first call; where a gate finds
    one missing it either fails and says which command installs it, or prints
    `SKIPPED` and the target — never silence.
-3. **SDL2** — `brew install sdl2` or `sudo apt install libsdl2-dev`. The
+3. **[SDL2](https://www.libsdl.org/)** — `brew install sdl2` or `sudo apt install libsdl2-dev`. The
    simulator links it.
-4. **clang-format 21 or newer** — the two repositories with C++ format it,
+4. **[clang-format](https://clang.llvm.org/docs/ClangFormat.html) 21 or newer** — the two repositories with C++ format it,
    and an older clang-format ignores options it does not know rather than
    rejecting them.
 5. **The FreeInk SDK's headers**, found beside the checkouts or named by
    `FREEINK_SDK_INCLUDE`. Without them the C++ stages skip and say so.
-6. **Optional, for `all` runs and for flashing:** CMake for the C++ host's
+6. **Optional, for `all` runs and for flashing:** [CMake](https://cmake.org/) for the C++ host's
    build and self-test; the Xtensa `esp` fork (`espup install`) for the
-   ESP32-S3 image; `probe-rs` or `elf2uf2-rs` for an RP2040 board.
+   [ESP32-S3](https://www.espressif.com/en/products/socs/esp32-s3) image; `probe-rs` or `elf2uf2-rs` for an [RP2040](https://www.raspberrypi.com/products/rp2040/) board.
 
 | Repository | Needs |
 |---|---|
@@ -85,10 +81,3 @@ the crate. See [the repository name](#the-repository-name).
 | `xpui-esp32` | Rust, `riscv32imc-unknown-none-elf`; the `esp` fork for the S3 image |
 | `xpui-cpp` | Rust, clang-format; the SDK and SDL2 for the host's compile, CMake for `all` |
 | `xpui-dev` | Rust, and the other nine checked out beside it |
-
-## The repository name
-
-The organisation's `xpui-framework` holds the crate `xpui`, and every guide in
-the organisation checks it out as `xpui` to match. That is why the directory
-beside your other checkouts is `xpui` while its remote says `xpui-framework`.
-Said once, here; no other document has to.

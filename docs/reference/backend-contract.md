@@ -36,7 +36,7 @@ installs beside the host is [`Navigator`](navigation.md#navigator).
 | Implementation | Canvas, TextMetrics, InputSource, Clock | Chrome |
 |---|---|---|
 | `xpui-embedded-graphics` | by hand, over a `DrawTarget` | from `xpui_chrome::plain_chrome!`, painted with its own `Canvas` |
-| `xpui-fui` | by hand, across a C ABI into FreeInkUI | by hand, the same way |
+| `xpui-fui` | by hand, across a C ABI into [FreeInkUI](https://github.com/Free-Ink/freeink-sdk/tree/main/libs/ui/FreeInkUI) | by hand, the same way |
 | the fake host, `xpui::testing::TestHost` | by hand, recording every call | by hand, recording every call |
 
 Every method takes `&self`. The framework holds one `&'static dyn Host` and
@@ -299,6 +299,8 @@ The system back gesture, an edge swipe on a touch device.
 fn was_back_gesture(&self) -> bool
 ```
 
+The runtime takes it as a press of `Button::Back`, offered to the screen first.
+
 #### `host::InputSource::was_home_gesture`
 
 The system home gesture, offered to the screen before the host acts.
@@ -307,7 +309,8 @@ The system home gesture, offered to the screen before the host acts.
 fn was_home_gesture(&self) -> bool
 ```
 
-The screen on top sees it first, through `Screen::handle_home_gesture`, and
+`App::tick` reads it every frame, so a host reports it here and calls nothing
+else. The screen on top sees it first, through `Screen::handle_home_gesture`, and
 consumes it by returning `true`, as an overlay does to dismiss itself.
 
 ### Provided methods

@@ -26,7 +26,7 @@ component's messages into a screen's, `.map`, is
 |---|---|---|
 | [`.on_tap(message)`](#modifierson_tap) | `Tappable` | A touch, and Confirm while focused, send `message`. |
 | [`.on_touch(message)`](#modifierson_touch) | `Tappable` | A touch sends `message`; the view stays out of the focus order. |
-| [`.on_long_press(message)`](#modifierson_long_press) | `Tappable` | As `.on_tap`, and declares a held press as well. |
+| [`.on_long_press(message)`](#modifierson_long_press) | `Tappable` | As `.on_tap`, and a finger held for 500 ms sends `message` too, once. |
 | [`.flexible()`](#modifiersflexible) | `Flexible` | Absorbs leftover space in a stack, the way a `Spacer` does. |
 | [`.frame(width, height)`](#modifiersframe) | `Frame` | Fixes the size and centres the view in it. |
 | [`.map(convert)`](views.md#viewextmap) | `Mapped` | Folds a component's messages into this screen's. |
@@ -136,12 +136,48 @@ fn on_long_press(self, message: M) -> Tappable<Self, M>
 ```
 
 It declares a tap, a focus stop and a long press, all sending the same
-`message`.
+`message`. A quick tap sends it on release, Confirm sends it while the view
+holds focus, and a finger resting on the view sends it once the hold reaches
+500 ms, the delay before a held key starts repeating.
 
-> [!WARNING]
-> The runtime resolves taps and drags, and nothing in it acts on a long press.
-> Today a view given `.on_long_press(message)` behaves as `.on_tap(message)`
-> does: a tap and Confirm send `message`, and holding the press adds nothing.
+**One press sends one message.** A hold fires while the finger is still down,
+and the release that ends it sends nothing, so a view never hears a long press
+followed by a tap. A finger that slides off the view before the threshold fires
+no long press. A hold the loop could not see, because the panel was busy
+refreshing, starts timing again from the frame that next sees it.
+
+**A hold that means something else.** Keep the tap on the view and put a
+hold-only region around it with [`Tappable::accepting`](#tappableaccepting). A
+tap resolves to the innermost region that takes a tap, and a hold to the
+innermost region that takes a hold, so each finds its own message.
+
+**Example — open on a tap, a menu on a hold**
+
+```rust
+use xpui::{InputMask, Interactions, Modifiers, Point, Tappable, Text, View, testing};
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Msg {
+    Open,
+    Menu,
+}
+
+testing::install();
+let mut book: Tappable<_, Msg> =
+    Tappable::new(Text::new("Middlemarch").on_tap(Msg::Open), Msg::Menu)
+        .accepting(InputMask::LONG_PRESS);
+book.measure(testing::screen());
+let mut out = Interactions::new(0);
+book.interactions(Point::ORIGIN, &mut out);
+
+// Resolved the way the runtime resolves them: the innermost region that takes it.
+let innermost = |kind: InputMask| {
+    let item = out.items().iter().rev().find(|item| item.mask.contains(kind))?;
+    Some(item.trigger.resolve(item.rect, item.rect.x()))
+};
+assert_eq!(innermost(InputMask::TAP), Some(Msg::Open));
+assert_eq!(innermost(InputMask::LONG_PRESS), Some(Msg::Menu));
+```
 
 #### `Modifiers::flexible`
 
@@ -285,7 +321,7 @@ pub struct Flexible<V>
 
 A stack measures its fixed children against the whole space it was offered, and
 its flexible children afterwards, against a share of what is left; see
-[how a stack measures](layout.md#how-a-stack-measures). A slider fills whatever
+[how a stack measures](stacks.md#how-a-stack-measures). A slider fills whatever
 width it is offered, so between fixed `-` and `+` glyphs it takes the whole row
 unless it is flexible, and the `+` lands past the edge.
 
@@ -414,7 +450,7 @@ pub fn accepting(self, mask: InputMask) -> Self
 
 | Parameter | Meaning |
 |---|---|
-| `mask` | The kinds of input, combined with `union` or `\|`. `TAP` is a touch released inside the target. `FOCUS` makes it a stop Up and Down reach and Confirm fires. `LONG_PRESS` is declared but not yet acted on; see [`on_long_press`](#modifierson_long_press). |
+| `mask` | The kinds of input, combined with `union` or `\|`. `TAP` is a touch released inside the target. `FOCUS` makes it a stop Up and Down reach and Confirm fires. `LONG_PRESS` sends the message once, when a finger has rested on the target for 500 ms; see [`on_long_press`](#modifierson_long_press). |
 
 `InputMask::DRAG` offers every frame the finger is down to its target, so a
 tappable accepting it sends its message on each of those frames. It is for a

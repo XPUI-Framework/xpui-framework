@@ -15,11 +15,11 @@ each piece does.
 
 | | |
 |---|---|
-| [`Screen`](#screen) | A screen. |
+| [`Screen`](#screen) | A page of the interface: its state, what it looks like, and how a message changes it. |
 
 ## `Screen`
 
-A screen.
+A page of the interface: its state, what it looks like, and how a message changes it.
 
 ```text
 pub trait Screen
@@ -34,7 +34,7 @@ reads a touch, tracks focus or asks for a repaint after `update`.
 | [`body`](#screenbody) | — | Describes the screen. Called once per paint and once per frame carrying input. |
 | [`update`](#screenupdate) | — | Applies a message. The runtime repaints afterwards. |
 | [`title`](#screentitle) | `None` | The screen's name, for the header and for a host that keeps a stack. |
-| [`on_key`](#screenon_key) | `None` | A key, offered **before** the runtime applies its own meaning. |
+| [`on_key`](#screenon_key) | `None` | Any key, and the back gesture as Back, offered **before** the runtime applies its own meaning. |
 | [`on_swipe`](#screenon_swipe) | `None` | A swipe, likewise offered first. |
 | [`on_background_tap`](#screenon_background_tap) | `None` | A touch no control claimed. |
 | [`tick`](#screentick) | nothing | A frame happened, **whether or not any input arrived**. |
@@ -333,6 +333,10 @@ assert_eq!(drawn, ["Dune", "Emma", "Ivanhoe", "By title"]);
 
 **Example — dismissing an overlay with the home gesture**
 
+`App::tick` does this on its own when the host reports the gesture. The fake
+host reports none, so this calls `App::home_gesture`, as a host with a home key
+of its own would.
+
 ```rust
 use xpui::{App, Screen, Text, View, finish_screen, testing};
 
@@ -430,10 +434,14 @@ fn on_key(&self, key: Button) -> Option<Self::Message>
 
 Return a message to consume the key, or `None` to leave it to the runtime:
 Up and Down move focus, Confirm sends the focused control's message, Left and
-Right nudge a value, and Back finishes the screen. A key claimed here repeats
-while it is held, 500 ms after the press and every 500 ms after that. It is
-offered first even while a value is open for editing, so a screen claiming Up
-takes it away from the edit too.
+Right nudge a value, and Back closes an open dialog or finishes the screen.
+Every `Button` is offered, `Power`, `NavNext`, `NavPrevious` and the four
+`Screen*` directions included, though the runtime gives those no meaning of its
+own. The system back gesture arrives here as `Button::Back`. A key claimed here
+repeats while it is held, 500 ms after the press and every 500 ms after that.
+It is offered first even while a value is open for editing or a dialog is up,
+so a screen claiming Up takes it away from the edit, and a screen claiming Back
+keeps it from the dialog.
 
 #### `Screen::on_swipe`
 
@@ -461,7 +469,8 @@ fn on_background_tap(&self, point: Point) -> Option<Self::Message>
 
 Asked only when no control declared at `point` takes the tap, only on a host
 with a touch panel, and never before the screen's first paint or while a value
-is open. An
+is open. Under a dialog given `Modal::on_dismiss`, the dialog takes a tap
+outside its options and this is not asked; under one without, it is. An
 `OverlayPanel` gets the same effect with `on_scrim_tap`, which is an ordinary
 interaction and needs no coordinates.
 
@@ -541,8 +550,9 @@ fn handle_home_gesture(&mut self) -> bool
 
 Return `true` to consume it, and `App` does nothing more. Return `false`, the
 default, and `App` pops every screen down to the root. An overlay claims it and
-calls `finish_screen`, so the gesture closes the overlay and nothing else. The
-runtime never reads the gesture itself: a host that detects one calls
+calls `finish_screen`, so the gesture closes the overlay and nothing else.
+`App::tick` reads the gesture from the host's input and offers it here, so no
+screen and no host reads it; a host with another way home calls
 [`App::home_gesture`](app.md#apphome_gesture).
 
 **See also:** [`App`](app.md#app), [`NavigationScreen`](navigation.md#navigationscreen), [`present`](navigation.md#present)

@@ -40,10 +40,13 @@ Every call is forwarded, and nothing is answered from the recording, so a screen
 measures, lays out and paints exactly as it would without the wrapper. The
 record lands in the same log as the fake's, so [`ops_log`](#testingops_log), the
 [draw accessors](#draw-accessors) and [snapshots](#testingassert_snapshot) all
-read a real backend's frame. [`Ui`](testing.md#testingui) installs one for you.
+read a real backend's frame. [`Ui`](driving.md#testingui) installs one for you.
 
-A repaint request is forwarded to the backend and not counted by
-[`updates`](testing.md#counters).
+A repaint request is counted by [`updates`](testing.md#counters), as the fake
+counts its own, and then forwarded to the backend. A dither is recorded as the
+fake records it, with `light` in `black`, so a snapshot marks the same shade
+through either host. Wrap a real backend, never the fake itself: that records
+every call twice.
 
 **Example — recording a real backend**
 
@@ -82,7 +85,7 @@ The host underneath, for anything this wrapper does not model — reading the fr
 pub fn inner(&self) -> &'static H
 ```
 
-**See also:** [`testing::Ui`](testing.md#testingui), [`testing::ops_log`](#testingops_log)
+**See also:** [`testing::Ui`](driving.md#testingui), [`testing::ops_log`](#testingops_log)
 
 ## `testing::DrawOp`
 

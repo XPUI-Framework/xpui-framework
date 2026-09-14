@@ -111,17 +111,21 @@ fn update(&mut self, message: Message) {
 That is the same shape `xpui-gallery`'s `gallery/src/menu.rs` uses for all seven of its
 examples.
 
-### `Back` means three things, in order
+### `Back` means four things, in order
 
 This is the one that catches people, and it caught this repository:
 
-1. **Leave a value being edited.** A stepper that is open cancels.
-2. **A screen claims it.** A screen with a picker open closes the picker.
-3. **Pop the stack.** Nothing above claimed it, so the screen finishes.
+1. **A screen claims it.** `Screen::on_key` is asked first, for Back as for any key.
+2. **Leave a value being edited.** A stepper that is open cancels.
+3. **Close a dialog.** An open picker sends its `on_dismiss`, or swallows the
+   key when it has none.
+4. **Pop the stack.** Nothing above claimed it, so the screen finishes.
+
+The system back gesture is the same Back, and goes through the same four.
 
 A firmware once fixed a root screen finishing — pressing Back on the first
 screen and ending the app — by suppressing the key at the pin. That killed the
-other two meanings on every host: a screen could not dismiss its own picker,
+other meanings on every host: a screen could not dismiss its own picker,
 and a value opened on a root screen could be committed but never cancelled.
 
 The answer is one call, and it is not discoverable from the reference:

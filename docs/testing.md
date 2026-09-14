@@ -64,7 +64,7 @@ fn opens_the_list_screen<H: Host + Drive + 'static>(backend: &'static H) {
 ```
 
 Every method `Ui` has, from tapping a label to reading the stack's depth, is in
-[the reference](reference/testing.md#testingui).
+[the reference](reference/driving.md#testingui).
 
 **Assert on what is on the screen, not on the depth.** `depth() == 2` says
 *something* opened. It does not say the right thing did — and that exact

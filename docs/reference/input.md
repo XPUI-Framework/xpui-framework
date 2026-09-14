@@ -8,9 +8,10 @@ touch panel and a device with four buttons run the same screen.
 
 [Writing a widget](../writing-a-widget.md) builds a control that declares its
 own regions. [Controls](controls.md) is what the keys do to a slider or a
-stepper. This page is the vocabulary underneath both: the buttons, the frame
-of input, and the keys along the bottom edge. What a widget declares, and how
-the runtime resolves it, is [Interactions](interactions.md).
+stepper. This page is the vocabulary underneath both: the buttons and the frame
+of input. The keys along the bottom edge are [Key rows](key-rows.md), and what a
+widget declares, and how the runtime resolves it, is
+[Interactions](interactions.md).
 
 ## Topics
 
@@ -19,8 +20,6 @@ the runtime resolves it, is [Interactions](interactions.md).
 | [`Button`](#button) | A button by meaning, never by physical position. |
 | [`SwipeDir`](#swipedir) | The direction a completed swipe travelled. |
 | [`Input`](#input-1) | One frame of input, as screens reach for it. |
-| [`KeyRow`](#keyrow) | What the keys along the bottom edge mean, left to right. |
-| [`RowKey`](#rowkey) | What one key along the bottom edge of a device does. |
 
 ## How input reaches a screen
 
@@ -98,12 +97,14 @@ first:
 | Step | Offered to the screen through | Then the runtime |
 |---|---|---|
 | a touch held on a `DRAG` region | nothing | sends that region's message every frame |
-| a tap on a `TAP` region | `Screen::on_background_tap`, when no region takes it | sends that region's message |
+| a touch held 500 ms on a `LONG_PRESS` region | nothing | sends that region's message once; the release sends nothing |
+| a tap on a `TAP` region | `Screen::on_background_tap`, when no region and no dialog's `on_dismiss` takes it | sends that region's message |
 | a swipe | `Screen::on_swipe` | moves focus on a vertical swipe |
-| a key press, or a held key's repeat | `Screen::on_key` | walks focus, nudges, confirms, or finishes the screen |
+| a key press, a held key's repeat, or the back gesture | `Screen::on_key` | walks focus, nudges, confirms, dismisses a dialog, or finishes the screen |
 
 Touches and swipes are declined while a value is open for editing. A held key
-repeats every 500 ms after a 500 ms delay.
+repeats every 500 ms after a 500 ms delay, and a finger becomes a long press
+after the same 500 ms.
 
 ### A vertical swipe moves focus
 
@@ -127,7 +128,8 @@ A screen that wants a key or a gesture for itself claims it in
 [`Screen::on_key`](screens.md#screenon_key) or
 [`Screen::on_swipe`](screens.md#screenon_swipe), and is asked before the runtime.
 Back is the key worth knowing the runtime keeps: unclaimed, it finishes the
-screen.
+screen, or, while a dialog is open, goes to the dialog instead; see
+[`Modal::on_dismiss`](dialogs.md#modalon_dismiss).
 
 ## `Button`
 
@@ -160,15 +162,70 @@ of the fifteen.
 | `Button::ScreenUp` | Up as seen on the rendered screen, whatever the orientation. |
 | `Button::ScreenDown` | Down as seen on the rendered screen, whatever the orientation. |
 
-**Eight of them are the runtime's.** `Left`, `Right`, `Up`, `Down`, `Confirm`,
-`Back`, `PageBack` and `PageForward` are offered to `Screen::on_key` and, when
-the screen declines, given the meanings above. `PageBack` walks focus like `Up`
-and `PageForward` like `Down`, which is what a device with only two side keys
-relies on. Auto-repeat applies to these eight, claimed or not.
+**All fifteen reach `Screen::on_key`**, before the runtime gives any of them a
+meaning, and a held key repeats whether or not the screen claims it.
 
-**The other seven never reach `on_key`.** The runtime does not read `Power`,
-`NavNext`, `NavPrevious` or the four `Screen*` directions. A screen that wants
-one asks [`Input::was_pressed`](#inputwas_pressed) itself, from `Screen::tick`.
+**Eight of them mean something to the runtime.** When the screen declines
+`Left`, `Right`, `Up`, `Down`, `Confirm`, `Back`, `PageBack` or `PageForward`,
+the runtime gives it the meaning above. `PageBack` walks focus like `Up` and
+`PageForward` like `Down`, which is what a device with only two side keys
+relies on. `Power`, `NavNext`, `NavPrevious` and the four `Screen*` directions
+mean nothing to the runtime: a screen that wants one claims it, and one that
+declines it loses nothing.
+
+**The back gesture is `Back`.** When the host reports
+[`Input::was_back_gesture`](#inputwas_back_gesture), the runtime takes it as a
+press of `Back`: offered to `on_key`, then cancelling an open edit, dismissing a
+dialog or finishing the screen. It does not repeat.
+
+**Example — a reader's side keys skip chapters**
+
+```rust
+use xpui::screen::{Driver, Runtime};
+use xpui::{Button, NavigationScreen, Screen, Text, View, testing};
+
+#[derive(Clone, Copy)]
+enum Msg {
+    Chapter(i32),
+}
+
+struct Book {
+    chapter: i32,
+}
+
+impl Screen for Book {
+    type Message = Msg;
+
+    fn body(&self) -> impl View<Msg> {
+        NavigationScreen::new(Text::new("Chapter"))
+    }
+
+    fn update(&mut self, message: Msg) {
+        let Msg::Chapter(by) = message;
+        self.chapter = (self.chapter + by).max(1);
+    }
+
+    fn on_key(&self, key: Button) -> Option<Msg> {
+        match key {
+            Button::NavNext => Some(Msg::Chapter(1)),
+            Button::NavPrevious => Some(Msg::Chapter(-1)),
+            _ => None,
+        }
+    }
+
+    fn title(&self) -> Option<&'static str> {
+        Some("Walden")
+    }
+}
+
+testing::install();
+testing::reset();
+let mut runtime = Runtime::new(Book { chapter: 3 });
+runtime.render();
+testing::press(Button::NavNext);
+runtime.loop_();
+assert_eq!(runtime.screen().chapter, 4);
+```
 
 `Button` is `#[repr(u8)]`, numbered in the order of the table from `Back = 0`
 to `ScreenDown = 14`, so a backend can pass it across a C boundary.
@@ -238,7 +295,7 @@ runtime.loop_();
 assert_eq!(testing::finishes(), 1);
 ```
 
-**See also:** [`Input`](#input-1), [`RowKey`](#rowkey),
+**See also:** [`Input`](#input-1), [`RowKey`](key-rows.md#rowkey),
 [`Screen::on_key`](screens.md#screenon_key)
 
 ## `SwipeDir`
@@ -516,7 +573,8 @@ See `InputSource::was_back_gesture`.
 pub fn was_back_gesture() -> bool
 ```
 
-The system back gesture, an edge swipe on a touch device.
+The system back gesture, an edge swipe on a touch device. The runtime takes it
+as a press of `Button::Back`, so a screen sees it in `Screen::on_key`.
 
 #### `Input::was_home_gesture`
 
@@ -526,8 +584,8 @@ See `InputSource::was_home_gesture`.
 pub fn was_home_gesture() -> bool
 ```
 
-The system home gesture. A host offers it to the top screen through
-`App::home_gesture` before acting on it itself.
+The system home gesture. `App::tick` reads it and offers it to the top screen
+through `Screen::handle_home_gesture`, so neither a screen nor a host needs to.
 
 #### `Input::swipe_moves_selection`
 
@@ -557,155 +615,3 @@ value and Up and Down move it: see [the value mode](controls.md#the-value-mode).
 
 **See also:** [`Button`](#button), [`SwipeDir`](#swipedir),
 [`InputSource`](backend-contract.md#hostinputsource)
-
-## `KeyRow`
-
-What the keys along the bottom edge mean, left to right.
-
-```text
-pub struct KeyRow(&'static [RowKey])
-```
-
-A hint bar asks two questions, how many slots to divide its band into and which
-word goes in each, and a device answers both with its row. A slot with nothing
-behind it is `RowKey::Unassigned` and stays blank: naming a key the device does
-not have sends a person looking for it.
-
-Neither answer can be inferred from the key count. A device with three keys
-along the bottom and an up/down pair elsewhere has a key for Back and gives it
-the first slot, and an inference from the count would put every label one key
-to the left of what it names. See [the key row is data](../design.md#the-key-row-is-data-not-an-inference).
-
-`KeyRow` lives here rather than beside what paints it because it is a fact
-about hardware: the crate describing a device should not have to depend on the
-one drawing it. A board crate states its row, and a hint bar such as
-[`xpui-chrome`](https://github.com/XPUI-Framework/xpui-chrome)'s reads it, with
-words the product supplies.
-
-**Example — a reader's row, and a badge's own**
-
-```rust
-use xpui::{KeyRow, RowKey};
-
-const BADGE: KeyRow = KeyRow::new(&[RowKey::Back, RowKey::Confirm, RowKey::Unassigned]);
-const NO_ROW: KeyRow = KeyRow::new(&[]);
-
-assert_eq!(KeyRow::READER.len(), 4);
-assert!(KeyRow::READER.contains(RowKey::Next));
-assert!(!BADGE.contains(RowKey::Next));
-assert!(NO_ROW.is_empty(), "reserves no hint band");
-```
-
-**Example — the words for a board's hint row**
-
-```rust
-use xpui::{KeyRow, RowKey};
-
-/// The product's own words: only it knows what language its user reads.
-fn word(key: RowKey) -> &'static str {
-    match key {
-        RowKey::Back => "Back",
-        RowKey::Confirm => "Select",
-        RowKey::Previous => "Up",
-        RowKey::Next => "Down",
-        RowKey::Unassigned => "",
-    }
-}
-
-const BADGE: KeyRow = KeyRow::new(&[RowKey::Back, RowKey::Confirm, RowKey::Unassigned]);
-
-let slots: Vec<&str> = BADGE.iter().map(word).collect();
-assert_eq!(slots, ["Back", "Select", ""]);
-```
-
-### Creating a row
-
-#### `KeyRow::READER`
-
-A reader's four keys, Back leftmost.
-
-```text
-pub const READER: KeyRow = KeyRow(&[ RowKey::Back, RowKey::Confirm, RowKey::Previous, RowKey::Next, ])
-```
-
-#### `KeyRow::new`
-
-A row of a device's own.
-
-```text
-pub const fn new(keys: &'static [RowKey]) -> KeyRow
-```
-
-| Parameter | Meaning |
-|---|---|
-| `keys` | The slots, left to right. An empty slice is a device with no bottom row. |
-
-`const`, so a board table can hold one.
-
-### Reading a row
-
-#### `KeyRow::len`
-
-How many slots the hint band divides into.
-
-```text
-pub const fn len(&self) -> usize
-```
-
-#### `KeyRow::is_empty`
-
-Whether the device has no bottom row at all.
-
-```text
-pub const fn is_empty(&self) -> bool
-```
-
-A device without one reserves no band, and there is nothing to label.
-
-#### `KeyRow::contains`
-
-Whether some slot carries `key`.
-
-```text
-pub fn contains(&self, key: RowKey) -> bool
-```
-
-#### `KeyRow::iter`
-
-The slots, left to right.
-
-```text
-pub fn iter(&self) -> impl Iterator<Item = RowKey> + use<>
-```
-
-**See also:** [`RowKey`](#rowkey), [`Hint`](navigation.md#hint)
-
-## `RowKey`
-
-What one key along the bottom edge of a device does.
-
-```text
-pub enum RowKey
-```
-
-The vocabulary a [`KeyRow`](#keyrow) is written in. Which **word** each one
-paints is not here: only a product knows what language its user reads, so the
-words are supplied alongside the row.
-
-| Variant | Meaning |
-|---|---|
-| `RowKey::Back` | Leaves the screen, or the value being edited. |
-| `RowKey::Confirm` | Acts on whatever has focus. |
-| `RowKey::Previous` | Walks a list backwards. |
-| `RowKey::Next` | Walks a list forwards. |
-| `RowKey::Unassigned` | A key with no word in the hint vocabulary, drawn blank. |
-
-`Previous` is `Button::Up` on a device with a reader's four keys, and `Next` is
-`Button::Down`. `Unassigned` covers a key nothing is mapped to and one whose
-meaning has no label, as a power key's does.
-
-How a value control shows that these keys have changed meaning while it is open
-is [`ControlState`](theme.md#controlstate).
-
-**See also:** [`KeyRow`](#keyrow), [`Button`](#button),
-[`ControlState`](theme.md#controlstate)
