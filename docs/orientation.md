@@ -17,10 +17,10 @@ and names no product, device or backend; everything else depends inward on it.
 |---|---|---|
 | [`xpui-framework`](https://github.com/XPUI-Framework/xpui-framework) | the crate `xpui`: the framework | nothing |
 | [`xpui-chrome`](https://github.com/XPUI-Framework/xpui-chrome) | themed components painted from drawing primitives alone | `xpui` |
-| [`xpui-boards`](https://github.com/XPUI-Framework/xpui-boards) | seven devices as data, one crate per vendor over a `core` vocabulary | `xpui` |
+| [`xpui-boards`](https://github.com/XPUI-Framework/xpui-boards) | eight devices as data, one crate per vendor over a `core` vocabulary | `xpui` |
 | [`xpui-backends`](https://github.com/XPUI-Framework/xpui-backends) | the `embedded-graphics` and FreeInkUI backends, the host framebuffer, the ABI checker | `xpui`, `xpui-chrome` |
 | [`xpui-simulator`](https://github.com/XPUI-Framework/xpui-simulator) | an `xpui` app in a desktop window | the four above |
-| [`xpui-gallery`](https://github.com/XPUI-Framework/xpui-gallery) | the reference application, and the seven-board conformance suite it doubles as | the five above |
+| [`xpui-gallery`](https://github.com/XPUI-Framework/xpui-gallery) | the reference application, and the eight-board conformance suite it doubles as | the five above |
 | [`xpui-rp2040`](https://github.com/XPUI-Framework/xpui-rp2040) | the gallery as firmware for the [Badger 2040](https://shop.pimoroni.com/products/badger-2040) and the [Tufty 2040](https://shop.pimoroni.com/products/tufty-2040) | `xpui`, `xpui-boards`, `xpui-backends`, `xpui-gallery` |
 | [`xpui-esp32`](https://github.com/XPUI-Framework/xpui-esp32) | the gallery as firmware for the [Xteink X3](https://www.xteink.com/products/xteink-x3) and the [Seeed Sticky](https://www.seeedstudio.com/reTerminal-Sticky-p-6861.html) | the same four |
 | [`xpui-cpp`](https://github.com/XPUI-Framework/xpui-cpp) | a C++ host for Rust screens over the C ABI, on a desktop and as an ESP32 image | `xpui`, `xpui-backends` |

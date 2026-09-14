@@ -13,7 +13,7 @@ use crate::paths::tracked;
 /// If you want to reach for a backend from inside the framework, add a trait
 /// method instead — that is what the seam is for. A review comment does not
 /// run, which is why this does.
-const FORBIDDEN: [&str; 11] = [
+const FORBIDDEN: [&str; 12] = [
     "crosspoint",
     "xteink",
     "freeink",
@@ -27,6 +27,7 @@ const FORBIDDEN: [&str; 11] = [
     // `x4pro`, `X4Pro`, `--board x4pro`. `forbidden_in` also reads the line
     // with its spaces removed, so `x4 pro` is the same word.
     "x4pro",
+    "x4classic",
     "gfxrenderer",
 ];
 
@@ -98,6 +99,7 @@ mod tests {
             "Sticky",
             "X4PRO",
             "x4pro",
+            "X4 Classic",
             "GfxRenderer",
         ] {
             assert!(

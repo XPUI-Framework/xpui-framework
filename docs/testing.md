@@ -109,7 +109,7 @@ against a committed PNG, pixel for pixel, and it lives beside the backends:
 [`xpui-backends`' screenshot guide](https://github.com/XPUI-Framework/xpui-backends/blob/main/embedded_graphics/docs/screenshots.md)
 is how such a test is written and a golden accepted, and
 [`xpui-gallery`](https://github.com/XPUI-Framework/xpui-gallery) runs every
-screen through it on all seven boards.
+screen through it on all eight boards.
 
 ## Three things that will bite
 

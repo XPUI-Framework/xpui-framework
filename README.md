@@ -22,7 +22,7 @@ firmware: no dependencies, no build script, `no_std`.
   toggles and dialogs; a [backend](https://github.com/XPUI-Framework/xpui-backends)
   paints it through whatever the device has. The
   [gallery](https://github.com/XPUI-Framework/xpui-gallery) runs the same
-  screens on seven boards, and the
+  screens on eight boards, and the
   [simulator](https://github.com/XPUI-Framework/xpui-simulator) puts them in a
   window, inside the device's own body.
 - **Tested on a laptop, not on a device.** The `testing` feature is a fake host
@@ -135,7 +135,7 @@ than through whoever happens to sit above it.
 flowchart TD
   xpui["xpui<br/>the framework"]
   chrome["xpui-chrome<br/>components"]
-  boards["xpui-boards<br/>seven devices"]
+  boards["xpui-boards<br/>eight devices"]
   backends["xpui-backends<br/>two backends"]
   simulator["xpui-simulator<br/>a window"]
   gallery["xpui-gallery<br/>the app"]

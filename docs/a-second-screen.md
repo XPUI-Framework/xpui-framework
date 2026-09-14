@@ -9,7 +9,7 @@ draws into memory and records what it drew. Put a window under it whenever you
 like; you will not need one to follow this.
 
 `gallery/` in the [gallery repository](https://github.com/XPUI-Framework/xpui-gallery)
-is the worked version of all of it, running on seven panels.
+is the worked version of all of it, running on eight panels.
 
 ## 1. A list is not a stack of rows
 
