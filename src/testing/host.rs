@@ -7,7 +7,8 @@ use alloc::string::ToString;
 use super::metrics::{READER_FONT, UI_FONT, UI_SMALL_FONT, line_height, screen, text_width};
 use super::ops::{DrawOp, RectKind};
 use super::state::{
-    FINISHES, HAS_LEFT_RIGHT_KEYS, HELD, NOW, PRESENTS, PRESSED, SWIPE, SWIPE_MOVES_SELECTION, push,
+    FINISHES, HAS_LEFT_RIGHT_KEYS, HELD, NOW, PRESENTS, PRESSED, SWIPE, SWIPE_MOVES_SELECTION,
+    UNAVAILABLE_TEXT, mark_read, push,
 };
 use crate::geometry::{Point, Rect, Size};
 use crate::host::{
@@ -73,7 +74,10 @@ impl Canvas for TestHost {
 
     fn draw_text(&self, origin: Point, text: &str, font: FontId, style: FontStyle) {
         if font.0 == 0 {
-            return; // a font this build omitted draws nothing
+            // A font this build omitted draws nothing. Counted, so a test can
+            // still prove the framework never asked.
+            UNAVAILABLE_TEXT.with(|count| count.set(count.get() + 1));
+            return;
         }
         push(DrawOp::Text {
             origin,
@@ -185,17 +189,14 @@ impl Navigator for TestHost {
 }
 
 /// No input by default. A test that needs a touch drives the view directly.
+///
+/// Nothing is consumed by reading, as the trait promises: an injected edge
+/// reads the same all frame, and `next_frame`, `reset` or the next write after
+/// a read is what ends it.
 impl InputSource for TestHost {
     fn was_pressed(&self, button: Button) -> bool {
-        // Consumed on read, so an injected press fires for exactly one frame —
-        // the same edge behaviour a real input manager has.
-        PRESSED.with(|pressed| {
-            let matched = pressed.get() == Some(button);
-            if matched {
-                pressed.set(None);
-            }
-            matched
-        })
+        mark_read();
+        PRESSED.with(|pressed| pressed.get() == Some(button))
     }
 
     fn is_pressed(&self, button: Button) -> bool {
@@ -229,14 +230,8 @@ impl InputSource for TestHost {
     }
 
     fn swipe(&self) -> SwipeDir {
-        // Consumed on read: a swipe is an edge event a real input manager
-        // reports for one frame, and leaving it set makes it fire again on the
-        // next.
-        SWIPE.with(|swipe| {
-            let direction = swipe.get();
-            swipe.set(SwipeDir::None);
-            direction
-        })
+        mark_read();
+        SWIPE.with(|swipe| swipe.get())
     }
 
     fn was_back_gesture(&self) -> bool {

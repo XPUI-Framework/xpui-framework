@@ -21,6 +21,8 @@
 //!
 //! Everything is forwarded. Nothing is answered from the recording, so a screen
 //! measures, lays out and paints exactly as it would without this in the way.
+//! A repaint request is counted by [`updates`](super::updates) on its way
+//! through, as the fake counts its own.
 
 use alloc::boxed::Box;
 use alloc::string::ToString;
@@ -29,7 +31,7 @@ use alloc::string::String;
 use alloc::vec::Vec;
 
 use super::ops::{DrawOp, RectKind, RowCells};
-use super::state::push;
+use super::state::{UPDATES, push};
 use crate::geometry::{Point, Rect, Size};
 use crate::host::{
     Button, Canvas, Chrome, Clock, ControlState, FontId, FontRole, FontStyle, Hint, HintWord, Host,
@@ -110,7 +112,8 @@ impl<H: Host + 'static> Canvas for Recorder<H> {
         push(DrawOp::Rect {
             rect,
             kind: RectKind::Dither,
-            black: !light,
+            // `black` carries `light` for a dither, as the fake records it.
+            black: light,
         });
         self.inner.fill_rect_dither(rect, light);
     }
@@ -283,6 +286,7 @@ impl<H: Host + 'static> Chrome for Recorder<H> {
     }
 
     fn request_update(&self) {
+        UPDATES.with(|count| count.set(count.get() + 1));
         self.inner.request_update();
     }
 }

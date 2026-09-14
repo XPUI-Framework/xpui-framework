@@ -299,7 +299,7 @@ fn a_kept_root_can_still_replace_itself() {
     assert!(app.is_running());
 }
 
-/// A request declined at the root does not fire later./// A request declined at the root does not fire later.
+/// A request declined at the root does not fire later.
 ///
 /// `finish_screen` sets a flag the shell clears when it acts on it. Left set
 /// while the root declines it, the next push would be popped straight back off
@@ -317,7 +317,9 @@ fn a_declined_finish_is_not_remembered() {
     assert_eq!(app.depth(), 2);
 
     // A frame with no key pressed. The stale request, if it were kept, would
-    // pop the screen just pushed.
+    // pop the screen just pushed. Reading does not consume the fake's press,
+    // so the frame that carried it is ended first.
+    testing::next_frame();
     app.tick();
     assert_eq!(app.depth(), 2, "the declined request did not carry over");
 }

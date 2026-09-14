@@ -37,7 +37,7 @@ use alloc::vec::Vec;
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicBool, Ordering};
 
-use crate::host::{self, Navigator};
+use crate::host::{self, Input, Navigator};
 use crate::screen::{Driver, Runtime, Screen};
 
 /// What the navigator writes and [`App`] reads, in its own allocation.
@@ -114,6 +114,16 @@ impl Navigator for AppShell {
     }
 }
 
+/// Which way in last acted on a home gesture, so the other can tell it is
+/// looking at the same one.
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum Home {
+    /// `tick` read it from the host's input.
+    Tick,
+    /// The host called `home_gesture` itself.
+    Host,
+}
+
 /// A stack of screens, and the frame loop that drives the top one.
 pub struct App {
     stack: Vec<Box<dyn Driver>>,
@@ -121,6 +131,9 @@ pub struct App {
     dirty: bool,
     /// Whether the root screen may be finished. See [`App::keep_root`].
     keep_root: bool,
+    /// Set by whichever of `tick` and `home_gesture` acted on a home gesture,
+    /// and taken by the next of either. See [`App::home_gesture`].
+    home: Option<Home>,
 }
 
 impl App {
@@ -139,6 +152,7 @@ impl App {
             shell,
             dirty: true,
             keep_root: false,
+            home: None,
         };
         app.push(root);
         app
@@ -157,7 +171,11 @@ impl App {
         self
     }
 
-    /// Pushes a screen and shows it.
+    /// Pushes a screen and marks the app dirty, without painting it.
+    ///
+    /// The screen's `on_enter` runs here. Nothing reaches the panel until the
+    /// host next calls [`render`](App::render) or
+    /// [`render_if_dirty`](App::render_if_dirty).
     pub fn push<S: Screen + 'static>(&mut self, screen: S) {
         self.push_driver(Box::new(Runtime::new(screen)));
     }
@@ -212,7 +230,18 @@ impl App {
     }
 
     /// One frame of input, then whatever navigation it asked for.
+    ///
+    /// The home gesture is part of that input: when the host's input reports
+    /// one, this offers it as [`home_gesture`](App::home_gesture) does, before
+    /// the screen left on top runs its frame.
     pub fn tick(&mut self) {
+        // A host that called `home_gesture` since the last frame was reporting
+        // this frame's gesture, so it is not acted on a second time here.
+        if self.home.take() != Some(Home::Host) && Input::was_home_gesture() {
+            self.unwind_home();
+            self.home = Some(Home::Tick);
+        }
+
         // The borrow on the stack ends here, before anything can edit it.
         if let Some(top) = self.stack.last_mut() {
             top.loop_();
@@ -283,7 +312,20 @@ impl App {
 
     /// Offers the system home gesture to the top screen, and pops everything
     /// down to the root if nothing claims it.
+    ///
+    /// [`tick`](App::tick) already calls this when the host's input reports the
+    /// gesture, so a host need not. One that still does is not acted on twice:
+    /// a call straight after a `tick` that handled the gesture does nothing,
+    /// and a `tick` straight after a call leaves that frame's gesture alone.
     pub fn home_gesture(&mut self) {
+        if self.home.take() == Some(Home::Tick) {
+            return;
+        }
+        self.unwind_home();
+        self.home = Some(Home::Host);
+    }
+
+    fn unwind_home(&mut self) {
         if let Some(top) = self.stack.last_mut()
             && top.handle_home_gesture()
         {
